@@ -726,6 +726,17 @@ const enUS: Record<string, string> = {
   "bots.providerSettings.discord": "Discord support is not available yet.",
   "bots.providerSettings.wecom": "WeCom support is not available yet.",
   "bots.telegramBotToken": "Link bot",
+  "bots.weixinEcho.title": "Text connectivity test (Echo)",
+  "bots.weixinEcho.description":
+    "Send ping for pong; other private text is echoed without AI. Enabled for new pairings. Stop other gateways using this account first.",
+  "bots.weixinPairing.title": "Weixin pairing",
+  "bots.weixinPairing.description":
+    "Scan to connect ClawBot / iLink and verify ping → pong in Weixin.",
+  "bots.weixinPairing.open": "Pair and manage",
+  "bots.weixinVerification.label": "Verification code shown on your phone",
+  "bots.weixinVerification.submit": "Verify",
+  "bots.weixinRegistration.need_verifycode": "Enter the verification code shown on your phone",
+  "bots.weixinRegistration.redirect": "Switching Weixin login endpoint",
   "bots.weixinRegistrationTitle": "Weixin QR login",
   "bots.weixinRegistrationDescription":
     "Scan to log in, then send any message in Weixin to activate the chat.",
