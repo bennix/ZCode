@@ -42,6 +42,7 @@ export interface TurnMachine {
   state: TurnState;
   start(): TurnState;
   startModelRequest(model: string, messages: ModelRequestState["messages"]): TurnState;
+  abandonModelRequest(): TurnState;
   receiveModelResponse(content: string): TurnState;
   addStreamingContent(content: string): TurnState;
   scheduleTools(toolCalls: ToolCall[], schedule: ToolScheduleState): TurnState;
@@ -130,6 +131,10 @@ export class TurnMachineImpl implements TurnMachine {
         messages,
       },
     };
+  }
+
+  abandonModelRequest(): TurnState {
+    return this.transition(Phase.AggregatingResults);
   }
 
   receiveModelResponse(content: string): TurnState {

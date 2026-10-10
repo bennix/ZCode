@@ -231,7 +231,12 @@ export function canTransitionTo(current: TurnPhase, next: TurnPhase): boolean {
   const validTransitions: Record<TurnPhase, TurnPhase[]> = {
     [TurnPhase.Idle]: [TurnPhase.ProcessingInput],
     [TurnPhase.ProcessingInput]: [TurnPhase.AwaitingModelResponse, TurnPhase.Completing],
-    [TurnPhase.AwaitingModelResponse]: [TurnPhase.Streaming, TurnPhase.Completing, TurnPhase.Error],
+    [TurnPhase.AwaitingModelResponse]: [
+      TurnPhase.Streaming,
+      TurnPhase.AggregatingResults,
+      TurnPhase.Completing,
+      TurnPhase.Error,
+    ],
     [TurnPhase.Streaming]: [
       TurnPhase.SchedulingTools,
       TurnPhase.AggregatingResults,

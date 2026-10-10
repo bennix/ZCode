@@ -301,6 +301,9 @@ async function runModelBackedTurnStepImpl(
       const fallbackModel = createTurnModel(this, { selection: fallbackSelection });
       await this.persistAssistantMessage(assistantMessageId, state.userMessageId, assistantCreatedAt,
         { completed: Date.now() }, modelTraceContext, model);
+      // 连接回退发生在 AwaitingModelResponse；先结束失败请求的阶段，下一轮才能启动备用模型。
+      // 原请求没有可提交输出，不能伪造 assistant 响应来推进状态机。
+      state.turnMachine = new TurnMachineImpl(state.turnMachine.abandonModelRequest());
       state.model = fallbackModel;
       state.turnRequestState.entries = rebuildContextPrefix(this, {
         model: fallbackModel, turnRequestEntries: state.turnRequestState.entries,

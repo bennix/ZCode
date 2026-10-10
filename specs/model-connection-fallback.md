@@ -11,3 +11,24 @@
 入口同时展示于通用设置和模型设置顶部，使用同一 ConnectionFallbackSettings 与设置服务，不创建第二份偏好。模型设置中的备用选择保持原环境边界，不混入供应商编辑的本机服务覆盖。
 
 达到三次后立即取消主请求并交接，不等待剩余 adapter 重试预算；交接触发后的取消回调不清空触发次数。备用模型沿用用户设置的 options.reasoningLevel，不继承主模型档位。
+
+## 失败请求的阶段交接
+
+`TurnMachine` 是当前 turn 阶段的唯一所有者。连接故障触发备用模型时，原请求已经进入 `AwaitingModelResponse`，但没有可提交的正文或工具调用。Runtime 先让状态机将该失败请求标记为已放弃，进入 `AggregatingResults`，再更新本轮模型选择并由现有循环启动下一次请求。这个阶段交接不写入虚构的 assistant 响应，也不创建新 turn；下一次请求沿用同一 turn 和已有历史。若失败前已有输出或工具提交，则禁止此交接，沿原错误/恢复路径处理。
+
+```mermaid
+sequenceDiagram
+    participant Provider as 主模型
+    participant Runtime as Runtime
+    participant Machine as TurnMachine（阶段所有者）
+    participant Backup as 备用模型
+    Provider-->>Runtime: 第三次连接故障且无输出
+    Runtime->>Machine: abandonModelRequest()
+    Machine-->>Runtime: AggregatingResults
+    Runtime->>Runtime: 更新本轮模型并重建上下文前缀
+    Runtime->>Machine: startModelRequest(备用模型)
+    Machine-->>Runtime: AwaitingModelResponse
+    Runtime->>Backup: 发起同一 turn 的新请求
+```
+
+验收：连续第三次网络失败且无输出时，主模型请求从 `AwaitingModelResponse` 进入 `AggregatingResults`，备用模型请求可以正常进入 `AwaitingModelResponse`；没有额外消息或工具结果。普通完成、用户停止、非网络错误和备用模型再次失败保持原有处理。Desktop 实时流与手机恢复流继续共享同一个 turn owner，不另建队列或快照。
