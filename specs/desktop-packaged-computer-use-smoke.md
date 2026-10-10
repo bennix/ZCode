@@ -15,3 +15,7 @@ Linux CI 的 Xvfb 环境没有正确配置 Electron SUID sandbox helper，因此
 安装后 E2E 若没有出现欢迎页，应记录当前 URL、截断的页面正文与近期进程输出，并在 CI 保留失败截图；页面内容和日志只来自隔离首次启动目录。Windows 静默安装先使用安装器默认安装目录，再从该 runner 的用户 Programs 目录定位安装后的 `ZenCode.exe`，避免把 `/D` 自定义路径参数问题误判成包损坏。安装器仍异常退出时必须保留原始退出码，不把该 job 标为通过。
 
 安装后检查还提供候选模式：输入成功的 Windows/Linux 打包 run ID 与完整预期源码提交 SHA，先从 GitHub API 校验 run 名称、成功结论、仓库和 `head_sha`，再按架构下载该 run 的构建 artifact 并安装。候选模式的文件摘要由 job 打印并用于后续晋升核对；不能拿发布版固定哈希去判断尚未发布的新构建。只有候选安装后检查全部通过，才可用晋升工作流替换 `v3.14.26` 的公开资产。发布版模式继续从 Release 下载并核对固定哈希，两个模式不得混用来源。
+
+## 安装后 Agent 资源根目录
+
+安装后的 Main 是 `resourcesPath` 的唯一所有者。Main 在 `InitLocal` 消息中把绝对资源根目录交给 window-scoped Host；Host 在开始数据库准备前设置该进程的资源路径供 Agent resolver 使用。该顺序不依赖 Electron utility process 对自定义 fork 环境变量的继承行为，也不从 checkout 搜索回退。开发态不传此字段，仍沿用开发解析链。验收以安装器中的应用为准：deb x64/ARM64 的首次启动不能出现 `unsupported_runtime`；Windows 安装成功后执行同样断言。缺少 `resources/glm/zcode.cjs` 时保持显式失败，不从源码树补齐。

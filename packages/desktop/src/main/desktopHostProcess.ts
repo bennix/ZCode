@@ -32,7 +32,6 @@ import {
   type RemoteTarget,
   type WorkspacePurpose,
   ZCODE_DESKTOP_CONTEXT_PROMPT_ENABLED_ENV,
-  ZCODE_PACKAGED_RESOURCES_PATH_ENV,
 } from "@zcode/shared";
 import { getMainLaunchPartialMarks } from "./desktopLaunchMarks.js";
 import { BroadcastHub } from "./broadcastHub.js";
@@ -84,6 +83,8 @@ export interface HostInitMessage {
   zcodeBuiltinProviderConfigFilePath: string;
   /** Main 提前异步采集并过滤的本机 runtime 环境；只允许传给 InitLocal。 */
   runtimeProcessEnvPatch?: Record<string, string>;
+  /** Main 是已安装包资源根目录的所有者；InitLocal 到达后 Host 才开始存储准备。 */
+  packagedResourcesPath?: string;
 }
 
 interface SpawnHostProcessOptions {
@@ -261,8 +262,6 @@ export function spawnHostProcess(
     env: {
       ...buildHostProcessEnv(dependencies.hostProcessLocalEnv),
       ...buildHostE2ECoverageEnv(),
-      // 已安装包的 utility process 没有可靠的 process.resourcesPath；由 Main 传递唯一资源根目录。
-      ...(app.isPackaged ? { [ZCODE_PACKAGED_RESOURCES_PATH_ENV]: process.resourcesPath } : {}),
       ZCODE_PROCESS_LABEL: label,
       // macOS-only: the Computer Use Helper launcher runs inside this forked host utilityProcess, whose
       // code-signing identity is a nested Electron helper (NOT dev.zcode.app). Publish THIS (main
@@ -712,6 +711,8 @@ export function spawnHostProcess(
         deliveryKind: options?.taskRealtime?.deliveryKind,
       }
     : { ...initMessage, databaseStartupId: databaseStartupRelay.startupId };
+  // Electron utilityProcess 的 fork env 在安装态可能丢失自定义键；用一次性初始化消息传递资源根目录。
+  if (app.isPackaged) hostInitMessage.packagedResourcesPath = process.resourcesPath;
 
   if (options?.attachInitialServicePort === false) {
     child.postMessage(hostInitMessage);

@@ -74,6 +74,7 @@ import {
   HostMessageTypes,
   HostResponseTypes,
   ZCODE_VERSION,
+  ZCODE_PACKAGED_RESOURCES_PATH_ENV,
   formatLogPrefix,
   formatZCodeHostProcessName,
   formatZodError,
@@ -2786,6 +2787,10 @@ parentPort.on("message", async (e: Electron.MessageEvent) => {
       port.close();
       databaseStartup.coordinator.publish();
       return;
+    }
+    // 数据库准备会同步解析 Agent；必须先写入 Main 提供的安装资源根目录。
+    if (msg.packagedResourcesPath) {
+      process.env[ZCODE_PACKAGED_RESOURCES_PATH_ENV] = msg.packagedResourcesPath;
     }
     let basePortClosed = false;
     port.once("close", () => {
