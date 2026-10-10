@@ -34,6 +34,7 @@ if (args[0] === 'release' && args[1] === 'view') {
   const id = args[3].split('/').at(-1);
   const asset = state.assets.find((item) => item.apiUrl.endsWith('/' + id));
   if (!asset) process.exit(2);
+  if (process.env.FAKE_GH_FAIL_RENAME_STAGED === '1' && asset.name.includes('.refresh-')) process.exit(3);
   asset.name = args[5].slice('name='.length);
   save();
   process.stdout.write('{}');
@@ -101,6 +102,26 @@ test("staging hash mismatch leaves the old release asset intact", async (t) => {
         PATH: `${directory}:${process.env.PATH}`,
         FAKE_GH_STATE: statePath,
         FAKE_GH_CORRUPT: "1",
+      },
+    }),
+  );
+  const state = JSON.parse(await readFile(statePath, "utf8"));
+  assert.equal(
+    state.assets.find((asset) => asset.name === "ZenCode-3.14.26-win-x64.exe")?.digest,
+    "sha256:old",
+  );
+  assert.ok(state.assets.some((asset) => asset.name.endsWith(".refresh-123-1")));
+});
+
+test("failed canonical rename restores the old release asset", async (t) => {
+  const { directory, packagePath, statePath } = await fixture(t);
+  await assert.rejects(
+    execFileAsync(process.execPath, [script, "v3.14.26", "owner/repo", "123-1", packagePath], {
+      env: {
+        ...process.env,
+        PATH: `${directory}:${process.env.PATH}`,
+        FAKE_GH_STATE: statePath,
+        FAKE_GH_FAIL_RENAME_STAGED: "1",
       },
     }),
   );
