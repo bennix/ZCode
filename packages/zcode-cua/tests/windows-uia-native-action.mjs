@@ -18,31 +18,31 @@ const clickedPath = join(temporary, "clicked");
 const title = "ZenCode Native UIA Smoke";
 const context = { workspaceKey: "native-windows-smoke", sessionId: "dialog", runtimeScope: "main" };
 const script = String.raw`
-Add-Type -AssemblyName System.Windows.Forms
-$form = New-Object System.Windows.Forms.Form
-$form.Text = 'ZenCode Native UIA Smoke'
+Add-Type -AssemblyName PresentationFramework
+$form = New-Object System.Windows.Window
+$form.Title = 'ZenCode Native UIA Smoke'
 $form.Width = 420
 $form.Height = 240
-$form.StartPosition = 'Manual'
+$form.WindowStartupLocation = 'Manual'
 $form.Left = 100
 $form.Top = 100
-$textBox = New-Object System.Windows.Forms.TextBox
+$panel = New-Object System.Windows.Controls.StackPanel
+$panel.Margin = [System.Windows.Thickness]::new(30)
+$textBox = New-Object System.Windows.Controls.TextBox
 $textBox.Name = 'ZenCodeInput'
-$textBox.AccessibleName = 'ZenCodeInput'
-$textBox.Width = 340
-$textBox.Left = 30
-$textBox.Top = 35
-$form.Controls.Add($textBox)
-$button = New-Object System.Windows.Forms.Button
+[System.Windows.Automation.AutomationProperties]::SetName($textBox, 'ZenCodeInput')
+$textBox.Margin = [System.Windows.Thickness]::new(0, 0, 0, 24)
+[void]$panel.Children.Add($textBox)
+$button = New-Object System.Windows.Controls.Button
 $button.Name = 'ZenCodeConfirm'
-$button.Text = 'ZenCodeConfirm'
+$button.Content = 'ZenCodeConfirm'
+[System.Windows.Automation.AutomationProperties]::SetName($button, 'ZenCodeConfirm')
 $button.Width = 180
 $button.Height = 48
-$button.Left = 110
-$button.Top = 90
 $button.Add_Click({ [System.IO.File]::WriteAllText($env:ZCODE_CUA_SMOKE_CLICKED, $textBox.Text); $form.Close() })
-$form.Controls.Add($button)
-$form.Add_Shown({ [System.IO.File]::WriteAllText($env:ZCODE_CUA_SMOKE_READY, 'ready') })
+$panel.Children.Add($button) | Out-Null
+$form.Content = $panel
+$form.Add_ContentRendered({ [System.IO.File]::WriteAllText($env:ZCODE_CUA_SMOKE_READY, 'ready') })
 [void]$form.ShowDialog()
 `;
 await writeFile(scriptPath, script);
@@ -106,7 +106,7 @@ function snapshotIdFrom(response) {
 }
 
 try {
-  await waitForFile(readyPath, "WinForms fixture");
+  await waitForFile(readyPath, "WPF fixture");
   const apps = await call("list_apps");
   assert.match(apps.content?.[0]?.text ?? "", /ZenCode Native UIA Smoke/u);
 
@@ -123,7 +123,7 @@ try {
   // 根因待 CI 树诊断确认：列出窗口成功但文本框缺失；输出有界树以区分目标窗口与 UIA 子节点问题。
   assert.ok(
     inputIndex,
-    `WinForms text box was not visible in the Windows UIA tree. apps=${(apps.content?.[0]?.text ?? "").slice(0, 1200)} tree=${(observed?.content?.[0]?.text ?? "").slice(0, 5000)}`,
+    `WPF text box was not visible in the Windows UIA tree. apps=${(apps.content?.[0]?.text ?? "").slice(0, 1200)} tree=${(observed?.content?.[0]?.text ?? "").slice(0, 5000)}`,
   );
   const snapshotId = snapshotIdFrom(observed);
   assert.ok(snapshotId, "UIA observation must issue a ZenCode snapshot ID");
@@ -137,7 +137,7 @@ try {
     .split("\n")
     .find((line) => line.includes("ZenCodeConfirm"));
   const buttonIndex = buttonLine?.match(/^\s*(\d+)\s+/u)?.[1];
-  assert.ok(buttonIndex, "WinForms button was not visible after text input");
+  assert.ok(buttonIndex, "WPF button was not visible after text input");
   const clickSnapshotId = snapshotIdFrom(afterInput);
   assert.ok(clickSnapshotId, "second observation must issue a new ZenCode snapshot ID");
   await call(
@@ -152,7 +152,7 @@ try {
       ? await Promise.race([
           once(windowProcess, "exit"),
           delay(10_000).then(() => {
-            throw new Error("WinForms fixture did not exit after UIA click");
+            throw new Error("WPF fixture did not exit after UIA click");
           }),
         ])
       : [windowProcess.exitCode];
