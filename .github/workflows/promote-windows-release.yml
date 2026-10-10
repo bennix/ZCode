@@ -7,6 +7,10 @@ on:
         description: Successful Windows package run ID
         required: true
         type: string
+      expected_sha:
+        description: Exact commit SHA built by the source run
+        required: true
+        type: string
 
 permissions:
   actions: read
@@ -19,17 +23,22 @@ jobs:
       matrix:
         arch: [x64, arm64]
     steps:
-      - name: Verify source run and draft release
+      - uses: actions/checkout@v4
+
+      - name: Verify source run and published release
         env:
           GH_TOKEN: ${{ github.token }}
           SOURCE_RUN_ID: ${{ inputs.run_id }}
+          EXPECTED_SHA: ${{ inputs.expected_sha }}
         run: |
           [[ "$SOURCE_RUN_ID" =~ ^[0-9]+$ ]]
+          [[ "$EXPECTED_SHA" =~ ^[0-9a-f]{40}$ ]]
           run_json="$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$SOURCE_RUN_ID")"
           test "$(jq -r '.name' <<< "$run_json")" = 'Windows package'
           test "$(jq -r '.conclusion' <<< "$run_json")" = 'success'
-          test "$(jq -r '.head_branch' <<< "$run_json")" = 'main'
-          test "$(gh release view v3.14.26 --repo "$GITHUB_REPOSITORY" --json isDraft --jq .isDraft)" = 'true'
+          test "$(jq -r '.head_repository.full_name' <<< "$run_json")" = "$GITHUB_REPOSITORY"
+          test "$(jq -r '.head_sha' <<< "$run_json")" = "$EXPECTED_SHA"
+          test "$(gh release view v3.14.26 --repo "$GITHUB_REPOSITORY" --json isDraft --jq .isDraft)" = 'false'
 
       - name: Download verified installer
         uses: actions/download-artifact@v4
@@ -39,11 +48,10 @@ jobs:
           run-id: ${{ inputs.run_id }}
           github-token: ${{ github.token }}
 
-      - name: Verify and upload installer
+      - name: Verify and promote installer
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           installer='release-windows-${{ matrix.arch }}/ZenCode-3.14.26-win-${{ matrix.arch }}.exe'
           test -f "$installer"
-          sha256sum "$installer"
-          gh release upload v3.14.26 "$installer" --repo "$GITHUB_REPOSITORY"
+          node .github/scripts/promote-release-assets.mjs v3.14.26 "$GITHUB_REPOSITORY" "$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT" "$installer"
