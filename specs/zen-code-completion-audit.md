@@ -2,17 +2,18 @@
 
 下表记录逐项验收基线；正式包证据见下方发布验收。测试通过只证明对应场景，不推断未覆盖的平台或安装形态。
 
-## 3.14.28 候选验收（尚未发布）
+## 3.14.28 发布验收
 
 - 3.14.27 正式包内含已签名的 `OpenComputerUse`，其只读 `doctor` 能报告 macOS 两项权限及锁屏；设置页此前仍指向未随包发布的旧 Helper，故会显示未知。当前源码改为同一原生执行器负责只读权限诊断和授权引导。无项目的首次设置页也能读取本机权限。
-- 隔离 Electron 设置页 E2E 已验证插件初始关闭、手动开启后两项权限显示已授权，锁屏单独提示；定向诊断、映射、引导与 IPC 测试通过。该源码尚未进入公证 DMG；锁屏会话无法验收真实授权窗口和桌面动作。3.14.27 仍是 Latest，本地仍保留其已公证 DMG。
-- 源码提交 `6eddb6c9c819a669acab487cc2e43381245472b3` 已推送到 `bennix/ZCode` 的候选分支。Windows 构建 `38084702723`、Linux 构建 `38084702737` 双架构成功；Linux 候选安装验收 `38085863542` 全部成功。Windows 候选安装验收 `38086144107` 的 ARM64 首次通过，x64 首次安装触发 NSIS `System.dll` 的 `0xC0000005`，仅重跑失败作业的第 2 次尝试通过；该偶发故障仍未根治。草稿 `v3.14.28` 暂存 6 个 Windows/Linux 资产，`38086559975` 核对了远端摘要；尚未公开。
-- macOS 正式身份打包三次均在 electron-builder 对不同框架文件执行 `codesign --timestamp` 时遭遇 Apple “The timestamp service is not available”。没有跳过时间戳，也没有生成可公证的 3.14.28 DMG。本地仅留 3.14.27 已公证 DMG；签名服务恢复后须重新构建、公证和安装验证。
+- 隔离 Electron 设置页 E2E 已验证插件初始关闭、手动开启后两项权限显示已授权，锁屏单独提示；定向诊断、映射、引导与 IPC 测试通过。已解锁 Mac 上的正式包通过 IDE 原生全屏 E2E；随包原生执行器能读取授权、列出应用、观察备忘录及截图，并两次点击“开关边栏”恢复原状。
+- 源码提交 `6eddb6c9c819a669acab487cc2e43381245472b3` 的 `v3.14.28` 已公开并包含七个安装资产。Windows 构建 `38084702723`、Linux 构建 `38084702737` 双架构成功；Linux 候选安装验收 `38085863542` 全部成功。Windows 候选安装验收 `38086144107` 的 ARM64 首次通过，x64 首次安装触发 NSIS `System.dll` 的 `0xC0000005`，仅重跑失败作业的第 2 次尝试通过；该偶发故障仍未根治。公开安装复验 `38090291851` 的六个 Windows/Linux 作业全部成功，均先校验公开资产摘要再安装。旧版 `v3.14.27` 的七个安装资产已从 GitHub Release 清理，保留其历史发布记录。
+- macOS Apple Silicon 从该精确源码提交重新打包，Developer ID 签名并获 Apple 公证 Accepted（提交 ID `a66778a8-d560-41f3-9bcb-33f2b043368a`），DMG 已装订。公开下载的 DMG SHA-256 为 `540e92607da7cf1b3f2d66dc83aa228919a644dd7f332223d70843651fcea50b`，装订验证、挂载 App 严格签名及 Gatekeeper `Notarized Developer ID` 均通过。`release-artifacts` 仅保留此最新版公证 DMG。Apple 时间戳服务曾短暂不可用；只对该瞬时故障有限重试，未关闭时间戳或 hardened runtime。
+- IDE 原生全屏自动场景通过，但用户所指“应隐藏的那一排”仍缺新的定位截图，尚未完成该具体视觉验收。外部 `zcode.z.ai` Landing Page 的部署入口仍未在本仓库定位；不能把 README 指向 Latest 当作站点已更新。
 
 ## 3.14.27 发布验收
 
-- GitHub `bennix/ZCode` 的 `v3.14.27` 已公开且标为 Latest，7 个规范安装资产齐全。Tag 直接指向产品源码提交 `53b55fe68e453a06fec9a465de2bc40f8cac2fb6`，资产摘要与公开 Release 一致。
-- macOS Apple Silicon：Developer ID 签名及 Apple 公证 Accepted（提交 ID `458206cb-577e-4f39-80a2-2eb41edd6763`）；DMG 装订、挂载 App 的严格签名和 Gatekeeper `Notarized Developer ID` 检查通过。`release-artifacts` 只保留 `ZenCode-3.14.27-mac-arm64.dmg`，SHA-256 `cbfee5318973e6249348aba547785e7b4d7d6d74cad689cee0fd35c05e34879f`，与公开资产相同。从正式 DMG 挂载启动的电脑控制首次设置及创作/多 Agent 引导 E2E 通过。
+- GitHub `bennix/ZCode` 的 `v3.14.27` 曾公开并标为 Latest，发布时 7 个规范安装资产齐全。Tag 直接指向产品源码提交 `53b55fe68e453a06fec9a465de2bc40f8cac2fb6`，资产摘要与当时公开 Release 一致。
+- macOS Apple Silicon：Developer ID 签名及 Apple 公证 Accepted（提交 ID `458206cb-577e-4f39-80a2-2eb41edd6763`）；DMG 装订、挂载 App 的严格签名和 Gatekeeper `Notarized Developer ID` 检查通过。当时 `release-artifacts` 只保留 `ZenCode-3.14.27-mac-arm64.dmg`，SHA-256 `cbfee5318973e6249348aba547785e7b4d7d6d74cad689cee0fd35c05e34879f`，与当时公开资产相同。从正式 DMG 挂载启动的电脑控制首次设置及创作/多 Agent 引导 E2E 通过。
 - Windows x64/ARM64 构建 `38078439366`、Linux x64/ARM64 构建 `38078439125` 成功。候选安装后验收 `38080749184` 的 7 个作业均成功，覆盖 Windows 两架构安装及首次启动、Linux 两架构 deb 安装及首次启动、两架构 rpm 容器安装。公开 Release 下载后的独立复验 `38081392999` 的 7 个作业也全部成功，均先校验公开资产 SHA-256 再执行安装检查。
 - macOS 正式包 IDE 聚焦后的 resize 布局通过。原生全屏 E2E 在当前测试环境中调用到达 Main，但窗口仍保持 1200×800 且未产生 fullscreen 事件；`NSWorkspace.frontmostApplication` 为 `com.apple.loginwindow`，确认测试环境处于锁屏会话，故不能宣称原生全屏已验收。用户所指应隐藏的具体行需要新截图。外部 `zcode.z.ai` Landing Page 仍显示 3.14.5，站点源码与部署入口不在本仓库；仓库 README 已指向 GitHub Latest。
 
