@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import { aboutUpdatePresentation } from "../src/main/aboutUpdatePresentation.js";
 import { createCustomAboutDialogHtml } from "../src/main/aboutWindow.js";
+import { isPackageManagedLinuxUpdateRuntime } from "../src/main/packageManagedLinuxUpdate.js";
 test("about distinguishes installed latest, new version, unsupported build and errors", () => {
   assert.match(
     aboutUpdatePresentation({ kind: "up-to-date", currentVersion: "1.0.0" }, "zh-CN").text,
@@ -12,6 +13,10 @@ test("about distinguishes installed latest, new version, unsupported build and e
     /2.0.0/,
   );
   assert.match(aboutUpdatePresentation({ kind: "dev-skipped" }, "zh-CN").text, /未启用/);
+  assert.match(
+    aboutUpdatePresentation({ kind: "package-managed" }, "zh-CN").text,
+    /包管理器|GitHub Releases/u,
+  );
   assert.equal(
     aboutUpdatePresentation({ kind: "error", message: "offline" }, "en-US").button,
     "Retry",
@@ -20,6 +25,13 @@ test("about distinguishes installed latest, new version, unsupported build and e
     aboutUpdatePresentation({ kind: "ready", version: "2.0.0" }, "zh-CN").button,
     /重启/,
   );
+});
+test("DEB/RPM 使用包管理器更新，AppImage 继续使用原生更新器", () => {
+  assert.equal(isPackageManagedLinuxUpdateRuntime("linux", undefined), true);
+  assert.equal(isPackageManagedLinuxUpdateRuntime("linux", ""), true);
+  assert.equal(isPackageManagedLinuxUpdateRuntime("linux", "/tmp/ZenCode.AppImage"), false);
+  assert.equal(isPackageManagedLinuxUpdateRuntime("win32", undefined), false);
+  assert.equal(isPackageManagedLinuxUpdateRuntime("darwin", undefined), false);
 });
 test("About contains dedicated update action, version and escaped dynamic content", () => {
   const html = createCustomAboutDialogHtml({
@@ -37,9 +49,19 @@ test("About contains dedicated update action, version and escaped dynamic conten
   assert.match(html, /&lt;untrusted&gt;/);
   assert.match(html, /zencode-about:\/\/check-update/);
 });
-test("GitHub source is explicit and rejects URLs or injected paths",async()=>{
- const {parseGitHubUpdateRepository}=await import("../src/main/githubUpdateSource.js");
- assert.equal(parseGitHubUpdateRepository(null),null);
- assert.deepEqual(parseGitHubUpdateRepository("example/desktop"),{owner:"example",repo:"desktop"});
- for(const value of ["https://github.com/example/desktop","example/../secret","example/..",{},"owner/repo?token=secret"]) assert.throws(()=>parseGitHubUpdateRepository(value));
+test("GitHub source is explicit and rejects URLs or injected paths", async () => {
+  const { parseGitHubUpdateRepository } = await import("../src/main/githubUpdateSource.js");
+  assert.equal(parseGitHubUpdateRepository(null), null);
+  assert.deepEqual(parseGitHubUpdateRepository("example/desktop"), {
+    owner: "example",
+    repo: "desktop",
+  });
+  for (const value of [
+    "https://github.com/example/desktop",
+    "example/../secret",
+    "example/..",
+    {},
+    "owner/repo?token=secret",
+  ])
+    assert.throws(() => parseGitHubUpdateRepository(value));
 });

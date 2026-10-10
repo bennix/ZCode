@@ -265,6 +265,9 @@ export function useRootPlatformEffects({
             case "dev-skipped":
               toast(intl.formatMessage({ id: "update.toast.devSkipped" }));
               return;
+            case "package-managed":
+              toast(intl.formatMessage({ id: "update.toast.packageManaged" }));
+              return;
             case "error":
               toast(intl.formatMessage({ id: "update.toast.error" }, { error: payload.message }));
               return;

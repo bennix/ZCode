@@ -1489,6 +1489,7 @@ const zhCN: Record<string, string> = {
   "update.toast.alreadyDownloading": "正在下载新版本（{progress}%）",
   "update.toast.ready": "v{version} 已下载，重启即可安装",
   "update.toast.devSkipped": "开发环境不检查更新",
+  "update.toast.packageManaged": "Linux DEB/RPM 请通过包管理器或 GitHub Releases 检查并安装更新",
   "update.toast.error": "检查更新失败：{error}",
   "forceUpdate.title": "需要升级 ZenCode 后继续使用",
   "forceUpdate.description":

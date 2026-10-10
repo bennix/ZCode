@@ -1609,6 +1609,8 @@ const enUS: Record<string, string> = {
   "update.toast.alreadyDownloading": "Downloading new version ({progress}%)",
   "update.toast.ready": "v{version} downloaded, restart to install",
   "update.toast.devSkipped": "Updates are disabled in dev builds",
+  "update.toast.packageManaged":
+    "For Linux DEB/RPM, check and install updates through your package manager or GitHub Releases",
   "update.toast.error": "Update check failed: {error}",
   "forceUpdate.title": "Update ZenCode to continue",
   "forceUpdate.description":

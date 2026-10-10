@@ -23,6 +23,7 @@ export type UpdateCheckResultPayload =
   | { kind: "downloading"; version: string }
   | { kind: "already-downloading"; version: string; progress: string }
   | { kind: "ready"; version: string }
+  | { kind: "package-managed" }
   | { kind: "dev-skipped" }
   | { kind: "error"; message: string };
 

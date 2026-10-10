@@ -22,19 +22,26 @@ test("published desktop app checks its GitHub update manifest", async () => {
   const root = await mkdtemp(join(tmpdir(), "zencode-about-update-e2e-"));
   const port = await freePort();
   let output = "";
-  const child = spawn(executable, [`--remote-debugging-port=${port}`], {
-    cwd: root,
-    env: {
-      ...process.env,
-      HOME: join(root, "home"),
-      ZCODE_DATA_BASE_DIR: join(root, "data"),
-      ZCODE_DESKTOP_HOME_DIR: join(root, "home"),
-      ZCODE_DESKTOP_USER_DATA_DIR: join(root, "user"),
-      ZCODE_DESKTOP_SESSION_DATA_DIR: join(root, "session"),
-      ZCODE_DISABLE_FIXED_REMOTE_DEBUGGING_PORT: "1",
+  const child = spawn(
+    executable,
+    [
+      `--remote-debugging-port=${port}`,
+      ...(process.env.ZENCODE_TEST_DISABLE_SANDBOX === "1" ? ["--no-sandbox"] : []),
+    ],
+    {
+      cwd: root,
+      env: {
+        ...process.env,
+        HOME: join(root, "home"),
+        ZCODE_DATA_BASE_DIR: join(root, "data"),
+        ZCODE_DESKTOP_HOME_DIR: join(root, "home"),
+        ZCODE_DESKTOP_USER_DATA_DIR: join(root, "user"),
+        ZCODE_DESKTOP_SESSION_DATA_DIR: join(root, "session"),
+        ZCODE_DISABLE_FIXED_REMOTE_DEBUGGING_PORT: "1",
+      },
+      stdio: ["ignore", "pipe", "pipe"],
     },
-    stdio: ["ignore", "pipe", "pipe"],
-  });
+  );
   for (const stream of [child.stdout, child.stderr]) {
     stream.on("data", (chunk) => {
       output = (output + chunk.toString()).slice(-8_000);
@@ -54,7 +61,9 @@ test("published desktop app checks its GitHub update manifest", async () => {
     assert.ok(browser, `packaged app did not expose CDP: ${output}`);
     const context = browser.contexts()[0];
     const page = context.pages()[0] ?? (await context.waitForEvent("page", { timeout: 30_000 }));
-    await page.getByRole("heading", { name: /^(?:欢迎来到 ZenCode|Welcome to ZenCode)$/u }).waitFor();
+    await page
+      .getByRole("heading", { name: /^(?:欢迎来到 ZenCode|Welcome to ZenCode)$/u })
+      .waitFor();
     await page.getByText(/^(?:暂时跳过|Skip for now)$/u).click();
     for (let step = 0; step < 3; step++) await page.getByText(/^(?:跳过|Skip)$/u).click();
     await page.getByTestId("workspace-help-menu-trigger").click();
@@ -62,12 +71,19 @@ test("published desktop app checks its GitHub update manifest", async () => {
     await page.getByText(/^(?:关于 ZenCode|About ZenCode)$/u).click();
     const aboutPage = await aboutPagePromise;
     await aboutPage.locator("#update-status").waitFor();
-    await aboutPage.waitForFunction(() => {
-      const text = document.querySelector("#update-status")?.textContent ?? "";
-      return /^(?:已是最新版本|Up to date|发现新版本|New version)/u.test(text);
-    }, undefined, { timeout: 45_000 });
+    await aboutPage.waitForFunction(
+      () => {
+        const text = document.querySelector("#update-status")?.textContent ?? "";
+        return /^(?:已是最新版本|Up to date|发现新版本|New version|Linux DEB\/RPM|For Linux DEB\/RPM)/u.test(
+          text,
+        );
+      },
+      undefined,
+      { timeout: 45_000 },
+    );
     const status = (await aboutPage.locator("#update-status").innerText()).trim();
     assert.doesNotMatch(status, /Cannot find latest(?:-mac)?\.yml/iu);
+    if (process.platform === "linux") assert.match(status, /包管理器|package manager/u);
     console.log(`packaged update check: ${status}`);
   } finally {
     await browser?.close();

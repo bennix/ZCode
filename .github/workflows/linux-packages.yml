@@ -89,3 +89,8 @@ jobs:
           test -x "$(command -v zcode)"
           ZENCODE_PACKAGED_APP_PATH="$(command -v zcode)" ZENCODE_TEST_DISABLE_SANDBOX=1 \
             xvfb-run -a node --test packages/desktop/tests/computer-use-settings.e2e.mjs
+
+      - name: Check installed deb About update guidance
+        run: |
+          ZENCODE_PACKAGED_APP_PATH="$(command -v zcode)" ZENCODE_TEST_DISABLE_SANDBOX=1 \
+            xvfb-run -a node --test packages/desktop/tests/about-update-packaged.e2e.mjs

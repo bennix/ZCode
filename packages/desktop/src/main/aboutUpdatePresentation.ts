@@ -31,6 +31,13 @@ export function aboutUpdatePresentation(result: UpdateCheckResultPayload, locale
           : "Automatic updates are unavailable for this build or channel",
         button: check,
       };
+    case "package-managed":
+      return {
+        text: zh
+          ? "Linux DEB/RPM 请通过包管理器或 GitHub Releases 检查并安装更新"
+          : "For Linux DEB/RPM, check and install updates through your package manager or GitHub Releases",
+        button: check,
+      };
     case "error":
       return {
         text: `${zh ? "检查失败" : "Check failed"}: ${result.message}`,

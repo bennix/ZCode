@@ -21,6 +21,7 @@ import pkg, { CancellationToken } from "electron-updater";
 import semver from "semver";
 import { logger } from "./logger.js";
 import { getElectronReleasePlatform, ManifestUpdateProvider } from "./manifestUpdateProvider.js";
+import { isPackageManagedLinuxUpdateRuntime } from "./packageManagedLinuxUpdate.js";
 const { autoUpdater } = pkg;
 
 export const CHECK_FOR_UPDATE_MENU_ID = "check-for-update";
@@ -904,10 +905,16 @@ async function clearPendingPostUpdateReleaseNotes(
   logger.info(`[auto-update] cleared post-update release notes (${reason}) version=${version}`);
 }
 
-const manualUpdateResultListeners = new Set<(windowId: number, result: UpdateCheckResultPayload) => void>();
-export function onManualUpdateCheckResult(listener: (windowId: number, result: UpdateCheckResultPayload) => void) {
+const manualUpdateResultListeners = new Set<
+  (windowId: number, result: UpdateCheckResultPayload) => void
+>();
+export function onManualUpdateCheckResult(
+  listener: (windowId: number, result: UpdateCheckResultPayload) => void,
+) {
   manualUpdateResultListeners.add(listener);
-  return () => { manualUpdateResultListeners.delete(listener); };
+  return () => {
+    manualUpdateResultListeners.delete(listener);
+  };
 }
 function notifyManualUpdateResult(win: BrowserWindow, payload: UpdateCheckResultPayload) {
   if (win.isDestroyed()) return;
@@ -1525,14 +1532,17 @@ export async function initAutoUpdater(options: InitAutoUpdaterOptions = {}): Pro
   githubUpdateSourceMissing = !github && !options.updateFeedSource;
   if (githubUpdateSourceMissing) {
     logger.warn("[auto-update] GitHub release repository is not configured");
-    setAutoUpdaterMenuState({kind:"idle",enabled:true});
+    setAutoUpdaterMenuState({ kind: "idle", enabled: true });
     return;
   }
   githubUpdateSourceActive = Boolean(github);
   if (github) {
-    autoUpdater.allowPrerelease = (await resolveUpdateReleaseChannel(options.settingService)) === "preview";
-    autoUpdater.setFeedURL({provider:"github",owner:github.owner,repo:github.repo});
-  } else { applyManifestUpdateProvider(options); }
+    autoUpdater.allowPrerelease =
+      (await resolveUpdateReleaseChannel(options.settingService)) === "preview";
+    autoUpdater.setFeedURL({ provider: "github", owner: github.owner, repo: github.repo });
+  } else {
+    applyManifestUpdateProvider(options);
+  }
 
   const triggerCheckForUpdates = (reason: string) => {
     if (checkForUpdatesInFlight) {
@@ -1806,7 +1816,10 @@ export function requestForceAutoUpdate(
   onStateChange({ kind: "checking" });
 
   if (githubUpdateSourceMissing) {
-    onStateChange({kind:"error",message:"ZenCode GitHub Releases repository has not been configured"});
+    onStateChange({
+      kind: "error",
+      message: "ZenCode GitHub Releases repository has not been configured",
+    });
     return dispose;
   }
   if (!canUseAutoUpdaterInCurrentRuntime()) {
@@ -1890,7 +1903,13 @@ export function checkForUpdateMenuClick(originWindow?: BrowserWindow | null, che
   }
 
   if (githubUpdateSourceMissing) {
-    notifyManualUpdateResult(targetWindow, {kind:"error",message: menuLocale === "zh-CN" ? "尚未配置 ZenCode 的 GitHub Releases 发布仓库" : "ZenCode GitHub Releases repository has not been configured"});
+    notifyManualUpdateResult(targetWindow, {
+      kind: "error",
+      message:
+        menuLocale === "zh-CN"
+          ? "尚未配置 ZenCode 的 GitHub Releases 发布仓库"
+          : "ZenCode GitHub Releases repository has not been configured",
+    });
     return;
   }
   if (autoUpdaterDisabledForProductFlavor) {
@@ -1902,9 +1921,19 @@ export function checkForUpdateMenuClick(originWindow?: BrowserWindow | null, che
     return;
   }
 
+  if (isPackageManagedLinuxUpdateRuntime(process.platform, process.env.APPIMAGE)) {
+    // 修复依据：DEB/RPM 没有 APPIMAGE，electron-updater 会返回空结果且不发完成事件；
+    // 在进入 checking 状态前告知包管理器所有权，避免 About 永远显示“正在检查”。
+    notifyManualUpdateResult(targetWindow, { kind: "package-managed" });
+    return;
+  }
+
   if (menuState.kind === "update-downloaded") {
     // 修复：About 打开后的只读检查不能触发退出安装。
-    if (checkOnly) { notifyManualUpdateResult(targetWindow, { kind: "ready", version: menuState.version }); return; }
+    if (checkOnly) {
+      notifyManualUpdateResult(targetWindow, { kind: "ready", version: menuState.version });
+      return;
+    }
     // 菜单文案已经切到“重启以更新”，如果仍只发 ready toast，
     // 用户点击系统菜单不会安装更新，而顶部按钮会安装，两个入口语义不一致。
     // 这里复用按钮背后的安装逻辑，让菜单点击真正触发重启安装。
