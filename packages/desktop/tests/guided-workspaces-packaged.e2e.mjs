@@ -45,7 +45,9 @@ test("packaged first-use Studio and Agent board show task before advanced settin
       }
     }
     assert.ok(browser, "packaged desktop app did not open");
-    const page = browser.contexts()[0]?.pages()[0];
+    const context = browser.contexts()[0];
+    // 根因：CDP 端口先于首个窗口可用；等待真正的页面，避免首次启动被误判为失败。
+    const page = context?.pages()[0] ?? (await context?.waitForEvent("page", { timeout: 30_000 }));
     assert.ok(page, "packaged desktop window did not open");
     await page.getByRole("heading", { name: "欢迎来到 ZenCode" }).waitFor();
     await page.getByText("暂时跳过", { exact: true }).click();
