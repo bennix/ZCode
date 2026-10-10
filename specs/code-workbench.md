@@ -103,6 +103,7 @@ IDE 打开成功 → useAppPanels 记录带 purpose 的 tab → 原浏览器面�
 
 全屏收起问题的已确认原因：工作台聚焦时原 conversation 栏变成宽度小于 480px 的 AI 停靠区；窗口全屏会触发通用 `resize` 自动收起策略，该策略误把停靠区当成普通会话栏并调用右侧面板折叠。自动收起仅适用于普通会话布局；IDE 聚焦布局由同一活动 tab 和显式返回状态派生，窗口尺寸变化不能自动折叠它。显式返回、手动收起和切换 tab 的原有语义不变。验收须先在浏览器场景覆盖聚焦态 resize 与普通会话态 resize，再在可进入原生全屏的桌面会话复测包内窗口。打包版 E2E 激活窗口时必须识别该 `.app` 的实际 bundle ID，并按测试子进程 PID 激活，不能把 Preview 的 bundle ID 写死到正式版验收路径或激活另一份同 ID 安装包。
 2026-10-10 验证：修复前 macOS 打包版注入 `resize` 后 IDE 聚焦消失；修复后同一打包测试通过，IDE 保持铺满、原浏览器工具栏隐藏；4 项浏览器场景通过。最新 macOS arm64 Preview 包已从隔离数据目录启动并进入系统原生全屏，窗口尺寸实际扩展，IDE 保持铺满、普通浏览器工具栏及工作区标题行隐藏，AI 停靠区仍在可视范围；截图 `/tmp/zencode-ide-fullscreen-theme-check.png` 已人工查看。截图仍显示 VS Code 自身的 Restricted Mode 横幅和 Command Center 行；用户此前所指需隐藏的具体行尚待重发截图确认，不能把这些 IDE 自身行误称为普通浏览器工具栏。
+2026-10-11 正式 DMG 复验环境的 `NSWorkspace.frontmostApplication` 为 `com.apple.loginwindow`；系统处于锁屏会话。原生全屏命令已到达 Main，但窗口不能成为前台，尺寸维持 1200×800 且没有全屏事件。打包版全屏 E2E 必须先检查已激活的测试进程确实是前台应用；锁屏或激活失败应明确报告环境前置条件，而不是把窗口没有扩展归因于 IDE 布局。此检查只读系统状态，不修改窗口所有者或全屏切换路径。已解锁交互会话仍须重新执行完整几何断言与截图验收。
 
 IDE 聚焦布局由当前活动 browser tab 的 `purpose=code-workbench` 派生，tab 状态仍由 `useAppPanels` 唯一持有。壳层只保存本窗口的“返回对话布局”显式覆盖及 AI 收起状态，不再另存一份 IDE URL/工作区身份。恢复已有 IDE tab、切换回 IDE tab 或重启后重新挂载时自动恢复铺满布局；返回对话布局只压制当前 tab，再次点击源码 IDE 创建新 tab 时恢复聚焦。普通网页 tab 不进入聚焦布局。验收需要覆盖恢复的 IDE tab、显式返回、重新打开及普通浏览器。
 

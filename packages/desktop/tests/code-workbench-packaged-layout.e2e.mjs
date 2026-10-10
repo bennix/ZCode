@@ -239,6 +239,22 @@ test(
         ]);
       }
       await page.bringToFront();
+      if (process.platform === "darwin") {
+        const { stdout } = await execFileAsync("osascript", [
+          "-l",
+          "JavaScript",
+          "-e",
+          'ObjC.import("AppKit"); const front = $.NSWorkspace.sharedWorkspace.frontmostApplication; JSON.stringify({ pid: front.processIdentifier, bundleId: ObjC.unwrap(front.bundleIdentifier), name: ObjC.unwrap(front.localizedName) });',
+        ]);
+        const frontmost = JSON.parse(stdout.trim());
+        // 原因：锁屏时 AppKit 激活调用可能返回却无法让测试窗口成为前台；此时 macOS 不会进入原生全屏。
+        // 先验证交互会话前置条件，避免把无全屏事件误判成 IDE 布局回归。
+        assert.equal(
+          frontmost.pid,
+          child.pid,
+          `native full screen requires the packaged app in an unlocked foreground desktop; frontmost=${JSON.stringify(frontmost)}`,
+        );
+      }
       if (process.env.ZENCODE_IDE_ACTIVATE_ONLY === "1") {
         await page.waitForTimeout(5_000);
         assert.equal(await page.locator('[data-code-workbench-focus="true"]').count(), 1);
