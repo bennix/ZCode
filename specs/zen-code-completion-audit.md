@@ -4,7 +4,7 @@
 
 ## 3.14.26 发布验收
 
-- macOS Apple Silicon：Developer ID 签名、Apple 公证与 DMG staple/validate 成功；从 DMG 挂载的 App 经 `codesign --verify --deep --strict` 和 Gatekeeper 检查，结果为 `Notarized Developer ID`。隔离首次启动、创作及多 Agent 引导、IDE 主题与原生全屏 E2E 已通过。DMG 品牌背景修订后，卷内普通与 Retina 背景显示 `ZenCode`；外层 DMG 重新签名并经 Apple 公证（提交 ID `061db389-b8ef-437c-a85b-48b8ed5a539e`），`stapler validate`、`codesign --verify` 与 Gatekeeper 均通过。本地仅保留 `release-artifacts/ZenCode-3.14.26-mac-arm64.dmg`，SHA-256 为 `331363012cf4ee1d52a01668b31aa26cfec7032e1137df8016daa79f5257c832`。
+- macOS Apple Silicon：Developer ID 签名、Apple 公证与 DMG staple/validate 成功；从 DMG 挂载的 App 经 `codesign --verify --deep --strict` 和 Gatekeeper 检查，结果为 `Notarized Developer ID`。隔离首次启动、创作及多 Agent 引导、IDE 主题与原生全屏 E2E 已通过。DMG 品牌背景普通与 Retina 图像显示 `ZenCode`。连接故障切换备用模型前先结束失败请求的修复已包含在包内；最新 LZMA DMG 经 Apple 公证（提交 ID `8278422f-01cc-4076-9fec-1572c179e4dd`）、`stapler validate`、`codesign --verify` 与 Gatekeeper 检查通过。本地正式包为 `release-artifacts/ZenCode-3.14.26-mac-arm64.dmg`，SHA-256 为 `b55a1ea930b67ad52928479fe9c64c860211386f072a27ae143b5d5aa3e7e33e`。
 - Linux x64/ARM64：GitHub Actions `38035309613` 两作业成功，分别完成打包 MCP 握手、首次电脑控制设置、X11 原生动作、Weston Wayland AT-SPI 元素动作。验证的是 CI 图形会话，未覆盖 GNOME/KDE portal 授权、真实用户安装后的桌面环境或 glibc 2.39 以下系统。
 - Windows x64/ARM64：GitHub Actions `38039029480` 两作业成功，分别完成打包 MCP 握手、首次电脑控制设置及 WPF 窗口的 UIA `set_value` 与按钮 `click` 哨兵检查。验证的是登录的 CI 交互桌面，未覆盖锁屏、RDP 断线或最终安装器安装后的全部应用视觉检查。
 - 七个 Mac/Linux/Windows 安装资产已发布到 `bennix/ZCode` 的 `v3.14.26`，该版本为 Latest；旧软件发布 `v3.14.11` 及标签已移除。外部 `zcode.z.ai` Landing Page 仍显示 3.14.5 下载地址，其源码或部署入口不在当前仓库，待取得入口后更新；仓库 README 已指向 GitHub Latest。
