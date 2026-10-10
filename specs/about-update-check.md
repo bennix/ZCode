@@ -18,3 +18,7 @@ Main updater 是唯一状态所有者；About 是订阅者，关闭即解除订�
 GitHub provider：版本比较、平台/架构资产选择、SHA512 和现有签名/安装检查均复用。
 Release 需同时上传构建出的 latest*.yml、zip/dmg 或 exe/AppImage 及 blockmap；
 仅上传源码 zip 或 CI 临时 artifact 不构成自动更新发布。macOS 自动更新需签名。
+
+macOS 公证会改写并装订最终 DMG，因此发布所有者必须在装订后重算 DMG 的 SHA-512 与字节数，再生成最终 `latest-mac.yml`；ZIP 的摘要也必须来自实际上传文件。Release 至少同时提供 `latest-mac.yml`、其引用的签名 ZIP 与已公证 DMG。上传前后分别校验 metadata 中每个 URL 对应的真实文件和 SHA-512。缺少 metadata 或摘要不符时，Release 不得宣称“检查更新”可用。验收从已安装正式 App 发起检查，应显示“已是最新”或真实较新版本，不出现找不到 `latest-mac.yml`。
+
+Windows GitHub provider 使用一个 `latest.yml`。x64 与 ARM64 规范安装器都要列入 `files`，文件名包含架构，以便 electron-updater 按当前 `process.arch` 选择。摘要和字节数必须取自最终公开安装器；清单的主 `path`/`sha512` 指向 x64，两个架构的 URL 均须在 Release 中存在。发布后分别在 Windows x64、ARM64 已安装应用中从 About 发起检查，不能只检查 YAML 可下载。
