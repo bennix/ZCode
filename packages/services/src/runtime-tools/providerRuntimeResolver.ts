@@ -1,7 +1,7 @@
 import { existsSync } from "node:fs";
 import { homedir } from "node:os";
 import { resolve as resolvePath } from "node:path";
-import { ZCODE_AGENT_RUNTIME } from "@zcode/shared";
+import { ZCODE_AGENT_RUNTIME, ZCODE_PACKAGED_RESOURCES_PATH_ENV } from "@zcode/shared";
 
 const packagedResourcesPath =
   typeof (process as NodeJS.Process & { resourcesPath?: string }).resourcesPath === "string"
@@ -49,6 +49,10 @@ export function findZCodeAgentRuntimeBinary(): string | null {
   if (envPath && existsSync(envPath)) {
     return envPath;
   }
+  const desktopResourcesPath = process.env[ZCODE_PACKAGED_RESOURCES_PATH_ENV];
+  if (desktopResourcesPath) {
+    return resolveExistingPath([resolvePath(desktopResourcesPath, ...resourceSegments)]);
+  }
 
   // import.meta.dirname 在打包后的 CJS bundle（zcode-server.cjs）中是 undefined，
   // 直接传给 resolvePath 会报 "paths[0]" argument must be of type string。
@@ -78,6 +82,12 @@ export function findZCodeAgentRuntimeNodeBundle(): string | null {
   const runtime = ZCODE_AGENT_RUNTIME;
   const entrySegments = runtime.resolveNodeBundleSegments();
   const resourceSegments = [runtime.bundledResourceDir, ...entrySegments];
+  // 安装后的 utility process 可能没有 process.resourcesPath；Main 的显式路径是唯一包内事实。
+  // 指定后不回退 checkout，避免测试从源码目录误判安装包已带 Agent。
+  const desktopResourcesPath = process.env[ZCODE_PACKAGED_RESOURCES_PATH_ENV];
+  if (desktopResourcesPath) {
+    return resolveExistingPath([resolvePath(desktopResourcesPath, ...resourceSegments)]);
+  }
 
   // 与 findZCodeAgentRuntimeBinary 一致，打包后的 CJS bundle 里 import.meta.dirname 为 undefined，
   // 这里做空值保护后再构建仓库内候选路径。

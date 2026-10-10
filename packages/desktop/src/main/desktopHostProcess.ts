@@ -32,6 +32,7 @@ import {
   type RemoteTarget,
   type WorkspacePurpose,
   ZCODE_DESKTOP_CONTEXT_PROMPT_ENABLED_ENV,
+  ZCODE_PACKAGED_RESOURCES_PATH_ENV,
 } from "@zcode/shared";
 import { getMainLaunchPartialMarks } from "./desktopLaunchMarks.js";
 import { BroadcastHub } from "./broadcastHub.js";
@@ -260,6 +261,8 @@ export function spawnHostProcess(
     env: {
       ...buildHostProcessEnv(dependencies.hostProcessLocalEnv),
       ...buildHostE2ECoverageEnv(),
+      // 已安装包的 utility process 没有可靠的 process.resourcesPath；由 Main 传递唯一资源根目录。
+      ...(app.isPackaged ? { [ZCODE_PACKAGED_RESOURCES_PATH_ENV]: process.resourcesPath } : {}),
       ZCODE_PROCESS_LABEL: label,
       // macOS-only: the Computer Use Helper launcher runs inside this forked host utilityProcess, whose
       // code-signing identity is a nested Electron helper (NOT dev.zcode.app). Publish THIS (main
@@ -565,7 +568,6 @@ export function spawnHostProcess(
       });
       return;
     }
-
 
     if (result.data.type === HostResponseTypes.BotRemoteWorkspaceReconnectRequest) {
       const request = result.data;

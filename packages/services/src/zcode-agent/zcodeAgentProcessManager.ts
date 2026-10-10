@@ -16,6 +16,7 @@ import {
 } from "@zcode/shared/process-diagnostic";
 import {
   ZCODE_AGENT_RUNTIME,
+  ZCODE_PACKAGED_RESOURCES_PATH_ENV,
   ZCODE_AGENT_PROVIDER,
   ZCODE_RUNTIME_ENV_KEY,
   resolveWorkspaceKey,
@@ -418,7 +419,7 @@ function resolveElectronRuntimeZCodeAgentCommand(
   // 不再随包内置一份独立 Node 二进制（体积从 ~180MB 降到 ~16MB，且跨平台同一份 JS）。
   // 用 process.versions.electron 作为闸门：远端 SSH/WSL host 由系统 Node 运行、没有 electron，
   // 会跳过这里继续走原生二进制兜底，桌面/远端两条链路互不影响。
-  if (!process.versions.electron) {
+  if (!process.versions.electron && !process.env[ZCODE_PACKAGED_RESOURCES_PATH_ENV]) {
     return null;
   }
   const bundlePath = findZCodeAgentRuntimeNodeBundle();

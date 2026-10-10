@@ -1,5 +1,8 @@
 export type ZCodeAgentBinaryKind = "native-binary";
 
+/** Main 传给已安装桌面 Host 的 resources 根目录；utility process 不保证暴露 process.resourcesPath。 */
+export const ZCODE_PACKAGED_RESOURCES_PATH_ENV = "ZCODE_PACKAGED_RESOURCES_PATH";
+
 export interface ZCodeAgentRuntimeDescriptor {
   binaryKind: ZCodeAgentBinaryKind;
   binaryEnvVar: string;
