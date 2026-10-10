@@ -34,6 +34,8 @@ test("fresh desktop exposes Computer Use settings and shares the plugin toggle",
     [
       ...(packagedExecutable ? [] : [join(repoRoot, "packages/desktop")]),
       `--remote-debugging-port=${port}`,
+      // 根因：CI 的 Xvfb runner 未配置 SUID sandbox helper；只对该测试进程关闭沙箱。
+      ...(process.env.ZENCODE_TEST_DISABLE_SANDBOX === "1" ? ["--no-sandbox"] : []),
       ...(process.env.ZENCODE_TEST_APP_LANG ? [`--lang=${process.env.ZENCODE_TEST_APP_LANG}`] : []),
     ],
     {
@@ -125,6 +127,7 @@ test("fresh desktop exposes Computer Use settings and shares the plugin toggle",
       child.kill("SIGTERM");
       await new Promise((exit) => child.once("exit", exit));
     }
-    await rm(root, { recursive: true, force: true });
+    // 根因：Windows 的插件工作目录句柄可能在 Electron 退出后短暂占用；有界重试保留真实失败。
+    await rm(root, { recursive: true, force: true, maxRetries: 10, retryDelay: 200 });
   }
 });

@@ -1,17 +1,17 @@
-# ZCode
+# ZenCode
 
 <div align="center">
-  <img src="public/logo/icons/1024x1024.png" alt="ZCode" width="128" height="128" />
+  <img src="public/icon_512@2x.png" alt="ZenCode blue octopus icon" width="128" height="128" />
 </div>
 <p align="center">
   <a href="README.md">简体中文</a> | English
 </p>
 
-ZCode is an AI coding workspace with desktop, browser, and terminal interfaces. This repository contains the clients, backend services, shared UI, and Agent CLI and runtime source code.
+ZenCode is an AI coding workspace with desktop, browser, and terminal interfaces. This repository contains the clients, backend services, shared UI, and Agent CLI and runtime source code.
 
-## Updates
+## Download the desktop app
 
-- 2026-9-23: Updated to ZCode v3.14.3.
+Download the macOS DMG, Windows installer, or Linux packages from the [latest GitHub release](https://github.com/bennix/ZCode/releases/latest). The release page lists only platforms whose builds and checks have completed. Source development instructions follow below.
 
 ## Setup
 

@@ -1,19 +1,17 @@
-# ZCode
+# ZenCode
 
 <div align="center">
-  <img src="public/logo/icons/1024x1024.png" alt="ZCode" width="128" height="128" />
+  <img src="public/icon_512@2x.png" alt="ZenCode 蓝章鱼图标" width="128" height="128" />
 </div>
 <p align="center">
   简体中文 | <a href="README.en.md">English</a>
 </p>
 
+ZenCode 是 AI 编程工作台，提供桌面应用、浏览器界面和终端 Agent。本仓库包含客户端、后端服务、共享 UI，以及 Agent CLI 与运行时源码。
 
+## 下载桌面版
 
-ZCode 是 AI 编程工作台，提供桌面应用、浏览器界面和终端 Agent。本仓库包含客户端、后端服务、共享 UI，以及 Agent CLI 与运行时源码。
-
-## 更新
-
-- 2026-9-23：更新至 ZCode v3.14.3 版本。
+从 [GitHub 最新发行版](https://github.com/bennix/ZCode/releases/latest) 下载 macOS DMG、Windows 安装程序或 Linux 软件包。下载页只展示已完成构建与验证的平台；源码开发步骤见下文。
 
 ## 初始化
 

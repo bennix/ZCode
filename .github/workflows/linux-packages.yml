@@ -57,6 +57,7 @@ jobs:
       - name: Check packaged first-use Computer Use settings
         env:
           ZENCODE_PACKAGED_APP_PATH: packages/desktop/dist/${{ matrix.unpacked }}/zcode
+          ZENCODE_TEST_DISABLE_SANDBOX: "1"
         run: xvfb-run -a node --test packages/desktop/tests/computer-use-settings.e2e.mjs
 
       - name: Check native X11 observation and click
