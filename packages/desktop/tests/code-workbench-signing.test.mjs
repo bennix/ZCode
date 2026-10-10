@@ -3,7 +3,7 @@ import { mkdtemp, mkdir, writeFile, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
-import { findMachOFiles } from "../scripts/sign-code-workbench.mjs";
+import { findMachOFiles } from "../scripts/sign-bundled-native.mjs";
 
 test("workbench signing selects Mach-O files and skips ordinary resources", async () => {
   const root = await mkdtemp(join(tmpdir(), "zencode-workbench-sign-"));

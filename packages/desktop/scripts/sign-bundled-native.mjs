@@ -39,7 +39,7 @@ export async function findMachOFiles(root) {
   return found.sort();
 }
 
-export async function signWorkbenchNativeFiles(root, identity) {
+export async function signBundledNativeFiles(root, identity) {
   const entitlements = resolve(import.meta.dirname, "../build/entitlements.mac.inherit.plist");
   const files = await findMachOFiles(root);
   for (const file of files) {

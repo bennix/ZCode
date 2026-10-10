@@ -28,6 +28,7 @@ test("fresh desktop exposes Computer Use settings and shares the plugin toggle",
       : resolve(repoRoot, requestedExecutable)
     : undefined;
   if (packagedExecutable) await access(packagedExecutable);
+  let recentOutput = "";
   const child = spawn(
     packagedExecutable || join(repoRoot, "node_modules/.bin/electron"),
     [
@@ -47,20 +48,30 @@ test("fresh desktop exposes Computer Use settings and shares the plugin toggle",
         ZCODE_DESKTOP_SESSION_DATA_DIR: join(root, "session"),
         ZCODE_DISABLE_FIXED_REMOTE_DEBUGGING_PORT: "1",
       },
-      stdio: "ignore",
+      stdio: ["ignore", "pipe", "pipe"],
     },
   );
+  for (const stream of [child.stdout, child.stderr]) {
+    stream.on("data", (chunk) => {
+      recentOutput = (recentOutput + chunk.toString()).slice(-8_000);
+    });
+  }
   let browser;
   try {
-    for (let attempt = 0; attempt < 50; attempt++) {
+    for (let attempt = 0; attempt < 150; attempt++) {
       try {
         browser = await chromium.connectOverCDP(`http://127.0.0.1:${port}`, { timeout: 1_000 });
         break;
       } catch {
+        if (child.exitCode !== null || child.signalCode !== null) break;
         await new Promise((wait) => setTimeout(wait, 200));
       }
     }
-    assert.ok(browser, "Electron did not expose CDP");
+    // 根因待实机日志确认：10 秒无 CDP 可能是首次解包慢，也可能是子进程退出；保留有界诊断。
+    assert.ok(
+      browser,
+      `Electron did not expose CDP (exit=${child.exitCode}, signal=${child.signalCode}): ${recentOutput}`,
+    );
     const context = browser.contexts()[0];
     // 根因：CDP 端口先于首个 BrowserWindow 可用；等待页面事件，避免把正常启动误判为无窗口。
     const page = context?.pages()[0] ?? (await context?.waitForEvent("page", { timeout: 30_000 }));

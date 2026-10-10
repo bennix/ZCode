@@ -1,5 +1,5 @@
 import { verifyWorkbenchBundle, stageWorkbenchBundle } from "./scripts/prepare-code-workbench.mjs";
-import { signWorkbenchNativeFiles } from "./scripts/sign-code-workbench.mjs";
+import { signBundledNativeFiles } from "./scripts/sign-bundled-native.mjs";
 /* eslint-disable max-lines -- Electron Builder config keeps related packaging hooks together so build order stays explicit. */
 import { cpSync, existsSync, mkdirSync, mkdtempSync, rmSync } from "node:fs";
 import { readdir, writeFile } from "node:fs/promises";
@@ -558,9 +558,15 @@ export default {
       ),
     );
     if (context.electronPlatformName === "darwin" && shouldEnableMacSigning) {
-      await runTimedAsync("afterPack:signWorkbenchNativeFiles", async () => {
-        const count = await signWorkbenchNativeFiles(packagedWorkbenchPath, rawMacSigningIdentity);
-        console.log(`[afterPack] signed code-workbench Mach-O files=${count}`);
+      await runTimedAsync("afterPack:signBundledNativeFiles", async () => {
+        const resources = resolvePackagedResourcesDir(context);
+        for (const name of ["code-workbench", "glm", "tools"]) {
+          const count = await signBundledNativeFiles(
+            resolve(resources, name),
+            rawMacSigningIdentity,
+          );
+          console.log(`[afterPack] signed ${name} Mach-O files=${count}`);
+        }
       });
     }
     const actualWindowsTarget =
