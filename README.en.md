@@ -13,6 +13,15 @@ ZenCode is an AI coding workspace with desktop, browser, and terminal interfaces
 
 Download the macOS DMG, Windows installer, or Linux packages from the [latest GitHub release](https://github.com/bennix/ZCode/releases/latest). The release page lists only platforms whose builds and checks have completed. Source development instructions follow below.
 
+The current stable release is **3.14.28**. Choose the package for your device:
+
+| Platform | Package |
+| --- | --- |
+| macOS Apple Silicon | [DMG](https://github.com/bennix/ZCode/releases/download/v3.14.28/ZenCode-3.14.28-mac-arm64.dmg) |
+| Windows x64 / ARM64 | [x64](https://github.com/bennix/ZCode/releases/download/v3.14.28/ZenCode-3.14.28-win-x64.exe) · [ARM64](https://github.com/bennix/ZCode/releases/download/v3.14.28/ZenCode-3.14.28-win-arm64.exe) |
+| Linux x64 | [DEB](https://github.com/bennix/ZCode/releases/download/v3.14.28/ZenCode-3.14.28-linux-amd64.deb) · [RPM](https://github.com/bennix/ZCode/releases/download/v3.14.28/ZenCode-3.14.28-linux-x86_64.rpm) |
+| Linux ARM64 | [DEB](https://github.com/bennix/ZCode/releases/download/v3.14.28/ZenCode-3.14.28-linux-arm64.deb) · [RPM](https://github.com/bennix/ZCode/releases/download/v3.14.28/ZenCode-3.14.28-linux-aarch64.rpm) |
+
 ## Setup
 
 Install Git, Node.js **24.14.0**, and pnpm **10.33.2**. [mise.toml](mise.toml) is the source of truth for tool versions. Run all development and packaging commands below from the repository root.
