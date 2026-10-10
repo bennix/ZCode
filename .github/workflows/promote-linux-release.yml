@@ -1,0 +1,48 @@
+name: Promote verified Linux release assets
+
+on:
+  workflow_dispatch:
+    inputs:
+      run_id:
+        description: Successful Linux packages run ID
+        required: true
+        type: string
+
+permissions:
+  actions: read
+  contents: write
+
+jobs:
+  promote-arm64:
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Verify source run and draft release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          SOURCE_RUN_ID: ${{ inputs.run_id }}
+        run: |
+          [[ "$SOURCE_RUN_ID" =~ ^[0-9]+$ ]]
+          run_json="$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$SOURCE_RUN_ID")"
+          test "$(jq -r '.name' <<< "$run_json")" = 'Linux packages'
+          test "$(jq -r '.conclusion' <<< "$run_json")" = 'success'
+          test "$(jq -r '.head_branch' <<< "$run_json")" = 'main'
+          test "$(gh release view v3.14.26 --repo "$GITHUB_REPOSITORY" --json isDraft --jq .isDraft)" = 'true'
+
+      - name: Download verified arm64 artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: zencode-linux-arm64
+          path: release-linux-arm64
+          run-id: ${{ inputs.run_id }}
+          github-token: ${{ github.token }}
+
+      - name: Verify and upload arm64 packages
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          deb=(release-linux-arm64/ZenCode-3.14.26-linux-arm64.deb)
+          rpm=(release-linux-arm64/ZenCode-3.14.26-linux-aarch64.rpm)
+          test -f "${deb[0]}"
+          test -f "${rpm[0]}"
+          sha256sum "${deb[0]}" "${rpm[0]}"
+          gh release upload v3.14.26 "${deb[0]}" "${rpm[0]}" --repo "$GITHUB_REPOSITORY"
