@@ -17,6 +17,15 @@ test("installed utility process resolves its Agent bundle from Main's resource p
     const bundle = join(resources, "glm", "zcode.cjs");
     await mkdir(join(resources, "glm"), { recursive: true });
     await writeFile(bundle, "// test Agent bundle");
+    // 已安装应用可能从源码 checkout 启动；开发入口不能抢走包内 Agent。
+    const sourceEntry = join(root, "apps", "zcode-cli", "packages", "cli", "src", "main.ts");
+    const tsxEntry = join(root, "node_modules", ".bin", "tsx");
+    await mkdir(join(root, "apps", "zcode-cli", "packages", "cli", "src"), {
+      recursive: true,
+    });
+    await mkdir(join(root, "node_modules", ".bin"), { recursive: true });
+    await writeFile(sourceEntry, "// development Agent");
+    await writeFile(tsxEntry, "// development launcher");
     process.chdir(root);
     process.env[ZCODE_PACKAGED_RESOURCES_PATH_ENV] = resources;
     delete process.env.ZCODE_AGENT_SERVER_COMMAND;
@@ -33,6 +42,14 @@ test("installed utility process resolves its Agent bundle from Main's resource p
 
     await rm(bundle);
     assert.equal(findZCodeAgentRuntimeNodeBundle(), null);
+    assert.equal(
+      resolveDefaultZCodeAgentCommand({
+        workspacePath: root,
+        workspaceKey: root,
+        presentationSurface: "desktop",
+      }),
+      null,
+    );
   } finally {
     process.chdir(originalCwd);
     if (originalResources === undefined) delete process.env[ZCODE_PACKAGED_RESOURCES_PATH_ENV];

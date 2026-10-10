@@ -451,11 +451,13 @@ export function resolveDefaultZCodeAgentCommand(
     );
   }
 
-  // 顺序：env 显式覆盖 → monorepo dev 源码/dist（dev 改源码立刻生效，不会被远端历史装的 native binary
-  // 抢先匹配）→ 桌面打包态 Electron Node runtime 跑 zcode.cjs → 已部署 native binary（远端 SSH 兜底）。
-  const bundled =
-    resolveBundledWorkspaceZCodeAgentCommand(context) ??
-    resolveElectronRuntimeZCodeAgentCommand(context);
+  // 已安装桌面包的资源根由 Main 指定，必须先用包内 Agent。若从 checkout 启动安装包，
+  // 旧顺序会先命中源码 TS 入口；它不支持存储准备，导致首次启动 unsupported_runtime。
+  // 开发态没有资源根，仍优先使用 monorepo dist/source 入口。
+  const bundled = process.env[ZCODE_PACKAGED_RESOURCES_PATH_ENV]
+    ? resolveElectronRuntimeZCodeAgentCommand(context)
+    : (resolveBundledWorkspaceZCodeAgentCommand(context) ??
+      resolveElectronRuntimeZCodeAgentCommand(context));
   return applyPresentationSurfaceToCommand(
     bundled
       ? { ...bundled, supportsStorageStartup: true }
