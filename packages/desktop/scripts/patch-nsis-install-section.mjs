@@ -3,9 +3,19 @@ import { writeFileSync } from "node:fs";
 
 const PATCH_MARKER = "; zcode-installer-details-v1";
 const ON_INIT_PATCH_MARKER = "; zencode-on-init-stages-v1";
+const ASSISTED_INIT_PATCH_MARKER = "; zencode-assisted-init-stages-v1";
+const USER_FOLDER_PATCH_MARKER = "; zencode-user-folder-stages-v1";
 
 function optionalMacro(name) {
   return [`!ifmacrodef ${name}`, `  !insertmacro ${name}`, "!endif"].join("\n");
+}
+
+function optionalStage(stage, indent = "    ") {
+  return [
+    `${indent}!ifmacrodef ZCodeReportInstallerStage`,
+    `${indent}  !insertmacro ZCodeReportInstallerStage "${stage}"`,
+    `${indent}!endif`,
+  ].join("\n");
 }
 
 function replaceRequired(source, needle, replacement, label) {
@@ -129,6 +139,77 @@ export function patchNsisOnInitStagesSource(source) {
   return sourceEol === "\r\n" ? patched.replaceAll("\n", "\r\n") : patched;
 }
 
+/** 把 initMultiUser 缩小到管理员、注册表和模式选择边界。 */
+export function patchNsisAssistedInitStagesSource(source) {
+  const sourceEol = source.includes("\r\n") ? "\r\n" : "\n";
+  let patched = source.replaceAll("\r\n", "\n").replaceAll("\r", "\n");
+  if (patched.includes(ASSISTED_INIT_PATCH_MARKER)) return source;
+  patched = replaceRequired(
+    patched,
+    "    ${endIf}\n\n    !ifndef MULTIUSER_INIT_TEXT_ADMINREQUIRED",
+    [
+      `    ${ASSISTED_INIT_PATCH_MARKER}`,
+      "    ${endIf}",
+      optionalStage("uac-completed"),
+      "\n    !ifndef MULTIUSER_INIT_TEXT_ADMINREQUIRED",
+    ].join("\n"),
+    "initMultiUser UAC boundary",
+  );
+  patched = replaceRequired(
+    patched,
+    "    ${GetParameters} $R0",
+    `${optionalStage("registry-completed")}\n` + "    ${GetParameters} $R0",
+    "initMultiUser registry boundary",
+  );
+  patched = replaceRequired(
+    patched,
+    '    ${if} $hasPerUserInstallation == "1"',
+    `${optionalStage("mode-selection-started")}\n` + '    ${if} $hasPerUserInstallation == "1"',
+    "initMultiUser mode selection",
+  );
+  return sourceEol === "\r\n" ? patched.replaceAll("\n", "\r\n") : patched;
+}
+
+/** 缩小首次用户安装目录查询中 System 插件的具体出错调用。 */
+export function patchNsisPerUserFolderStagesSource(source) {
+  const sourceEol = source.includes("\r\n") ? "\r\n" : "\n";
+  let patched = source.replaceAll("\r\n", "\n").replaceAll("\r", "\n");
+  if (patched.includes(USER_FOLDER_PATCH_MARKER)) return source;
+  patched = replaceRequired(
+    patched,
+    "      System::Store S\n      # Win7 has a per-user programfiles known folder",
+    [
+      `      ${USER_FOLDER_PATCH_MARKER}`,
+      optionalStage("user-folder-store-started", "      "),
+      "      System::Store S",
+      optionalStage("user-folder-store-completed", "      "),
+      "      # Win7 has a per-user programfiles known folder",
+    ].join("\n"),
+    "per-user folder store",
+  );
+  patched = replaceRequired(
+    patched,
+    "      System::Call 'SHELL32::SHGetKnownFolderPath(g \"${FOLDERID_UserProgramFiles}\", i ${KF_FLAG_CREATE}, p 0, *p .r2)i.r1'",
+    "      System::Call 'SHELL32::SHGetKnownFolderPath(g \"${FOLDERID_UserProgramFiles}\", i ${KF_FLAG_CREATE}, p 0, *p .r2)i.r1'" +
+      `\n${optionalStage("user-folder-query-completed", "      ")}`,
+    "per-user folder query",
+  );
+  patched = replaceRequired(
+    patched,
+    "        System::Call '*$2(&w${NSIS_MAX_STRLEN} .s)'",
+    "        System::Call '*$2(&w${NSIS_MAX_STRLEN} .s)'" +
+      `\n${optionalStage("user-folder-pointer-read-completed", "        ")}`,
+    "per-user folder pointer read",
+  );
+  patched = replaceRequired(
+    patched,
+    "        System::Call 'OLE32::CoTaskMemFree(p r2)'",
+    `        System::Call 'OLE32::CoTaskMemFree(p r2)'\n${optionalStage("user-folder-free-completed", "        ")}`,
+    "per-user folder release",
+  );
+  return sourceEol === "\r\n" ? patched.replaceAll("\n", "\r\n") : patched;
+}
+
 export async function patchNsisInstallSectionFile(filePath) {
   const source = await readFile(filePath, "utf8");
   const patched = patchNsisInstallSectionSource(source);
@@ -147,6 +228,22 @@ export async function patchNsisOnInitStagesFile(filePath) {
     return { changed: false, originalSource: null };
   }
 
+  await writeFile(filePath, patched, "utf8");
+  return { changed: true, originalSource: source };
+}
+
+export async function patchNsisAssistedInitStagesFile(filePath) {
+  return patchNsisTemplateFile(filePath, patchNsisAssistedInitStagesSource);
+}
+
+export async function patchNsisPerUserFolderStagesFile(filePath) {
+  return patchNsisTemplateFile(filePath, patchNsisPerUserFolderStagesSource);
+}
+
+async function patchNsisTemplateFile(filePath, patchSource) {
+  const source = await readFile(filePath, "utf8");
+  const patched = patchSource(source);
+  if (patched === source) return { changed: false, originalSource: null };
   await writeFile(filePath, patched, "utf8");
   return { changed: true, originalSource: source };
 }

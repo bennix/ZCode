@@ -67,8 +67,10 @@ import {
 } from "./scripts/desktop-native-package-policy.mjs";
 import { replaceAppAsarFromStaging } from "./scripts/app-asar-repack.mjs";
 import {
+  patchNsisAssistedInitStagesFile,
   patchNsisInstallSectionFile,
   patchNsisOnInitStagesFile,
+  patchNsisPerUserFolderStagesFile,
   restoreNsisInstallSectionFileSync,
 } from "./scripts/patch-nsis-install-section.mjs";
 
@@ -102,11 +104,7 @@ const DEFAULT_ELECTRON_MIRROR = "https://npmmirror.com/mirrors/electron/";
 // Linux CI（pnpm hoisted）往往解析不到该二进制，`asar list` 未运行即 exit 1。
 // 显式依赖 @electron/asar 并用 Node 直接执行 CLI，避免跨平台找不齐 shim。
 const requireFromConfig = createRequire(import.meta.url);
-let nsisInstallSectionPatched = false;
-let nsisInstallSectionOriginalSource = null;
-let nsisInstallSectionPath = null;
-let nsisOnInitOriginalSource = null;
-let nsisOnInitPath = null;
+let nsisTemplatesPatched = false;
 const desktopElectronVersion = requireFromConfig("./package.json").devDependencies.electron;
 const asarCliPath = resolve(
   dirname(requireFromConfig.resolve("@electron/asar/package.json")),
@@ -516,52 +514,38 @@ export default {
     runTimedSync("beforePack:restoreTargetNodePtyPrebuild", () =>
       restoreTargetNodePtyPrebuild({ desktopPackageRoot, targetPlatform }),
     );
-    if (context.electronPlatformName !== "win32" || nsisInstallSectionPatched) {
+    if (context.electronPlatformName !== "win32" || nsisTemplatesPatched) {
       return;
     }
 
-    nsisInstallSectionPath = resolve(
+    const nsisTemplateRoot = resolve(
       dirname(requireFromConfig.resolve("app-builder-lib/package.json")),
       "templates",
       "nsis",
-      "installSection.nsh",
     );
-    const patchResult = await runTimedAsync("beforePack:patchNsisInstallSection", () =>
-      patchNsisInstallSectionFile(nsisInstallSectionPath),
-    );
-    nsisOnInitPath = resolve(
-      dirname(requireFromConfig.resolve("app-builder-lib/package.json")),
-      "templates",
-      "nsis",
-      "installer.nsi",
-    );
-    let onInitPatchResult;
+    const patchPlan = [
+      { file: "installSection.nsh", patch: patchNsisInstallSectionFile },
+      { file: "installer.nsi", patch: patchNsisOnInitStagesFile },
+      { file: "assistedInstaller.nsh", patch: patchNsisAssistedInitStagesFile },
+      { file: "multiUser.nsh", patch: patchNsisPerUserFolderStagesFile },
+    ];
+    const restores = [];
     try {
-      onInitPatchResult = await runTimedAsync("beforePack:patchNsisOnInitStages", () =>
-        patchNsisOnInitStagesFile(nsisOnInitPath),
-      );
+      for (const { file, patch } of patchPlan) {
+        const filePath = resolve(nsisTemplateRoot, file);
+        const result = await runTimedAsync(`beforePack:patchNsis:${file}`, () => patch(filePath));
+        if (result.changed) restores.push({ filePath, originalSource: result.originalSource });
+      }
     } catch (error) {
-      restoreNsisInstallSectionFileSync({
-        filePath: nsisInstallSectionPath,
-        originalSource: patchResult.originalSource,
-      });
+      for (const restore of restores.reverse()) restoreNsisInstallSectionFileSync(restore);
       throw error;
     }
-    nsisInstallSectionPatched = true;
-    nsisInstallSectionOriginalSource = patchResult.originalSource;
-    nsisOnInitOriginalSource = onInitPatchResult.originalSource;
-    if (patchResult.changed || onInitPatchResult.changed) {
+    nsisTemplatesPatched = true;
+    if (restores.length) {
       // electron-builder 在当前进程内随后才会编译 NSIS；等整个构建进程退出后恢复 node_modules
       // 中的上游模板，避免把一次打包的定制内容永久留在开发依赖里。
       process.once("exit", () => {
-        restoreNsisInstallSectionFileSync({
-          filePath: nsisInstallSectionPath,
-          originalSource: nsisInstallSectionOriginalSource,
-        });
-        restoreNsisInstallSectionFileSync({
-          filePath: nsisOnInitPath,
-          originalSource: nsisOnInitOriginalSource,
-        });
+        for (const restore of restores.reverse()) restoreNsisInstallSectionFileSync(restore);
       });
     }
   },
