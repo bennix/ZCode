@@ -33,3 +33,5 @@ Linux 构建流水线在上传候选 deb/rpm 后，必须安装该架构的 deb 
 Windows 安装器崩溃诊断还应输出 NSIS 自身的阶段日志（若存在），以判断 `System.dll` 异常发生在初始化、清理、解包还是快捷方式阶段；日志缺失本身也是定位证据。不得因日志不存在而覆盖安装器原始失败。
 
 Windows x64 CI 曾在静默安装启动后约 4 秒，以 `0xC0000005` 崩溃；Application Error 明确指向 NSIS 临时目录中的 `System.dll`。现有阶段日志在 `customInit` 就通过 `System::Call GetCurrentProcessId` 加载该插件，这是已确认的早期调用点；崩溃具体指令与阶段仍待 NSIS 日志验证。阶段日志改用已存在的安装进程角色标记，卸载日志用固定的 `uninstaller` 标记，避免仅为获取 PID 就在安装早期加载 `System.dll`。UI 调整和快捷方式逻辑中的其他 `System::Call` 本次不扩大修改范围。验收要求 Windows x64/ARM64 静默安装、首次启动通过，失败仍输出原始退出码和阶段日志。
+
+候选验收允许只提供一个平台的成功构建 run ID 与完整源码 SHA，用于单独验证 Windows 安装器或 Linux 包；未提供的平台 job 全部跳过，不能偷偷改从已发布 Release 下载。提供两个 run ID 时执行全平台检查。发布版模式仍要求三个候选输入都为空，并校验固定的公开资产哈希。

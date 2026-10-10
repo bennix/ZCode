@@ -32,12 +32,13 @@ jobs:
           EXPECTED_SHA: ${{ inputs.expected_sha }}
         run: |
           if [[ -z "$WINDOWS_RUN_ID" && -z "$LINUX_RUN_ID" && -z "$EXPECTED_SHA" ]]; then exit 0; fi
-          [[ "$WINDOWS_RUN_ID" =~ ^[0-9]+$ ]]
-          [[ "$LINUX_RUN_ID" =~ ^[0-9]+$ ]]
           [[ "$EXPECTED_SHA" =~ ^[0-9a-f]{40}$ ]]
+          [[ -n "$WINDOWS_RUN_ID" || -n "$LINUX_RUN_ID" ]]
           for entry in "Windows package:$WINDOWS_RUN_ID" "Linux packages:$LINUX_RUN_ID"; do
             name="${entry%%:*}"
             run_id="${entry##*:}"
+            if [[ -z "$run_id" ]]; then continue; fi
+            [[ "$run_id" =~ ^[0-9]+$ ]]
             run_json="$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$run_id")"
             test "$(jq -r '.name' <<< "$run_json")" = "$name"
             test "$(jq -r '.conclusion' <<< "$run_json")" = 'success'
@@ -46,6 +47,7 @@ jobs:
           done
   windows-installer:
     needs: validate-source
+    if: ${{ inputs.expected_sha == '' || inputs.windows_run_id != '' }}
     strategy:
       fail-fast: false
       matrix:
@@ -131,6 +133,7 @@ jobs:
 
   linux-deb:
     needs: validate-source
+    if: ${{ inputs.expected_sha == '' || inputs.linux_run_id != '' }}
     strategy:
       fail-fast: false
       matrix:
@@ -195,6 +198,7 @@ jobs:
 
   linux-rpm:
     needs: validate-source
+    if: ${{ inputs.expected_sha == '' || inputs.linux_run_id != '' }}
     strategy:
       fail-fast: false
       matrix:
