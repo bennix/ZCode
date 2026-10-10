@@ -38,6 +38,26 @@ export async function drainPendingRuntimeCommandsForActiveLoop(
     if (command.mode !== "task-notification" && command.mode !== "subagent-message") {
       continue;
     }
+    if (command.mode === "task-notification" && this.sessionStore?.getSessionInputById) {
+      let ledger: { status?: string } | null | undefined;
+      try {
+        ledger = await this.sessionStore.getSessionInputById(String(command.id));
+      } catch (error) {
+        // 账本读取失败时保留当前通知及后续命令，重试或重启后才能安全决定是否交付。
+        this.logger?.warn("Failed to verify active-loop background notification ledger", {
+          commandId: command.id,
+          errorMessage: error instanceof Error ? error.message : String(error),
+          event: "background_task.notification.ledger_read_failed",
+          module: "core.runtime",
+        });
+        break;
+      }
+      if (ledger?.status !== "admitted") {
+        // TaskOutput 可能已先结算同一 requestId；终态通知只从内存视图移除。
+        this.runtimeCommandQueue.removeById(command.id);
+        continue;
+      }
+    }
     const removed = this.runtimeCommandQueue.removeById(command.id);
     if (!removed) continue;
     if (isStaleBranchRuntimeCommand(this, removed)) continue;

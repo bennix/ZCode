@@ -41,6 +41,7 @@ import {
   restoreWorkspaceFileRewindEntries,
 } from "./workspace-checkpoint-persistence.js";
 import { mainTurnCacheHitAggregateFromMessages } from "./turn-model-step-usage.js";
+import { restorePromotedBackgroundResponses } from "./background-notifications.js";
 
 export function toScheduleState(
   this: AgentRuntimeInternal,
@@ -232,6 +233,7 @@ export async function resumeFromStore(
     traceContext,
   });
   const recoveredSteerInputCount = await this.restorePersistedPendingInputs(traceContext);
+  await restorePromotedBackgroundResponses.call(this, traceContext);
   // 修复：重启只恢复已落盘的批次，将未完成调用标为中断；等待用户输入，不自动再调用模型。
   await restoreImageBatchMemory(this.sessionStore,this.sessionId);
   const resumedTodos = await this.readSessionTodosForContext(traceContext);
@@ -315,6 +317,19 @@ export async function resumeFromStore(
     sessionId: this.sessionId,
     status: "completed",
   });
+
+  if (this.runtimeCommandQueue.hasPending()) {
+    // 修复依据：admitted 后台通知的账本重放在 resume 阶段只恢复队列；
+    // 历史、目标状态和 SessionStart hook 均就绪后才准许重新启动模型消费。
+    void this.trackResidencyBlockingWork(this.drainRuntimeCommandQueue()).catch((error) => {
+      this.logger?.warn("Recovered background notification drain failed", {
+        ...traceContextToLogContext(traceContext),
+        errorMessage: error instanceof Error ? error.message : String(error),
+        event: "background_task.notification.resume_drain_failed",
+        module: "core.runtime",
+      });
+    });
+  }
 
   return {
     ...hydration,

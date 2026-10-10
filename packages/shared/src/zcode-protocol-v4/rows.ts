@@ -3,6 +3,7 @@
 // 结构变化换整行（row.upserted），文本增长用 append（row.delta）；turn 是 row 上的标签不是容器。
 import { z } from "zod";
 import { executionOutputPreviewSchema } from "../execution-output-preview.js";
+import { modelSelectionSchema } from "../model-selection.js";
 import { timestampSchema } from "./core.js";
 import { backgroundResultOriginMetaSchema, workflowLaunchMetaSchema } from "./workflow-row-meta.js";
 
@@ -58,6 +59,8 @@ export type TurnWorkSegment = z.infer<typeof turnWorkSegmentSchema>;
 export const turnHeaderRowSchema = z.object({
   ...rowBaseFields,
   kind: z.literal("turnHeader"),
+  /** 主请求实际使用的模型，独立于会话默认选择。 */
+  executionModel: modelSelectionSchema.optional(),
   // workflowLaunch：中枢直接启动的 controlOnly 轮。
   // 记录在案的偏斜：闭集枚举加值 → 旧桌面 + 新 CLI 时该行 parse 失败被丢（与下方
   // backgroundSource: "workflow" 加值同一档），CLI 与桌面同批发布下接受。

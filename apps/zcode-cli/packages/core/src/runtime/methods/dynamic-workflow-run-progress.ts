@@ -35,8 +35,8 @@ export async function recordDynamicWorkflowRunProgress(
     ),
     traceContext,
   );
-  notifyEscalationRaised.call(this, payload, traceContext);
-  notifyRunStalled.call(this, payload, traceContext);
+  await notifyEscalationRaised.call(this, payload, traceContext);
+  await notifyRunStalled.call(this, payload, traceContext);
 }
 
 /** run 级停滞的事件种类（引擎的 `RunEvent.type`）。 */
@@ -47,11 +47,11 @@ const RUN_STALLED_EVENT_TYPE = "run-stalled";
  * 纪律：每条事件恰好一条通知（driver 侧每个 stall 段只发一次，成功后重新上膛才会有下一条）；
  * 不催办；绝不抛异常——载荷形状不对就跳过并记一条日志。
  */
-function notifyRunStalled(
+async function notifyRunStalled(
   this: AgentRuntimeInternal,
   payload: DynamicWorkflowRunProgressPayload,
   traceContext: TraceContext,
-): void {
+): Promise<void> {
   if (payload.eventType !== RUN_STALLED_EVENT_TYPE) return;
   const sinceMs = payload.payload.sinceMs;
   if (typeof sinceMs !== "number" || !Number.isFinite(sinceMs) || sinceMs < 0) {
@@ -70,7 +70,7 @@ function notifyRunStalled(
     typeof capValue === "number" && Number.isFinite(capValue) && capValue >= 0
       ? Math.floor(capValue)
       : undefined;
-  this.enqueueBackgroundTaskNotification({
+  await this.enqueueBackgroundTaskNotification({
     originMeta: {
       backgroundSource: "workflow",
       title: runLabel,
@@ -110,11 +110,11 @@ const ESCALATION_RAISED_EVENT_TYPE = "escalation-raised";
  *   - **绝不抛异常**：这是观察面，而 run 的真相在 journal。载荷形状不对就跳过并记一条日志——
  *     它跨了端口边界又被有界化裁剪过，防御性读取是它应得的待遇。
  */
-function notifyEscalationRaised(
+async function notifyEscalationRaised(
   this: AgentRuntimeInternal,
   payload: DynamicWorkflowRunProgressPayload,
   traceContext: TraceContext,
-): void {
+): Promise<void> {
   if (payload.eventType !== ESCALATION_RAISED_EVENT_TYPE) return;
 
   const qid = stringField(payload.payload, "qid");
@@ -140,7 +140,7 @@ function notifyEscalationRaised(
   // askedAt 是 epoch ms，可能缺席（stringField 读不出数字，只能防御性直读）。
   const askedAt = payload.payload.askedAt;
 
-  this.enqueueBackgroundTaskNotification({
+  await this.enqueueBackgroundTaskNotification({
     originMeta: {
       backgroundSource: "workflow",
       title: runLabel,

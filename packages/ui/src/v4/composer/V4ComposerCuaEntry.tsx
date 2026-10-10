@@ -15,6 +15,7 @@ import { useZCodeIntl } from "@/i18n/IntlProvider.js";
 import {
   supportsLocalMacCuaPermissionOnboarding,
   supportsLocalWindowsCuaEntry,
+  supportsLocalLinuxCuaEntry,
 } from "@/lib/cuaPlatform.js";
 import {
   useCuaComposerEntry,
@@ -39,7 +40,9 @@ function V4ComposerCuaEntryImpl(props: V4ComposerCuaEntryProps) {
   const platformSupported =
     platform !== null &&
     services !== null &&
-    (supportsLocalMacCuaPermissionOnboarding(platform) || supportsLocalWindowsCuaEntry(platform));
+    (supportsLocalMacCuaPermissionOnboarding(platform) ||
+      supportsLocalWindowsCuaEntry(platform) ||
+      supportsLocalLinuxCuaEntry(platform));
   if (!platformSupported) return null;
   return <V4ComposerCuaEntryMounted {...props} />;
 }

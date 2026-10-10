@@ -1,7 +1,7 @@
 {
   "name": "computer-use",
   "version": "0.7.1",
-  "description": "Control macOS desktop applications with ZenCode's native executor.",
+  "description": "Control desktop applications on macOS, Windows, and Linux with ZenCode's native executors.",
   "author": { "name": "ZenCode" },
   "license": "Apache-2.0",
   "skills": "skills"

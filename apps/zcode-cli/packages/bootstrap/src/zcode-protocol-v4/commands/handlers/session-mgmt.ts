@@ -10,6 +10,7 @@ import { mapAttachmentRefsToTurnAttachments } from "../attachment-refs.js";
 import { inputIntentMetadata } from "../input-intent.js";
 import { commandAdmissionOf } from "../executor.js";
 import { startPromptTurn } from "../prompt-turn.js";
+import { createModelExecutionContext } from "../../../zcode-protocol/model-execution.js";
 import { requireRecord } from "../record-access.js";
 import type { V4CommandCoreHost } from "../types.js";
 import { applyRequestedSessionConfig } from "./model-config.js";
@@ -96,6 +97,9 @@ async function createSession(
         content: payload.firstInput.text,
         inputId: envelope.commandId,
         intent,
+        ...(payload.firstInput.modelExecution
+          ? { modelExecution: createModelExecutionContext(payload.firstInput.modelExecution) }
+          : {}),
         ...(attachments ? { attachments } : {}),
       });
       firstInput = {

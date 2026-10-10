@@ -10,6 +10,29 @@ import { promisify } from "node:util";
 import { getTargetPlatform } from "./target-platform.mjs";
 import { workbenchAsset, WORKBENCH_VERSION } from "./code-workbench-assets.mjs";
 
+const watermarkDirectories = [
+  "lib/vscode/out/vs/workbench/browser/parts/editor/media",
+  "lib/vscode/out/media",
+];
+const watermarkThemes = ["light", "dark", "hcLight", "hcDark"];
+
+export async function brandWorkbenchBundle(directory) {
+  const productPath = join(directory, "lib/vscode/product.json");
+  const product = JSON.parse(await readFile(productPath, "utf8"));
+  const icon = await readFile(resolve(import.meta.dirname, "../build/zenmux-icon.svg"), "utf8");
+  if (!icon.includes('viewBox="0 0 1024 1024"')) throw new Error("ZenCode icon is invalid");
+  const watermark = `<svg xmlns="http://www.w3.org/2000/svg" width="260" height="260" viewBox="0 0 260 260"><g opacity=".18"><svg x="20" y="20" width="220" height="220" viewBox="0 0 1024 1024">${icon.replace(/^<svg[^>]*>/, "").replace(/<\/svg>\s*$/, "")}</svg></g></svg>\n`;
+  const paths = watermarkDirectories.flatMap((base) =>
+    watermarkThemes.map((theme) => join(directory, base, `letterpress-${theme}.svg`)),
+  );
+  // 品牌资产缺失说明上游目录已变；必须阻止出包，避免隐藏的旧 LOGO 混入安装包。
+  await Promise.all(paths.map((path) => access(path)));
+  product.nameShort = "ZenCode";
+  product.nameLong = "ZenCode";
+  await writeFile(productPath, `${JSON.stringify(product, null, 2)}\n`);
+  await Promise.all(paths.map((path) => writeFile(path, watermark)));
+}
+
 export async function verifyWorkbenchBundle(directory, target) {
   const manifest = JSON.parse(await readFile(join(directory, "zencode-runtime.json"), "utf8"));
   const asset = workbenchAsset(target.os, target.arch);
@@ -36,6 +59,7 @@ export async function verifyWorkbenchBundle(directory, target) {
 
 export async function stageWorkbenchBundle(source, destination, target) {
   await verifyWorkbenchBundle(source, target);
+  await brandWorkbenchBundle(source);
   await cp(source, destination, { recursive: true, force: true, dereference: true });
   await verifyWorkbenchBundle(destination, target);
 }
@@ -46,7 +70,9 @@ export async function prepareWorkbench(
   const asset = workbenchAsset(target.os, target.arch);
   const destination = join(root, target.key);
   try {
-    return await verifyWorkbenchBundle(destination, target);
+    await verifyWorkbenchBundle(destination, target);
+    await brandWorkbenchBundle(destination);
+    return destination;
   } catch {
     /* 仅构建阶段准备资产 */
   }
@@ -77,6 +103,7 @@ export async function prepareWorkbench(
       }),
     );
     await verifyWorkbenchBundle(extracted, target);
+    await brandWorkbenchBundle(extracted);
     await rm(destination, { recursive: true, force: true });
     await rename(extracted, destination);
     console.log(`[workbench] Bundled asset ready: ${target.key}`);

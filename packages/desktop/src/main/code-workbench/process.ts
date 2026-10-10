@@ -12,6 +12,7 @@ import {
 } from "@zcode/shared";
 import { resolveBundledWorkbench } from "./install.js";
 import { writeWorkbenchExtension } from "./extension.js";
+import { updateWorkbenchTheme } from "./theme.js";
 
 export function isWithinWorkbench(root: string, path: string): boolean {
   const suffix = relative(root, path);
@@ -46,9 +47,10 @@ export async function startWorkbench(options: {
   await writeWorkbenchExtension(extensions);
   const data = join(options.root, "data", options.stateKey);
   await mkdir(join(data, "User"), { recursive: true });
+  const settingsPath = join(data, "User/settings.json");
   try {
     await writeFile(
-      join(data, "User/settings.json"),
+      settingsPath,
       JSON.stringify({
         "chat.disableAIFeatures": true,
         "workbench.startupEditor": "none",
@@ -59,10 +61,32 @@ export async function startWorkbench(options: {
   } catch (error) {
     if ((error as NodeJS.ErrnoException).code !== "EEXIST") throw error;
   }
+  let themeUpdate = Promise.resolve();
+  let currentTheme = options.request.theme ?? "dark";
+  let running = false;
+  const themeStreams = new Set<import("node:http").ServerResponse>();
+  const setTheme = (theme: "light" | "dark") => {
+    const next = themeUpdate.catch(() => {}).then(async () => {
+      // 启动后由 VS Code 扩展的配置 API 独占写入。外部改 settings.json 与扩展同时写会互相覆盖，导致主题闪回。
+      if (!running) await updateWorkbenchTheme(settingsPath, theme);
+      currentTheme = theme;
+      for (const stream of themeStreams) stream.write(`data: ${theme}\n\n`);
+    });
+    themeUpdate = next;
+    return next;
+  };
+  await setTheme(options.request.theme ?? "dark");
   const config = join(data, "code-server.yaml");
   await writeFile(config, "auth: none\ncert: false\n");
   const token = randomBytes(32).toString("hex");
   const bridge = createServer(async (req, res) => {
+    if (req.method === "GET" && req.url === "/theme-stream" && req.headers.authorization === `Bearer ${token}`) {
+      res.writeHead(200, { "Content-Type": "text/event-stream", "Cache-Control": "no-cache", Connection: "keep-alive" });
+      themeStreams.add(res);
+      res.write(`data: ${currentTheme}\n\n`);
+      req.on("close", () => themeStreams.delete(res));
+      return;
+    }
     if (
       req.method !== "POST" ||
       req.url !== "/context" ||
@@ -144,6 +168,8 @@ export async function startWorkbench(options: {
   let launchError: Error | undefined;
   const dispose = () => {
     stopped = true;
+    for (const stream of themeStreams) stream.end();
+    themeStreams.clear();
     child.kill();
     bridge.close();
   };
@@ -165,14 +191,17 @@ export async function startWorkbench(options: {
       if (stopped) throw launchError ?? new Error("IDE process exited during startup");
       try {
         const response = await fetch(`${origin}/healthz`, { signal: AbortSignal.timeout(1000) });
-        if (response.ok)
+        if (response.ok) {
+          running = true;
           return {
             origin,
             dispose,
+            setTheme,
             get alive() {
               return !stopped;
             },
           };
+        }
       } catch {
         /* 等待子进程就绪，不将此状态报告为已打开 */
       }

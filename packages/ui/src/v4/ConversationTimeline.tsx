@@ -1757,6 +1757,7 @@ function ConversationTimelineImpl({
         )}
       >
         <div
+          data-responsive-centered-empty-layout={responsiveCenteredEmptyLayout ? "true" : undefined}
           className={cn(
             // 固定高度断点会在窗口跨过临界值时让问候语与 composer 整组跳动。
             // 顶部留白按视口高度伸缩，输入框的位置不再受下方推荐列表高度影响；

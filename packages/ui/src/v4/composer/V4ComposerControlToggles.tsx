@@ -3,9 +3,10 @@
  */
 import { memo, useEffect, useRef, type ReactNode } from "react";
 import { GlobeIcon, MonitorCogIcon } from "lucide-react";
-import { ZCODE_CUA_OFFICIAL_PLUGIN_ID } from "@zcode/shared";
+import { isRemoteWorkspaceIdentity, ZCODE_CUA_OFFICIAL_PLUGIN_ID } from "@zcode/shared";
 import { Button } from "@/components/ui/button.js";
 import { useOptionalServices } from "@/hooks/useServices.js";
+import { useOptionalPlatform } from "@/hooks/usePlatform.js";
 import { useZCodeIntl } from "@/i18n/IntlProvider.js";
 import { cn } from "@/components/lib/utils.js";
 import { usePluginManagementStore } from "@/store/pluginManagementStore.js";
@@ -15,13 +16,16 @@ const BROWSER_USE_PLUGIN_ID = "browser-use@zcode-plugins-official";
 interface V4ComposerControlTogglesProps {
   workspacePath: string;
   workspaceIdentity?: string;
+  remoteSessionId?: string | null;
 }
 
 function V4ComposerControlTogglesImpl({
   workspacePath,
   workspaceIdentity,
+  remoteSessionId,
 }: V4ComposerControlTogglesProps) {
   const services = useOptionalServices();
+  const platform = useOptionalPlatform();
   const { intl } = useZCodeIntl();
   const plugins = usePluginManagementStore((state) => state.plugins);
   const loadedWorkspacePath = usePluginManagementStore((state) => state.workspacePath);
@@ -36,6 +40,12 @@ function V4ComposerControlTogglesImpl({
   // 原入口用局部 useState 记按钮颜色，插件缺失或 RPC 失败时仍会显示为开启。
   // 现在只读插件 store 的实际状态，并在工作区切换时重新加载该工作区概览。
   const workspaceKey = workspaceIdentity?.trim() || workspacePath;
+  // 原开关只检查 Desktop 平台，远程工作区仍能启用本机 CUA 插件；与设置页的本地限定不一致。
+  // 本机执行器只操作当前电脑，因此远程会话与远程 identity 都不能暴露此开关。
+  const showLocalComputerControl =
+    platform?.isDesktopRuntime === true &&
+    !remoteSessionId &&
+    !(workspaceIdentity?.trim() && isRemoteWorkspaceIdentity(workspaceIdentity.trim()));
   const loadedWorkspaceKey = loadedWorkspaceIdentity?.trim() || loadedWorkspacePath;
   const hasCurrentOverview = Boolean(
     workspaceKey && loadedWorkspaceKey === workspaceKey && !loading,
@@ -71,18 +81,20 @@ function V4ComposerControlTogglesImpl({
 
   return (
     <div className="flex items-center gap-1" data-composer-collapse-priority="0">
-      <ControlToggle
-        pressed={computerPlugin?.enabled === true}
-        label={intl.formatMessage({ id: "chat.toolbar.control.computer" })}
-        icon={<MonitorCogIcon className="size-4 shrink-0" aria-hidden />}
-        disabled={!computerPlugin || Boolean(togglingPluginId)}
-        unavailableReason={
-          missingComputer
-            ? intl.formatMessage({ id: "chat.toolbar.control.computerUnavailable" })
-            : undefined
-        }
-        onPressedChange={(next) => toggle(ZCODE_CUA_OFFICIAL_PLUGIN_ID, next)}
-      />
+      {showLocalComputerControl ? (
+        <ControlToggle
+          pressed={computerPlugin?.enabled === true}
+          label={intl.formatMessage({ id: "chat.toolbar.control.computer" })}
+          icon={<MonitorCogIcon className="size-4 shrink-0" aria-hidden />}
+          disabled={!computerPlugin || Boolean(togglingPluginId)}
+          unavailableReason={
+            missingComputer
+              ? intl.formatMessage({ id: "chat.toolbar.control.computerUnavailable" })
+              : undefined
+          }
+          onPressedChange={(next) => toggle(ZCODE_CUA_OFFICIAL_PLUGIN_ID, next)}
+        />
+      ) : null}
       <ControlToggle
         pressed={browserPlugin?.enabled === true}
         label={intl.formatMessage({ id: "chat.toolbar.control.browser" })}
@@ -95,7 +107,7 @@ function V4ComposerControlTogglesImpl({
         }
         onPressedChange={(next) => toggle(BROWSER_USE_PLUGIN_ID, next)}
       />
-      {missingComputer ? (
+      {showLocalComputerControl && missingComputer ? (
         <span role="status" className="text-ui-caption text-warning">
           {intl.formatMessage({ id: "chat.toolbar.control.computerUnavailable" })}
         </span>

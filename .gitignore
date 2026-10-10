@@ -71,3 +71,7 @@ packages/desktop/.e2e-network-capture/
 .zcode-runtime/
 
 packages/desktop/bundled-workbench/
+
+# Local release outputs are retained on disk and never committed.
+/release-output/
+/release-artifacts/

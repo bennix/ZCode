@@ -172,7 +172,11 @@ export async function persistUserPrompt(
       ),
       traceContext,
     );
-    await captureKnowledgeInput(this, { sessionId: this.sessionId, messageId: messageID, text: input, createdAt: created }, traceContext);
+    await captureKnowledgeInput(
+      this,
+      { sessionId: this.sessionId, messageId: messageID, text: input, createdAt: created },
+      traceContext,
+    );
     return;
   }
 
@@ -180,7 +184,11 @@ export async function persistUserPrompt(
   for (const part of parts) {
     await this.persistPart(part, traceContext);
   }
-  await captureKnowledgeInput(this, { sessionId: this.sessionId, messageId: messageID, text: input, createdAt: created }, traceContext);
+  await captureKnowledgeInput(
+    this,
+    { sessionId: this.sessionId, messageId: messageID, text: input, createdAt: created },
+    traceContext,
+  );
 }
 
 export async function persistSyntheticUserNotice(
@@ -209,9 +217,11 @@ export async function persistSyntheticUserNoticeForSession(
     /** 额外结构化 metadata，会与 `{ source }` 合并写到 part.metadata 上，供 UI 识别消息类型。 */
     metadata?: Record<string, unknown>;
     visibility?: MessageVisibility;
+    /** 后台通知账本 ID；存在时由 Store 原子提交消息和整批认领。 */
+    sessionInputIds?: string[];
   },
 ): Promise<void> {
-  if (options.sessionId === this.sessionId) {
+  if (options.sessionId === this.sessionId && !options.sessionInputIds) {
     this.latestConversationMessageId = options.messageID;
   }
   if (!this.sessionStore) return;
@@ -228,46 +238,55 @@ export async function persistSyntheticUserNoticeForSession(
     visibility,
     options.metadata,
   );
-  await this.persistMessage(
-    {
-      id: options.messageID,
-      sessionID: options.sessionId,
-      role: "user",
-      time: {
-        created,
-      },
-      agent: this.config.agentName ?? "zcode-agent",
-      metadata: messageMetadata,
-      modelSelection: this.getSessionModelSelection(),
-      semantics: buildSyntheticUserNoticeSemantics(options.source, visibility),
-      anchor: buildProjectionAnchor(
-        options.traceContext,
-        mapSyntheticSourceToAnchorOrigin(options.source),
-      ),
-      source: options.source,
-      system: this.config.systemPrompt,
-      synthetic: true,
-      tools: Object.fromEntries(this.getTools().map((tool) => [tool.name, true])),
-      visibility,
+  const message: Parameters<SessionStorePort["saveMessage"]>[0] = {
+    id: options.messageID,
+    sessionID: options.sessionId,
+    role: "user",
+    time: {
+      created,
     },
-    options.traceContext,
-  );
-  await this.persistPart(
-    {
-      id: createPartId(),
-      sessionID: options.sessionId,
-      messageID: options.messageID,
-      type: "text",
-      text: options.text,
-      synthetic: true,
-      time: {
-        start: created,
-        end: created,
-      },
-      metadata: partMetadata,
+    agent: this.config.agentName ?? "zcode-agent",
+    metadata: messageMetadata,
+    modelSelection: this.getSessionModelSelection(),
+    semantics: buildSyntheticUserNoticeSemantics(options.source, visibility),
+    anchor: buildProjectionAnchor(
+      options.traceContext,
+      mapSyntheticSourceToAnchorOrigin(options.source),
+    ),
+    source: options.source,
+    system: this.config.systemPrompt,
+    synthetic: true,
+    tools: Object.fromEntries(this.getTools().map((tool) => [tool.name, true])),
+    visibility,
+  };
+  const part: MessagePart = {
+    id: createPartId(),
+    sessionID: options.sessionId,
+    messageID: options.messageID,
+    type: "text",
+    text: options.text,
+    synthetic: true,
+    time: {
+      start: created,
+      end: created,
     },
-    options.traceContext,
-  );
+    metadata: partMetadata,
+  };
+  if (options.sessionInputIds) {
+    if (!this.sessionStore.promoteSessionInputBatch) {
+      throw new Error("Background notification batch promotion is unavailable");
+    }
+    await this.sessionStore.promoteSessionInputBatch({
+      ids: options.sessionInputIds,
+      sessionID: options.sessionId,
+      message,
+      parts: [part],
+    });
+    if (options.sessionId === this.sessionId) this.latestConversationMessageId = options.messageID;
+    return;
+  }
+  await this.persistMessage(message, options.traceContext);
+  await this.persistPart(part, options.traceContext);
 }
 
 export async function persistAssistantMessage(
@@ -312,6 +331,7 @@ export async function persistAssistantMessage(
       // 消息的模型。默认值只保留给不经过模型结果的既有 synthetic/fallback 路径。
       modelId,
       providerId,
+      ...(model?.options.reasoningLevel ? { reasoningLevel: model.options.reasoningLevel } : {}),
       mode: this.config.mode ?? "build",
       planEnabled: this.getPlanEnabled(),
       agent: this.config.agentName ?? "zcode-agent",

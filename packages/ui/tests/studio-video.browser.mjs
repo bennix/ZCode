@@ -122,7 +122,19 @@ try {
     const { React, createRoot } = await import("/packages/ui/tests/studio-react-entry.js");
     const { ZCodeIntlProvider } = await import("/packages/ui/src/i18n/IntlProvider.tsx");
     const { PlatformProvider } = await import("/packages/ui/src/hooks/usePlatform.tsx");
+    const { ServiceProvider } = await import("/packages/ui/src/hooks/useServices.tsx");
+    const { readStudioMediaLibrary } =
+      await import("/packages/ui/src/v4/composer/studio/studioMediaStore.ts");
     const { StudioPanel } = await import("/packages/ui/src/v4/composer/studio/StudioPanel.tsx");
+    let settings = { studioMediaLibrary: readStudioMediaLibrary() };
+    const services = {
+      settingService: {
+        get: async () => settings,
+        update: async (patch) => {
+          settings = { ...settings, ...patch };
+        },
+      },
+    };
     document.body.innerHTML = '<div id="app"></div>';
     createRoot(document.getElementById("app")).render(
       React.createElement(
@@ -131,12 +143,17 @@ try {
         React.createElement(
           PlatformProvider,
           { platform: {} },
-          React.createElement(StudioPanel, { modelSelectionView: null }),
+          React.createElement(
+            ServiceProvider,
+            { services },
+            React.createElement(StudioPanel, { modelSelectionView: null }),
+          ),
         ),
       ),
     );
   });
   await page.getByRole("button", { name: "Video", exact: true }).click();
+  await page.getByRole("button", { name: "Show generation settings", exact: true }).click();
   const duration = page.getByLabel("Duration (sec)", { exact: true });
   await duration.waitFor({ state: "visible" });
   assert.deepEqual(

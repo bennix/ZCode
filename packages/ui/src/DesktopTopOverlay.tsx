@@ -10,7 +10,7 @@ import {
 import { useZCodeIntl } from "@/i18n/IntlProvider.js";
 import { UpdateStatusButton } from "@/UpdateStatusButton.js";
 import { DesktopTopOverlayActionButton } from "@/DesktopTopOverlayActionButton.js";
-import { ZenMuxLogo } from "@/components/ui/ZenMuxLogo.js";
+import { ZenCodeAppLogo } from "@/components/ui/ZenCodeAppLogo.js";
 import {
   createWindowsCaptionControlsStyle,
   WINDOWS_CAPTION_CONTROLS_RIGHT_INSET_VAR,
@@ -117,6 +117,7 @@ export function DesktopTopOverlay({
         className={cn(
           "flex items-center",
           isMacDesktop && "h-14",
+          !isDesktop && "h-14 pl-2",
           usesCustomCaptionArea && "h-12",
           // Windows/Linux 工具组计入 4px 外沿留白和 1px 边框，较 8px 左边距右移 5px。
           usesCustomCaptionArea && "pl-3 ml-px",
@@ -132,7 +133,7 @@ export function DesktopTopOverlay({
             "pointer-events-auto flex items-center gap-1 shrink-0 [app-region:no-drag]",
           )}
         >
-          {usesCustomCaptionArea && (
+          {(usesCustomCaptionArea || !isDesktop) && (
             <DesktopTopOverlayActionButton
               title={toggleSidebarTitle}
               shortcut={toggleSidebarShortcutLabel}
@@ -140,7 +141,7 @@ export function DesktopTopOverlay({
               buttonClassName="group relative overflow-hidden rounded-lg"
               onClick={onToggleSidebar}
             >
-              <ZenMuxLogo className="size-5 transition-opacity duration-150 group-hover:opacity-0" />
+              <ZenCodeAppLogo className="size-5 transition-opacity duration-150 group-hover:opacity-0" />
               <SidebarToggleIcon className="absolute inset-0 m-auto size-4 opacity-0 transition-opacity duration-150 group-hover:opacity-100" />
             </DesktopTopOverlayActionButton>
           )}

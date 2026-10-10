@@ -33,7 +33,16 @@ export async function admitPrompt(
     this.activeTurnStartReservation === undefined;
   const busy = this.hasActiveOrQueuedTurnWork() && !promotionLeaseOnly;
   if (busy) {
-    if (options?.requireIdle === true || options?.modelExecution !== undefined) {
+    // 自动调度仅是可丢弃的本轮优化。Renderer 看到 idle 到 Core admission 之间
+    // 若另一轮抢先占位，应正常进入 CommandInbox；queued/guide 沿用用户原模型，
+    // 不能因为一个调度判断配置拒绝已经提交的用户输入。
+    const execution = options?.modelExecution;
+    const optionalDispatchOnly =
+      execution?.dispatcher !== undefined &&
+      execution.requestDependencies === undefined &&
+      execution.subagents === undefined &&
+      execution.memoryExtraction === undefined;
+    if (options?.requireIdle === true || (execution !== undefined && !optionalDispatchOnly)) {
       return {
         activeTurnId: this.activeTurn?.turnId,
         kind: "rejected",

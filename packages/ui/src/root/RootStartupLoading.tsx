@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 import { cn } from "@/components/lib/utils.js";
-import { ZenMuxLogo } from "@/components/ui/ZenMuxLogo.js";
+import { ZenCodeAppLogo } from "@/components/ui/ZenCodeAppLogo.js";
 
 interface RootStartupLoadingProps {
   label: string;
@@ -28,8 +28,8 @@ export function RootStartupLoading({ label, children, busy = true }: RootStartup
 /** 初始化与引导共用品牌图标，保持底色、描边、圆角和标志比例一致。 */
 export function ZCodeStartupLogoBadge({ animated = true }: { animated?: boolean }) {
   return (
-    <div className="relative flex size-24 items-center justify-center rounded-3xl bg-[linear-gradient(180deg,#000000_0%,#151718_100%)] text-[#ffffff] shadow-xl/20 before:pointer-events-none before:absolute before:inset-0 before:rounded-[inherit] before:border before:border-[rgba(255,255,255,0.1)] before:content-['']">
-      <ZCodeStartupLogo className="h-auto w-14" animated={animated} />
+    <div className="flex size-24 items-center justify-center">
+      <ZCodeStartupLogo className="size-24" animated={animated} />
     </div>
   );
 }
@@ -41,7 +41,5 @@ function ZCodeStartupLogo({
   className?: string;
   animated?: boolean;
 }) {
-  return (
-    <ZenMuxLogo className={cn("text-current", className, animated && "animate-pulse")} />
-  );
+  return <ZenCodeAppLogo className={cn(className, animated && "animate-pulse")} />;
 }

@@ -58,7 +58,7 @@ export interface BackgroundTaskNotificationCommand {
 
 export type EnqueueBackgroundTaskNotification = (
   notification: BackgroundTaskNotificationCommand,
-) => undefined;
+) => Promise<boolean>;
 
 export interface BackgroundTaskNotificationPolicyInput {
   runtimeScope: ToolRuntimeScope;

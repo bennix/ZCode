@@ -626,6 +626,13 @@ export async function queryTaskUsage(
   let reasoningTokens = 0;
   let cacheCreationTokens = 0;
   let cacheReadTokens = 0;
+  let requestTotalTokens = 0;
+  let requestInputTokens = 0;
+  let requestOutputTokens = 0;
+  let requestCacheCreationTokens = 0;
+  let requestCacheReadTokens = 0;
+  let mainRequestTokens = 0;
+  let dispatchRequestTokens = 0;
   let modelErrorCount = 0;
   const inputBaselineBySource: Record<string, number> = {};
 
@@ -646,6 +653,16 @@ export async function queryTaskUsage(
     const nonInputTokens = Math.max(0, rawTotalTokens - inputSideTokens);
     const rowOutputTokens = Number(row.outputTokens ?? 0);
     const rowReasoningTokens = Number(row.reasoningTokens ?? 0);
+    // 修复依据：旧 totalTokens 是共享上下文增量，不能用于比较调度请求的实际开销。
+    // 请求口径逐行求和，cache breakdown 只记录一次，不叠加到已含 cache 的输入。
+    const rowRequestTokens = inputSideTokens + nonInputTokens;
+    requestTotalTokens += rowRequestTokens;
+    requestInputTokens += inputSideTokens;
+    requestOutputTokens += rowOutputTokens;
+    requestCacheCreationTokens += Number(row.cacheCreationTokens ?? 0);
+    requestCacheReadTokens += Number(row.cacheReadTokens ?? 0);
+    if (row.querySource === "main_turn") mainRequestTokens += rowRequestTokens;
+    if (row.querySource === "model_dispatch") dispatchRequestTokens += rowRequestTokens;
     totalTokens += incrementalInputTokens + nonInputTokens;
     inputTokens += incrementalInputTokens;
     outputTokens += rowOutputTokens;
@@ -667,6 +684,13 @@ export async function queryTaskUsage(
     reasoningTokens,
     cacheCreationTokens,
     cacheReadTokens,
+    requestTotalTokens,
+    requestInputTokens,
+    requestOutputTokens,
+    requestCacheCreationTokens,
+    requestCacheReadTokens,
+    mainRequestTokens,
+    dispatchRequestTokens,
     modelRequestCount: rows.length,
     modelErrorCount,
     inputBaselineBySource,

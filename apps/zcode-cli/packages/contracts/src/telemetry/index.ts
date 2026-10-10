@@ -15,6 +15,7 @@ export const ModelApiOperation = {
   ContextCompaction: "context_compaction",
   GoalTitle: "goal_title_generation",
   GoalVerification: "goal_completion_verification",
+  ModelDispatch: "model_dispatch",
   GitCommitMessage: "workspace_git_commit_message",
   ProjectMemoryExtract: "project_memory_extract",
   ReadSessionContextExtract: "read_session_context_extract",
@@ -171,6 +172,8 @@ function mapQuerySourceToModelApiOperation(querySource: string | undefined): {
         operation: ModelApiOperation.SessionTitle,
         actorKind: ModelApiActorKind.System,
       };
+    case "model_dispatch":
+      return { operation: ModelApiOperation.ModelDispatch, actorKind: ModelApiActorKind.System };
     case "goal_summary_title":
       return { operation: ModelApiOperation.GoalTitle, actorKind: ModelApiActorKind.System };
     case "target_completion_verification":

@@ -6,6 +6,8 @@ export async function verifyStudioPanel(page) {
     const { React, createRoot } = await import("/packages/ui/tests/studio-react-entry.js");
     const { ZCodeIntlProvider } = await import("/packages/ui/src/i18n/IntlProvider.tsx");
     const { PlatformProvider } = await import("/packages/ui/src/hooks/usePlatform.tsx");
+    const { ServiceProvider } = await import("/packages/ui/src/hooks/useServices.tsx");
+    const { readStudioMediaLibrary } = await import("/packages/ui/src/v4/composer/studio/studioMediaStore.ts");
     const { StudioPanel } = await import("/packages/ui/src/v4/composer/studio/StudioPanel.tsx");
     const encode = (content, finished = false) =>
       new TextEncoder().encode(
@@ -76,11 +78,13 @@ export async function verifyStudioPanel(page) {
     const view = {
       providers: [
         {
-          config: { access: { type: "api-key", apiKey: "test" } },
+          config: { access: { type: "api-key", apiKey: "test" }, api: { baseUrl: "https://zenmux.ai/api/v1" } },
           models: [{ modelId: "test", config: { optionSpecs: {} } }],
         },
       ],
     };
+    let settings = { studioMediaLibrary: readStudioMediaLibrary() };
+    const services = { settingService: { get: async () => settings, update: async (patch) => { settings = { ...settings, ...patch }; } } };
     createRoot(document.getElementById("app")).render(
       React.createElement(
         ZCodeIntlProvider,
@@ -88,12 +92,15 @@ export async function verifyStudioPanel(page) {
         React.createElement(
           PlatformProvider,
           { platform: {} },
-          React.createElement(StudioPanel, { modelSelectionView: view }),
+          React.createElement(ServiceProvider, { services }, React.createElement(StudioPanel, { modelSelectionView: view })),
         ),
       ),
     );
   });
+  assert.equal(await page.getByPlaceholder("Describe the image, video, or the talk", { exact: true }).isVisible(), true);
+  assert.equal(await page.getByLabel("Intent", { exact: true }).isVisible(), false);
   await page.getByRole("button", { name: "Slides", exact: true }).click();
+  assert.equal(await page.getByPlaceholder("Topic", { exact: true }).isVisible(), true);
   await page.getByPlaceholder("Topic", { exact: true }).fill("Test deck");
   await page.getByRole("button", { name: "Make slides", exact: true }).click();
   await page
@@ -345,9 +352,14 @@ export async function verifyStudioPanel(page) {
   await page.evaluate(async()=>{
     const {React,createRoot}=await import('/packages/ui/tests/studio-react-entry.js');
     const {ZCodeIntlProvider}=await import('/packages/ui/src/i18n/IntlProvider.tsx');
+    const {PlatformProvider}=await import('/packages/ui/src/hooks/usePlatform.tsx');
+    const {ServiceProvider}=await import('/packages/ui/src/hooks/useServices.tsx');
+    const {readStudioMediaLibrary}=await import('/packages/ui/src/v4/composer/studio/studioMediaStore.ts');
     const {StudioMediaSettings}=await import('/packages/ui/src/v4/composer/studio/StudioMediaSettings.tsx');
     const host=document.createElement('div');document.body.append(host);
-    createRoot(host).render(React.createElement(ZCodeIntlProvider,{initialLocale:'en-US'},React.createElement(StudioMediaSettings)));
+    let settings={studioMediaLibrary:readStudioMediaLibrary()};
+    const services={settingService:{get:async()=>settings,update:async(patch)=>{settings={...settings,...patch};}}};
+    createRoot(host).render(React.createElement(ZCodeIntlProvider,{initialLocale:'en-US'},React.createElement(PlatformProvider,{platform:{}},React.createElement(ServiceProvider,{services},React.createElement(StudioMediaSettings)))));
   });
   await page.getByLabel('PPT repair model',{exact:true}).fill('custom/repair-model');
   assert.equal(await page.evaluate(()=>JSON.parse(localStorage.getItem('zencode.studio.repair-model')).state.modelId),'custom/repair-model');

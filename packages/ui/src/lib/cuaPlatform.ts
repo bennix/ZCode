@@ -43,18 +43,18 @@ export function supportsLocalMacCuaPermissionOnboarding(
 /**
  * Windows 本地桌面的 CUA 能力门（与上面的 mac 门对称）。
  *
- * Windows 无 TCC，不读 Helper 权限，因此不能用 openCuaPermissionOnboarding 当 capability 判据；
- * 改用 executeDesktopCommand——它只在 desktop preload 注入，能把 Windows 上的普通浏览器排除掉。
+ * Windows 无 TCC，不读 Helper 权限。以前用 executeDesktopCommand 作为能力门，但 Web
+ * 平台也有同名占位函数，会把普通浏览器误判成本机 Desktop；现在只认宿主显式标记。
  */
 export function supportsLocalWindowsCuaEntry(
-  platform: Pick<IPlatformService, "executeDesktopCommand"> | null | undefined,
+  platform: Pick<IPlatformService, "isDesktopRuntime"> | null | undefined,
 ): boolean {
-  return isWindowsDesktopUserAgent() && typeof platform?.executeDesktopCommand === "function";
+  return isWindowsDesktopUserAgent() && platform?.isDesktopRuntime === true;
 }
 
-/** Linux 图形桌面入口与 Windows 一样只要求 desktop preload；实际后端能力由 doctor 检查。 */
+/** Linux 图形桌面入口与 Windows 一样只认宿主标记；实际后端能力由 doctor 检查。 */
 export function supportsLocalLinuxCuaEntry(
-  platform: Pick<IPlatformService, "executeDesktopCommand"> | null | undefined,
+  platform: Pick<IPlatformService, "isDesktopRuntime"> | null | undefined,
 ): boolean {
-  return isLinuxDesktopUserAgent() && typeof platform?.executeDesktopCommand === "function";
+  return isLinuxDesktopUserAgent() && platform?.isDesktopRuntime === true;
 }

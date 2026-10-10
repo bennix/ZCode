@@ -18,7 +18,7 @@ import {
 } from "@zcode/shared";
 import { Alert, AlertDescription } from "./components/ui/alert.js";
 import { Button } from "./components/ui/button.js";
-import { ZenMuxLogo } from "@/components/ui/ZenMuxLogo.js";
+import { ZenCodeAppLogo } from "@/components/ui/ZenCodeAppLogo.js";
 import { useOAuth } from "./hooks/useOAuth.js";
 import { useZCodeIntl } from "./i18n/IntlProvider.js";
 import { LoginApiKeyForm } from "./login/LoginApiKeyForm.js";
@@ -475,15 +475,11 @@ function LoginPanelHeader({
 function LoginPanelLogo() {
   return (
     <div className="mb-1 flex flex-col items-center gap-1">
-      {/* 登录 logo 壳是固定深色底，边框不能跟随浅色主题 token，否则浅色主题下边框过重。 */}
-      <div
-        className="relative flex size-16 items-center justify-center rounded-2xl bg-[linear-gradient(180deg,#000000_0%,#151718_100%)] text-[#ffffff] shadow-lg/20 before:pointer-events-none before:absolute before:inset-0 before:rounded-2xl before:border before:border-[rgba(255,255,255,0.1)]"
-        aria-label="ZenMux"
-        role="img"
-      >
-        <ZenMuxLogo className="size-10" />
+      {/* 登录入口展示应用蓝章鱼图标；提供方选择器继续展示自己的身份图标。 */}
+      <div className="flex size-16 items-center justify-center" aria-label="ZenCode" role="img">
+        <ZenCodeAppLogo className="size-16" />
       </div>
-      <span className="text-ui-xs font-medium tracking-wide text-foreground-subtle">worker</span>
+      <span className="text-ui-xs font-medium tracking-wide text-foreground-subtle">ZenCode</span>
     </div>
   );
 }

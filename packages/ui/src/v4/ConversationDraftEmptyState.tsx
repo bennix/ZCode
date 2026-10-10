@@ -6,6 +6,7 @@
  */
 import { type CSSProperties, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { cn } from "@/components/lib/utils.js";
+import { ZenCodeAppLogo } from "@/components/ui/ZenCodeAppLogo.js";
 import { useZCodeIntl } from "@/i18n/IntlProvider.js";
 import { useIsOfficeMode } from "@/hooks/useInterfaceMode.js";
 import { logger } from "@/logger.js";
@@ -177,12 +178,7 @@ export function ConversationDraftEmptyState({ className }: { className?: string 
         aria-label="ZenCode"
         className="relative flex items-center gap-2 text-ui-caption font-semibold tracking-[0.16em] text-foreground-subtle"
       >
-        <span
-          aria-hidden="true"
-          className="grid size-8 place-items-center rounded-lg border border-border bg-surface text-ui-lg font-semibold tracking-normal text-foreground"
-        >
-          Z
-        </span>
+        <ZenCodeAppLogo className="size-8" />
         ZenCode
       </div>
       <p

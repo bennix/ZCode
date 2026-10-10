@@ -804,6 +804,8 @@ contextBridge.exposeInMainWorld("zcode", {
     ipcRenderer.send(PlatformChannels.CodeWorkbenchContextAck, { requestId, accepted });
   },
   openCodeWorkbench: (request: CodeWorkbenchRequest) => ipcRenderer.invoke(PlatformChannels.OpenCodeWorkbench, request),
+  setCodeWorkbenchTheme: (theme: "light" | "dark") =>
+    ipcRenderer.invoke(PlatformChannels.SetCodeWorkbenchTheme, theme),
   onCodeWorkbenchContext: (callback: (context: CodeWorkbenchContext) => void) => {
     const listener = (_event: unknown, context: CodeWorkbenchContext) => callback(context);
     ipcRenderer.on(PlatformChannels.CodeWorkbenchContext, listener);

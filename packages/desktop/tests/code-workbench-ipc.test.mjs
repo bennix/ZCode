@@ -33,3 +33,38 @@ test('actual IDE IPC opens development and packaged runtime, returns URL without
   }
  } finally {globalThis.fetch=fetchBefore;await rm(directory,{recursive:true,force:true});}
 });
+
+test('IDE theme updates stay within the sender window', async()=>{
+ const directory=await mkdtemp(join(tmpdir(),'ide-theme-ipc-'));
+ const bundle=await build({entryPoints:['packages/desktop/src/main/code-workbench/ipc.ts'],bundle:true,write:false,platform:'node',format:'esm',plugins:[{name:'ports',setup(b){
+  b.onResolve({filter:/^electron$/},()=>({path:'electron',namespace:'fixture'}));
+  b.onResolve({filter:/^\.\/process\.js$/},()=>({path:'launch',namespace:'fixture'}));
+  b.onLoad({filter:/.*/,namespace:'fixture'},({path})=>({contents:path==='launch'?`export async function startWorkbench(options){
+   const record={windowId:globalThis.activeWindowId,initialTheme:options.request.theme,updates:[]};
+   globalThis.workbenches.push(record);
+   return {alive:true,origin:'http://127.0.0.1:32123',setTheme:async theme=>record.updates.push(theme),dispose(){}};
+  }`: `
+   export const app={isPackaged:false,getPath:()=>'/data',getAppPath:()=>'/repo/desktop',once(){}};
+   export const BrowserWindow={fromWebContents:sender=>({id:sender.windowId,once(){}})};
+   export const ipcMain={handle(name,fn){globalThis.ideHandlers[name]=fn},on(){},removeListener(){}};
+  `}));
+ }}]});
+ try {
+  const file=join(directory,'ipc.mjs'); await writeFile(file,bundle.outputFiles[0].text);
+  globalThis.ideHandlers={};globalThis.workbenches=[];
+  const {registerCodeWorkbenchIpc}=await import(pathToFileURL(file).href);
+  registerCodeWorkbenchIpc({info(){},warn(){}});
+  const handler=Object.values(globalThis.ideHandlers).find(fn=>fn.toString().includes('Invalid IDE workspace'));
+  const themeHandler=Object.values(globalThis.ideHandlers).find(fn=>fn.toString().includes('Invalid IDE theme'));
+  assert.ok(handler && themeHandler);
+  const sender=id=>({windowId:id,isDestroyed:()=>false,send(){}});
+  await themeHandler({sender:sender(1)},'light');
+  globalThis.activeWindowId=1;
+  await handler({sender:sender(1)},{workspacePath:'/workspace-a',theme:'dark'});
+  globalThis.activeWindowId=2;
+  await handler({sender:sender(2)},{workspacePath:'/workspace-b',theme:'dark'});
+  assert.deepEqual(globalThis.workbenches.map(workbench=>workbench.initialTheme),['light','dark']);
+  await themeHandler({sender:sender(1)},'dark');
+  assert.deepEqual(globalThis.workbenches.map(workbench=>workbench.updates),[['dark'],[]]);
+ } finally {await rm(directory,{recursive:true,force:true});delete globalThis.ideHandlers;delete globalThis.workbenches;delete globalThis.activeWindowId;}
+});

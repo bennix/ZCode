@@ -2,9 +2,12 @@ import { useEffect, useState } from "react";
 import { usePlatform } from "@/hooks/usePlatform.js";
 import { dispatchCodeCommentAddToChat } from "@/lib/codeCommentContext.js";
 import { logger } from "@/logger.js";
+import { useZCodeStore } from "@/store/StoreProvider.js";
+import { resolveTheme } from "@/useTheme.js";
 
 export function useCodeWorkbench(workspacePath: string, workspaceIdentity?: string) {
   const platform = usePlatform();
+  const theme = useZCodeStore((state) => state.theme);
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
   useEffect(
@@ -34,7 +37,7 @@ export function useCodeWorkbench(workspacePath: string, workspaceIdentity?: stri
       setPending(true);
       setError(null);
       try {
-        return await platform.openCodeWorkbench({ workspacePath, workspaceIdentity });
+        return await platform.openCodeWorkbench({ workspacePath, workspaceIdentity, theme: resolveTheme(theme) });
       } catch (cause) {
         logger.warn("Code workbench startup failed", {
           reason: cause instanceof Error ? cause.name : "unknown",

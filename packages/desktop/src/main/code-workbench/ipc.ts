@@ -9,8 +9,21 @@ export function registerCodeWorkbenchIpc(logger: {
   warn: (...args: unknown[]) => void;
 }) {
   const processes = new Map<string, Promise<Awaited<ReturnType<typeof startWorkbench>>>>();
+  const windowThemes = new Map<number, "light" | "dark">();
   const disposedWindows = new Set<number>();
   const observedWindows = new Set<number>();
+  ipcMain.handle(PlatformChannels.SetCodeWorkbenchTheme, async (event, value: unknown) => {
+    if (value !== "light" && value !== "dark") throw new Error("Invalid IDE theme");
+    const window = BrowserWindow.fromWebContents(event.sender);
+    if (!window) throw new Error("Invalid IDE window");
+    windowThemes.set(window.id, value);
+    await Promise.all(
+      [...processes].filter(([key]) => key.startsWith(`${window.id}:`)).map(async ([, pending]) => {
+        const workbench = await pending;
+        if (workbench.alive) await workbench.setTheme(value);
+      }),
+    );
+  });
   ipcMain.handle(PlatformChannels.OpenCodeWorkbench, async (event, value: unknown) => {
     const request = codeWorkbenchRequestSchema.parse(value);
     const window = BrowserWindow.fromWebContents(event.sender);
@@ -21,6 +34,7 @@ export function registerCodeWorkbenchIpc(logger: {
       observedWindows.add(windowId);
       window.once("closed", () => {
         disposedWindows.add(windowId);
+        windowThemes.delete(windowId);
         for (const [id, pending] of processes) {
           if (id.startsWith(`${windowId}:`)) {
             void pending.then((process) => process.dispose()).catch(() => {});
@@ -41,7 +55,7 @@ export function registerCodeWorkbenchIpc(logger: {
         runtimeDirectory: app.isPackaged
           ? join(process.resourcesPath, "code-workbench")
           : join(app.getAppPath(), "bundled-workbench", `${process.platform}-${process.arch}`),
-        request,
+        request: { ...request, theme: windowThemes.get(windowId) ?? request.theme },
         stateKey: createHash("sha256").update(key).digest("hex").slice(0, 24),
         async onContext(context) {
           if (event.sender.isDestroyed()) throw new Error("IDE window closed");

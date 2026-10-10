@@ -1625,12 +1625,22 @@ const ReasoningRowView = memo(function ReasoningRowView({
 });
 
 const TurnHeaderRowView = memo(function TurnHeaderRowView({ row }: { row: TurnHeaderRow }) {
+  const { intl } = useZCodeIntl();
   return (
     <RowShell
       rowId={row.rowId}
       className="border-b border-[var(--color-border)] py-1 text-ui-sm text-[var(--color-foreground-subtle)]"
     >
       turn · {row.origin} · {row.state}
+      {row.executionModel ? (
+        <span className="ml-2 text-ui-sm text-foreground-subtle">
+          {intl.formatMessage({ id: "chat.executionModel" })}: {" "}
+          {row.executionModel.modelId}
+          {row.executionModel.options?.reasoningLevel
+            ? ` · ${row.executionModel.options.reasoningLevel}`
+            : ""}
+        </span>
+      ) : null}
     </RowShell>
   );
 });

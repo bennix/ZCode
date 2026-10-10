@@ -6,6 +6,7 @@ import type {
   TurnId,
 } from "@zcode/contracts";
 import type { AgentOutput } from "@zcode/contracts";
+import { uuidv7 } from "@zcode/shared";
 
 // local_dynamic_workflow 与 local_workflow 刻意分开：后者是 legacy `Workflow` 工具（不可取消），
 // 前者是 workflow run（经 DynamicWorkflowRunPort.cancel 可取消）。合成一个类型，取消分派就无法区分。
@@ -43,6 +44,8 @@ export interface RuntimeTaskMessageSink {
 export interface RuntimeTaskSnapshot extends SubagentTaskSnapshot {
   /** task 注册时所属 active conversation branch；用于迟到 completion fencing。 */
   branchGeneration?: number;
+  /** 同一子 Agent 生命周期的后台通知幂等键；重臂注册获得新值。 */
+  notificationRequestId?: string;
   exitCode?: number;
   type: RuntimeTaskType;
   isBackgrounded?: boolean;
@@ -71,10 +74,7 @@ export interface RuntimeTaskRegistry {
   all(): Record<string, RuntimeTaskSnapshot>;
   get(id: string): RuntimeTaskSnapshot | undefined;
   drainMessages(id: string): RuntimeTaskPendingMessage[];
-  queueMessage(
-    id: string,
-    message: RuntimeTaskPendingMessage,
-  ): RuntimeTaskSnapshot | undefined;
+  queueMessage(id: string, message: RuntimeTaskPendingMessage): RuntimeTaskSnapshot | undefined;
   register(task: RuntimeTaskSnapshot): void;
   remove(id: string): void;
   requestBackground(id: string): boolean;
@@ -119,6 +119,12 @@ export class InMemoryRuntimeTaskRegistry implements RuntimeTaskRegistry {
     const stamped = {
       ...task,
       branchGeneration: task.branchGeneration ?? this.activeBranchGeneration,
+      ...(task.type === "local_agent"
+        ? {
+            notificationRequestId:
+              task.notificationRequestId ?? `background_notification_${uuidv7()}`,
+          }
+        : {}),
     };
     this.tasks.set(stamped.taskId, stamped);
     this.resolveIfTerminal(stamped.taskId, stamped);
@@ -165,10 +171,7 @@ export class InMemoryRuntimeTaskRegistry implements RuntimeTaskRegistry {
     return Object.fromEntries(this.tasks);
   }
 
-  queueMessage(
-    id: string,
-    message: RuntimeTaskPendingMessage,
-  ): RuntimeTaskSnapshot | undefined {
+  queueMessage(id: string, message: RuntimeTaskPendingMessage): RuntimeTaskSnapshot | undefined {
     return this.update(id, (task) => ({
       ...task,
       pendingMessages: [...(task.pendingMessages ?? []), message],
@@ -242,10 +245,7 @@ export class InMemoryRuntimeTaskRegistry implements RuntimeTaskRegistry {
     }
   }
 
-  private resolveBackgroundWaiters(
-    id: string,
-    task: RuntimeTaskSnapshot | undefined,
-  ): void {
+  private resolveBackgroundWaiters(id: string, task: RuntimeTaskSnapshot | undefined): void {
     this.resolveWaiters(this.backgroundWaiters, id, task);
   }
 

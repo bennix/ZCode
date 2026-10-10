@@ -22,12 +22,25 @@ const ACTION_TOOLS = new Set([
   "set_value",
   "perform_action",
   "activate_window",
+  "move_window",
+  "resize_window",
 ]);
 const MAX_LINE_BYTES = 24 * 1024 * 1024;
+
+export function assertLinuxGlibcCompatible(version) {
+  if (typeof version !== "string") return;
+  const match = /^(\d+)\.(\d+)/.exec(version);
+  if (!match) return;
+  const major = Number(match[1]);
+  const minor = Number(match[2]);
+  if (major < 2 || (major === 2 && minor < 39))
+    throw new Error(`Computer Use Linux executor requires glibc 2.39 or newer (found ${version})`);
+}
 
 export function createMcpNativeRuntime({ env, platform, arch }) {
   const sessions = new Map();
   const starting = new Map();
+  const admissionTails = new Map();
   const generations = new Map();
   let disposed = false;
   const platformDir = platform === "win32" ? "windows" : "linux";
@@ -50,10 +63,12 @@ export function createMcpNativeRuntime({ env, platform, arch }) {
     }
     if (!session) {
       if (!executable) throw new Error("Computer Use native executor is unavailable");
+      if (platform === "linux" && process.platform === "linux")
+        assertLinuxGlibcCompatible(process.report?.getReport?.()?.header?.glibcVersionRuntime);
       await access(executable);
       let pending = starting.get(key);
       if (!pending) {
-        pending = McpHost.start(executable).finally(() => starting.delete(key));
+        pending = McpHost.start(executable, env).finally(() => starting.delete(key));
         starting.set(key, pending);
       }
       const host = await pending;
@@ -64,7 +79,7 @@ export function createMcpNativeRuntime({ env, platform, arch }) {
       if (sessions.has(key)) {
         return sessions.get(key);
       }
-      session = { host, snapshotId: undefined };
+      session = { host, snapshotId: undefined, tail: Promise.resolve() };
       sessions.set(key, session);
     }
     return session;
@@ -82,36 +97,72 @@ export function createMcpNativeRuntime({ env, platform, arch }) {
         if (toolName !== "platform.describe" && toolName !== "platform.call")
           throw new Error(`Unsupported Computer Use method: ${toolName}`);
         if (signal?.aborted) throw signal.reason;
-        const session = await getSession(context);
-        if (toolName === "platform.describe") {
-          const listed = await session.host.call("tools/list", {}, signal);
-          return result({
-            platform,
-            tools: (listed.tools ?? []).filter(
-              (tool) => READ_TOOLS.has(tool.name) || ACTION_TOOLS.has(tool.name),
-            ),
+        const key = `${context.workspaceKey}\0${context.remoteSessionId ?? ""}\0${context.sessionId}`;
+        const generation = generations.get(key) ?? 0;
+        // 修复依据：首次并发请求的 access/start 是异步的；先占位，避免它们
+        // 完成顺序改变 snapshot 的观察与动作顺序。
+        const previousAdmission = admissionTails.get(key) ?? Promise.resolve();
+        let releaseAdmission;
+        const admission = new Promise((resolveAdmission) => {
+          releaseAdmission = resolveAdmission;
+        });
+        admissionTails.set(key, admission);
+        let session;
+        let operation;
+        try {
+          await previousAdmission;
+          if (signal?.aborted) throw signal.reason;
+          if (disposed || (generations.get(key) ?? 0) !== generation)
+            throw new Error("Computer Use session ended before queued call");
+          session = await getSession(context);
+          // 修复依据：MCP 允许并发响应乱序；会话快照与元素索引必须按入队顺序更新。
+          operation = session.tail.then(async () => {
+            if (signal?.aborted) throw signal.reason;
+            if (
+              session.host.closed ||
+              (generations.get(key) ?? 0) !== generation ||
+              sessions.get(key) !== session
+            )
+              throw new Error("Computer Use session ended before queued call");
+            if (toolName === "platform.describe") {
+              const listed = await session.host.call("tools/list", {}, signal);
+              return result({
+                platform,
+                tools: (listed.tools ?? []).filter(
+                  (tool) => READ_TOOLS.has(tool.name) || ACTION_TOOLS.has(tool.name),
+                ),
+              });
+            }
+            const name = args?.name;
+            if (!READ_TOOLS.has(name) && !ACTION_TOOLS.has(name))
+              throw new Error(`Unsupported Computer Use tool: ${String(name)}`);
+            const input = args?.arguments;
+            if (!input || typeof input !== "object" || Array.isArray(input))
+              throw new Error("Computer Use tool arguments must be an object");
+            if (name === "get_app_state") session.snapshotId = undefined;
+            if (ACTION_TOOLS.has(name)) {
+              if (!session.snapshotId || args.snapshotId !== session.snapshotId)
+                throw new Error("Computer Use action requires the current observation snapshot");
+              session.snapshotId = undefined;
+            }
+            const called = await session.host.call(
+              "tools/call",
+              { name, arguments: input },
+              signal,
+            );
+            if (called.isError) return { content: called.content ?? [], isError: true };
+            if (name === "get_app_state") {
+              session.snapshotId = randomUUID();
+              return appendSnapshot(called, session.snapshotId);
+            }
+            return { content: called.content ?? [] };
           });
+          session.tail = operation.catch(() => undefined);
+        } finally {
+          releaseAdmission();
+          if (admissionTails.get(key) === admission) admissionTails.delete(key);
         }
-        const name = args?.name;
-        if (!READ_TOOLS.has(name) && !ACTION_TOOLS.has(name))
-          throw new Error(`Unsupported Computer Use tool: ${String(name)}`);
-        const input = args?.arguments;
-        if (!input || typeof input !== "object" || Array.isArray(input))
-          throw new Error("Computer Use tool arguments must be an object");
-        if (name === "get_app_state") session.snapshotId = undefined;
-        if (ACTION_TOOLS.has(name)) {
-          // 修复依据：上游 MCP 的 element_index 依赖最近一次观察，必须由会话持有并消费快照，避免旧索引触发错误动作。
-          if (!session.snapshotId || args.snapshotId !== session.snapshotId)
-            throw new Error("Computer Use action requires the current observation snapshot");
-          session.snapshotId = undefined;
-        }
-        const called = await session.host.call("tools/call", { name, arguments: input }, signal);
-        if (called.isError) return { content: called.content ?? [], isError: true };
-        if (name === "get_app_state") {
-          session.snapshotId = randomUUID();
-          return appendSnapshot(called, session.snapshotId);
-        }
-        return { content: called.content ?? [] };
+        return await operation;
       } catch (error) {
         if (signal?.aborted) await this.closeSession(context);
         return result({ error: error instanceof Error ? error.message : String(error) }, true);
@@ -154,8 +205,13 @@ function appendSnapshot(value, snapshotId) {
 }
 
 class McpHost {
-  static async start(executable) {
-    const child = spawn(executable, ["mcp"], { stdio: ["pipe", "pipe", "pipe"] });
+  static async start(executable, env) {
+    // 修复依据：原生执行器必须进入 runtime 指定的图形会话；否则 Wayland 的
+    // DISPLAY、D-Bus 等变量只用于定位二进制，子进程仍连接父进程的会话。
+    const child = spawn(executable, ["mcp"], {
+      stdio: ["pipe", "pipe", "pipe"],
+      env: { ...process.env, ...env },
+    });
     const host = new McpHost(child);
     try {
       await host.call(
@@ -184,7 +240,15 @@ class McpHost {
     this.closed = false;
     child.stdout.on("data", (chunk) => this.onData(chunk));
     child.on("error", (error) => this.fail(error));
-    child.on("exit", () => this.fail(new Error("Computer Use native executor exited")));
+    child.on("exit", (code, signal) =>
+      this.fail(
+        new Error(
+          `Computer Use native executor exited${code === null ? "" : ` with code ${code}`}${signal ? ` (${signal})` : ""}`,
+        ),
+      ),
+    );
+    // 修复依据：原生进程在 initialize 前退出时，stdin.write 的 EPIPE 是异步 error 事件；不接收会使整个 Agent 崩溃。
+    child.stdin.on("error", (error) => this.fail(error));
     child.stderr.on("data", () => {});
   }
 

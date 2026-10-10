@@ -430,6 +430,7 @@ export interface ModelExecutionContext {
   /** 仅当前 Turn 跳过自动 Project Memory Extraction；不修改 Session Memory 配置。 */
   memoryExtraction?: "skip";
   selectionScope: "execution";
+  dispatcher?: ModelSelection;
   requestDependencies?: ModelRequestDependencies;
   subagents?: {
     foregroundModel: "submission";

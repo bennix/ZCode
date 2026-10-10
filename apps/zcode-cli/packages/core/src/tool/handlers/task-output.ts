@@ -61,7 +61,7 @@ const taskOutputHandler: ToolHandler = async (input, context) => {
     // abort 时吞掉后续 completion notification。异步投影不会被外层取消竞态强制
     // 停止，因此 await 返回后必须再次检查 signal，再提交 claim。
     throwIfAborted(context.abortSignal);
-    markTaskNotified(initialTask, context);
+    await markTaskNotified(initialTask, context);
     return taskOutputResult("success", projectedTask);
   }
 
@@ -75,7 +75,7 @@ const taskOutputHandler: ToolHandler = async (input, context) => {
   }
   const projectedTask = await projectTask(task, context);
   throwIfAborted(context.abortSignal);
-  markTaskNotified(task, context);
+  await markTaskNotified(task, context);
   return taskOutputResult("success", projectedTask);
 };
 
@@ -250,9 +250,24 @@ function delay(milliseconds: number): Promise<void> {
 
 const isTaskActive = (status: string): boolean => status === "running" || status === "pending";
 
-function markTaskNotified(task: RuntimeTaskSnapshot, context: ToolExecutionContext): void {
+async function markTaskNotified(
+  task: RuntimeTaskSnapshot,
+  context: ToolExecutionContext,
+): Promise<void> {
+  if (task.type === "local_agent" && task.notificationRequestId) {
+    // 修复依据：TaskOutput 已把结果交给当前模型时，先结算 durable 通知，
+    // 再认领内存任务状态；恢复与排队 drain 都以账本终态阻止重复自动唤醒。
+    await context.sessionStore?.settleSessionInput?.({
+      id: task.notificationRequestId,
+      sessionID: context.sessionId,
+      status: "discarded",
+      reason: "task_output_consumed",
+    });
+  }
   context.runtimeTaskRegistry?.update(task.taskId, (current) =>
-    current.notified ? current : { ...current, notified: true },
+    current.notificationRequestId !== task.notificationRequestId || current.notified
+      ? current
+      : { ...current, notified: true },
   );
 }
 

@@ -408,7 +408,7 @@ export function WorkspaceAgentBoard({
   };
 
   return (
-    <section className="mb-3 rounded-2xl border border-border bg-card p-3 text-foreground">
+    <section className="mb-3 rounded-2xl border border-border bg-card p-3 text-foreground max-sm:p-2">
       <div className="mb-2 flex items-center justify-between gap-2">
         <div>
           <h2 className="text-ui-base font-medium">
@@ -420,57 +420,7 @@ export function WorkspaceAgentBoard({
               : intl.formatMessage({ id: "chat.workspace.hint" })}
           </p>
         </div>
-        <Button
-          type="button"
-          variant="ghost"
-          className="h-7 px-2 text-ui-caption"
-          disabled={agents.length >= MAX_AGENTS || running}
-          onClick={() => {
-            const next = [
-              ...agents,
-              {
-                id: `agent-${Date.now()}`,
-                name: `Agent ${agents.length + 1}`,
-                modelKey: firstKey,
-                stance: "collaborate" as const,
-                effort: defaultEffort(choices[0]?.efforts ?? []),
-              },
-            ];
-            setAgents(next);
-            persist({ agents: next });
-          }}
-        >
-          {intl.formatMessage({ id: "chat.workspace.add" })}
-        </Button>
       </div>
-      {searchLog.length > 0 ? (
-        <div className="mb-2 flex flex-col gap-2">
-          {searchLog.map((entry) => (
-            <div key={entry.query} className="rounded-xl border border-border bg-surface p-2">
-              <p className="text-ui-caption text-muted-foreground">{entry.query}</p>
-              {entry.hits.length === 0 ? (
-                <p className="text-ui-caption">
-                  {intl.formatMessage({ id: "chat.workspace.searchEmpty" })}
-                </p>
-              ) : (
-                entry.hits.map((hit) => (
-                  <button
-                    key={`${entry.query}-${hit.url}`}
-                    type="button"
-                    className="mt-1 block w-full text-left"
-                    onClick={() => platform.openExternal(hit.url)}
-                  >
-                    <span className="text-ui-caption text-foreground">{hit.title}</span>
-                    <span className="mt-0.5 block text-ui-caption text-muted-foreground">
-                      {hit.snippet}
-                    </span>
-                  </button>
-                ))
-              )}
-            </div>
-          ))}
-        </div>
-      ) : null}
       {!apiKey ? (
         <p className="mb-2 text-ui-caption text-warning">
           {intl.formatMessage({ id: "chat.workspace.noKey" })}
@@ -481,7 +431,7 @@ export function WorkspaceAgentBoard({
           {intl.formatMessage({ id: "chat.workspace.noModel" })}
         </p>
       ) : null}
-      <div className="mb-3 rounded-xl border border-border bg-surface p-3">
+      <div className="mb-3 rounded-xl border border-border bg-surface p-3 max-sm:p-2">
         <p className="mb-2 text-ui-caption font-medium text-foreground">
           {intl.formatMessage({ id: "chat.workspace.guideTask" })}
         </p>
@@ -500,7 +450,7 @@ export function WorkspaceAgentBoard({
             event.preventDefault();
             void addFiles([...event.dataTransfer.files]);
           }}
-          className="mt-2 min-h-16 w-full rounded-lg border border-border bg-background p-2 text-ui-base"
+          className="mt-2 min-h-16 w-full rounded-lg border border-border bg-background p-2 text-ui-base max-sm:min-h-12"
         />
         <p className="mt-1 text-ui-caption text-muted-foreground">
           {intl.formatMessage({ id: "chat.workspace.drop" })}
@@ -601,6 +551,28 @@ export function WorkspaceAgentBoard({
           {intl.formatMessage({ id: "chat.workspace.configure" })}
         </summary>
         <div className="mt-3">
+          <Button
+            type="button"
+            variant="ghost"
+            className="mb-2 h-7 px-2 text-ui-caption"
+            disabled={agents.length >= MAX_AGENTS || running}
+            onClick={() => {
+              const next = [
+                ...agents,
+                {
+                  id: `agent-${Date.now()}`,
+                  name: `Agent ${agents.length + 1}`,
+                  modelKey: firstKey,
+                  stance: "collaborate" as const,
+                  effort: defaultEffort(choices[0]?.efforts ?? []),
+                },
+              ];
+              setAgents(next);
+              persist({ agents: next });
+            }}
+          >
+            {intl.formatMessage({ id: "chat.workspace.add" })}
+          </Button>
           <div className="flex flex-col gap-2">
             {agents.map((agent) => {
               const efforts = choiceByKey(agent.modelKey)?.efforts ?? [];
@@ -693,9 +665,6 @@ export function WorkspaceAgentBoard({
                       {intl.formatMessage({ id: "chat.workspace.remove" })}
                     </Button>
                   </div>
-                  {outputs[agent.id] ? (
-                    <WorkspaceMarkdown text={outputs[agent.id] ?? ""} streaming={running} />
-                  ) : null}
                 </div>
               );
             })}
@@ -741,9 +710,6 @@ export function WorkspaceAgentBoard({
                   </select>
                 ) : null}
               </div>
-              {outputs.judge ? (
-                <WorkspaceMarkdown text={outputs.judge} streaming={running} />
-              ) : null}
             </div>
           </div>
           <label className="mt-2 flex items-center gap-2 text-ui-caption">
@@ -770,6 +736,34 @@ export function WorkspaceAgentBoard({
           ) : null}
         </div>
       </details>
+      {searchLog.length > 0 ? (
+        <div className="mt-2 flex flex-col gap-2">
+          {searchLog.map((entry) => (
+            <div key={entry.query} className="rounded-xl border border-border bg-surface p-2">
+              <p className="text-ui-caption text-muted-foreground">{entry.query}</p>
+              {entry.hits.length === 0 ? (
+                <p className="text-ui-caption">
+                  {intl.formatMessage({ id: "chat.workspace.searchEmpty" })}
+                </p>
+              ) : (
+                entry.hits.map((hit) => (
+                  <button
+                    key={`${entry.query}-${hit.url}`}
+                    type="button"
+                    className="mt-1 block w-full text-left"
+                    onClick={() => platform.openExternal(hit.url)}
+                  >
+                    <span className="text-ui-caption text-foreground">{hit.title}</span>
+                    <span className="mt-0.5 block text-ui-caption text-muted-foreground">
+                      {hit.snippet}
+                    </span>
+                  </button>
+                ))
+              )}
+            </div>
+          ))}
+        </div>
+      ) : null}
       {liveBoard ? (
         <div className="mt-2 rounded-lg border border-border bg-background p-2">
           <WorkspaceMarkdown text={liveBoard} streaming={running} />

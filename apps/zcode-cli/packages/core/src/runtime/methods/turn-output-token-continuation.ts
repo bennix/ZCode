@@ -117,7 +117,7 @@ export function commitAssistantToTurnRequest(
   if (!hasAssistantContent) return false;
   // provider result metadata 可能报告别的模型；assistant 归因必须使用
   // Turn 已绑定的 Model，避免恢复链重新引入旧的 provider-owned 模型身份。
-  const modelRef = { providerId: state.model.providerId, modelId: state.model.modelId };
+  const modelRef = state.model;
   commitTurnRequestEntries(runtime, state.turnRequestState, [
     createRuntimeAssistantEntry(
       state.modelResponse,

@@ -416,6 +416,7 @@ export const PlatformChannels = {
   /** Renderer → Main：获取系统中已安装的编辑器/终端列表（含图标） */
   GetInstalledEditors: "zcode:get-installed-editors",
   OpenCodeWorkbench: "zcode:open-code-workbench",
+  SetCodeWorkbenchTheme: "zcode:set-code-workbench-theme",
   CodeWorkbenchContext: "zcode:code-workbench-context",
   CodeWorkbenchContextAck: "zcode:code-workbench-context-ack",
   /** Renderer → Main：按 bundle id 获取系统应用图标 */
@@ -1150,6 +1151,10 @@ export interface PlatformChannelMap {
   [PlatformChannels.OpenCodeWorkbench]: {
     request: CodeWorkbenchRequest;
     response: { url: string };
+  };
+  [PlatformChannels.SetCodeWorkbenchTheme]: {
+    request: "light" | "dark";
+    response: void;
   };
   [PlatformChannels.GetInstalledEditors]: {
     request: void;

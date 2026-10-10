@@ -163,7 +163,7 @@ function createRuntimeToolExecutor(
       await runtime.appendEvent(event, getCurrentTraceContext() ?? runtime.rootTraceContext);
     },
     enqueueBackgroundTaskNotification: (notification) => {
-      runtime.enqueueBackgroundTaskNotification(notification);
+      return runtime.enqueueBackgroundTaskNotification(notification);
     },
     shouldEnqueueBackgroundTaskNotification: (input) =>
       shouldEnqueueRuntimeBackgroundTaskNotification(runtime, input),

@@ -1,5 +1,5 @@
 import { PanelLeftOpen } from "lucide-react";
-import { ZenMuxLogo } from "@/components/ui/ZenMuxLogo.js";
+import { ZenCodeAppLogo } from "@/components/ui/ZenCodeAppLogo.js";
 import { Button } from "@/components/ui/button.js";
 import { ControlHintTooltip } from "@/ControlHintTooltip.js";
 import { useZCodeIntl } from "@/i18n/IntlProvider.js";
@@ -32,7 +32,7 @@ export function WorkspaceSidebarCollapsedRail({
                 id: "workspaceSidebar.toggleSidebar",
               })}
             >
-              <ZenMuxLogo className="size-5 transition-opacity group-hover:opacity-0" />
+              <ZenCodeAppLogo className="size-5 transition-opacity group-hover:opacity-0" />
               <PanelLeftOpen className="absolute size-4 opacity-0 transition-opacity group-hover:opacity-100" />
             </Button>
           </ControlHintTooltip>

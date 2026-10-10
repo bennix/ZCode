@@ -6,9 +6,11 @@ import { chromium } from "playwright-core";
 test("composer control buttons follow loaded plugin state and failed writes", async () => {
   const mocks = {
     "@zcode/shared":
-      'export const ZCODE_CUA_OFFICIAL_PLUGIN_ID = "computer-use@zcode-plugins-official";',
+      'export const ZCODE_CUA_OFFICIAL_PLUGIN_ID = "computer-use@zcode-plugins-official"; export const isRemoteWorkspaceIdentity = (value) => value.startsWith("remote:");',
     "@/hooks/useServices.js":
       "export const useOptionalServices = () => ({pluginManagementService: {}});",
+    "@/hooks/usePlatform.js":
+      "export const useOptionalPlatform = () => ({isDesktopRuntime: window.__desktopRuntime === true});",
     "@/i18n/IntlProvider.js":
       "export const useZCodeIntl = () => ({intl:{formatMessage:({id})=>id}});",
     "@/components/ui/button.js":
@@ -37,7 +39,7 @@ test("composer control buttons follow loaded plugin state and failed writes", as
   };
   const bundle = await build({
     stdin: {
-      contents: `import React from 'react';import {createRoot} from 'react-dom/client';import {V4ComposerControlToggles} from './packages/ui/src/v4/composer/V4ComposerControlToggles.tsx';createRoot(document.getElementById('root')).render(<V4ComposerControlToggles workspacePath="/tmp/project" />);`,
+      contents: `import React from 'react';import {createRoot} from 'react-dom/client';import {V4ComposerControlToggles} from './packages/ui/src/v4/composer/V4ComposerControlToggles.tsx';createRoot(document.getElementById('root')).render(<V4ComposerControlToggles workspacePath="/tmp/project" remoteSessionId={window.__remoteSessionId} workspaceIdentity={window.__workspaceIdentity} />);`,
       resolveDir: process.cwd(),
       loader: "tsx",
     },
@@ -66,6 +68,9 @@ test("composer control buttons follow loaded plugin state and failed writes", as
   try {
     const page = await browser.newPage();
     await page.setContent('<div id="root"></div>');
+    await page.evaluate(() => {
+      window.__desktopRuntime = true;
+    });
     await page.addScriptTag({ content: bundle.outputFiles[0].text });
     const computer = page.getByRole("button", { name: "chat.toolbar.control.computer" });
     const browserControl = page.getByRole("button", { name: "chat.toolbar.control.browser" });
@@ -95,6 +100,33 @@ test("composer control buttons follow loaded plugin state and failed writes", as
     );
     assert.equal(await computer.getAttribute("aria-pressed"), "true");
     assert.equal(await computer.isDisabled(), false);
+    const webPage = await browser.newPage();
+    await webPage.setContent('<div id="root"></div>');
+    await webPage.addScriptTag({ content: bundle.outputFiles[0].text });
+    await webPage.getByRole("button", { name: "chat.toolbar.control.browser" }).waitFor();
+    assert.equal(
+      await webPage.getByRole("button", { name: "chat.toolbar.control.computer" }).count(),
+      0,
+    );
+    for (const remote of [
+      { remoteSessionId: "session-remote" },
+      { workspaceIdentity: "remote:wsl:Ubuntu:/tmp/project" },
+    ]) {
+      const remotePage = await browser.newPage();
+      await remotePage.setContent('<div id="root"></div>');
+      await remotePage.evaluate((value) => {
+        window.__desktopRuntime = true;
+        window.__remoteSessionId = value.remoteSessionId;
+        window.__workspaceIdentity = value.workspaceIdentity;
+      }, remote);
+      await remotePage.addScriptTag({ content: bundle.outputFiles[0].text });
+      await remotePage.getByRole("button", { name: "chat.toolbar.control.browser" }).waitFor();
+      assert.equal(
+        await remotePage.getByRole("button", { name: "chat.toolbar.control.computer" }).count(),
+        0,
+      );
+      await remotePage.close();
+    }
   } finally {
     await browser.close();
   }

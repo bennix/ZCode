@@ -65,6 +65,8 @@ import { appendBrowserTurnScreenshot } from "./browser-turn-screenshot.js";
 import { clearBrowserTurnState } from "../../repl/browser-turn-state.js";
 import { applySubmissionExecutionState, createTurnModel } from "./turn-model.js";
 import { rebuildContextPrefix } from "./context-refresh.js";
+import { judgeTurnModel } from "./model-dispatch-sidecar.js";
+import { continuationModelSelection } from "./model-dispatch-decision.js";
 
 const TARGET_RUN_HEARTBEAT_MS = 15_000;
 
@@ -556,7 +558,49 @@ export async function executeTurnCommand(
         }
 
         this.messageHistory.setCacheMiss();
-        const loopModel = submissionModel ?? admittedModel;
+        let loopModel = submissionModel ?? admittedModel;
+        if (
+          options?.modelExecution?.dispatcher &&
+          options.intent?.modelSelection &&
+          !options.automationId &&
+          !options.offPeakTaskId &&
+          options.inputSource === undefined
+        ) {
+          const dispatchCurrent = continuationModelSelection({
+            entries: this.messageHistory.borrowReadOnlyRuntimeEntries(),
+            candidates: this.modelCatalogPort?.listModels() ?? [],
+            fallback: options.intent.modelSelection,
+          });
+          const judgedSelection = await judgeTurnModel(this, {
+            dispatcher: options.modelExecution.dispatcher,
+            current: dispatchCurrent,
+            text: displayInput,
+            hasAttachments: resolvedAttachments.length > 0,
+            traceContext: turnTraceContext,
+            abortSignal: turnAbortSignal,
+          });
+          throwIfTurnAborted(turnAbortSignal);
+          const targetSelection = judgedSelection ?? dispatchCurrent;
+          if (
+            targetSelection.providerId !== options.intent.modelSelection.providerId ||
+            targetSelection.modelId !== options.intent.modelSelection.modelId ||
+            targetSelection.options?.reasoningLevel !==
+              options.intent.modelSelection.options?.reasoningLevel
+          ) {
+            try {
+              // Bug 修复依据：切换模型必须在同一 Core turn 中重建 provider 前缀；
+              // 仅换 Model 句柄会沿用旧模型的上下文窗口和缓存标记。
+              const judgedModel = createTurnModel(this, { selection: targetSelection });
+              rebuildContextPrefix(this, { model: judgedModel });
+              loopModel = judgedModel;
+            } catch (error) {
+              this.logger?.warn("Model dispatch selection became unavailable; using submitted model", {
+                event: "model_dispatch.selection_unavailable",
+                reason: error instanceof Error ? error.name : "unknown",
+              });
+            }
+          }
+        }
         if (!loopModel) {
           throw new Error("Turn model was not created before execution");
         }

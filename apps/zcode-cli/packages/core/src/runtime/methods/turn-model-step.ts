@@ -201,6 +201,7 @@ async function runModelBackedTurnStepImpl(
       messages: options.recordedMessages,
       providerId: String(model.providerId),
       modelId: String(model.modelId),
+      ...(model.options.reasoningLevel ? { reasoningLevel: model.options.reasoningLevel } : {}),
       querySource,
       toolCount: options.tools.length,
       iteration: state.toolCallCount === 0 ? 0 : Math.ceil(state.toolCallCount / 10),

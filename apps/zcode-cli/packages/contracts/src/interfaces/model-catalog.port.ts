@@ -19,6 +19,8 @@ export interface ModelCatalogEntry {
   reasoningLevels: string[];
   /** 注册表的默认档位；`reasoningLevels` 为空时缺席。 */
   defaultReasoningLevel?: string;
+  /** 仅当宿主确认同模型推理档位调整不会使提示缓存失效时为 true；未知时缺席。 */
+  effortChangePreservesCache?: true;
   contextWindow?: number;
   /** 本条目是否就是会话当前的选择（provider + model 同一）。整张表至多一条为真。 */
   current: boolean;

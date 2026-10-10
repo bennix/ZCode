@@ -3,6 +3,20 @@ import { test } from "node:test";
 import { resolveComputerUseAvailability } from "../src/settings/computerUseAvailability.js";
 import { resolveCuaComposerEntryView } from "../src/lib/cuaComposerEntryState.js";
 import { supportsLocalLinuxCuaEntry } from "../src/lib/cuaPlatform.js";
+import { createSettingsPageConfig } from "../src/settings/settingsPageConfig.js";
+
+test("Computer Use settings navigation appears on desktop and stays hidden on Web", () => {
+  assert.equal(
+    createSettingsPageConfig({ isDesktop: true }).settingsSections.some(
+      (section) => section.id === "computerUse",
+    ),
+    true,
+  );
+  assert.equal(
+    createSettingsPageConfig().settingsSections.some((section) => section.id === "computerUse"),
+    false,
+  );
+});
 
 test("local Linux desktop offers Computer Use while remote and web remain unavailable", () => {
   assert.deepEqual(resolveComputerUseAvailability({ isDesktop: true }), {
@@ -38,19 +52,14 @@ test("Linux entry requires the desktop preload and excludes Android", () => {
       configurable: true,
       value: { userAgent: "ZenCode Electron Linux x86_64" },
     });
-    assert.equal(
-      supportsLocalLinuxCuaEntry({ executeDesktopCommand: async () => undefined } as never),
-      true,
-    );
+    assert.equal(supportsLocalLinuxCuaEntry({ isDesktopRuntime: true } as never), true);
+    assert.equal(supportsLocalLinuxCuaEntry({ isDesktopRuntime: false } as never), false);
     assert.equal(supportsLocalLinuxCuaEntry(null), false);
     Object.defineProperty(globalThis, "navigator", {
       configurable: true,
       value: { userAgent: "Android Linux" },
     });
-    assert.equal(
-      supportsLocalLinuxCuaEntry({ executeDesktopCommand: async () => undefined } as never),
-      false,
-    );
+    assert.equal(supportsLocalLinuxCuaEntry({ isDesktopRuntime: true } as never), false);
   } finally {
     if (original) Object.defineProperty(globalThis, "navigator", original);
     else Reflect.deleteProperty(globalThis, "navigator");

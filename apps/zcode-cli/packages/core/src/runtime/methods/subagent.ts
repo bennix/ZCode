@@ -77,13 +77,13 @@ export function createDefaultSubagentPort(
       await this.appendEvent(event, traceContext);
     },
     enqueueParentTaskNotification: (notification) => {
-      this.enqueueBackgroundTaskNotification({
+      return this.enqueueBackgroundTaskNotification({
         originMeta: notification.originMeta,
+        requestId: notification.requestId,
         taskId: notification.taskId,
         text: notification.text,
         traceContext: notification.traceContext,
       });
-      return undefined;
     },
     getAllowedTools: () => {
       return buildExploreAllowedTools({

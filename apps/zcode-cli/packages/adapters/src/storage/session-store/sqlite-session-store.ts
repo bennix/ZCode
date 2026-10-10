@@ -696,6 +696,13 @@ export class SqliteSessionStore
     return sessionInputRepository.promoteSessionInput(this.db, input);
   }
 
+  async promoteSessionInputBatch(
+    input: Parameters<NonNullable<SessionStorePort["promoteSessionInputBatch"]>>[0],
+  ): Promise<void> {
+    this.throwBeforeWrite();
+    return sessionInputRepository.promoteSessionInputBatch(this.db, input);
+  }
+
   async markSessionInputPromoted(input: {
     id: string;
     sessionID: SessionId;

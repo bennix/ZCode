@@ -17,6 +17,7 @@ import type {
   DynamicWorkflowRunProgressPayload,
   HookRunLifecyclePayload,
   ModelCompletePayload,
+  ModelRequestPayload,
   ModelNetworkStatusPayload,
   ModelSelectedPayload,
   ModelStreamingPayload,
@@ -1357,6 +1358,8 @@ export class ProductProjection {
         return this.onStreamRecoveryRetryStarted(event);
       case SessionEventType.ModelSelected:
         return this.onModelSelected(event);
+      case SessionEventType.ModelRequest:
+        return this.onModelRequest(event);
       case SessionEventType.ModelComplete:
         return this.onModelComplete(event);
       case SessionEventType.ToolCallScheduled:
@@ -4358,6 +4361,25 @@ export class ProductProjection {
   }
 
   // ── config / usage ──
+
+  private onModelRequest(event: SessionEvent): ConversationDelta[] {
+    const payload = event.payload as ModelRequestPayload;
+    if (payload.querySource !== "main_turn") return [];
+    const headerRowId = this.turnHeaderRowIdByTurnId.get(this.turnIdOf(event));
+    const headerRow = headerRowId === undefined ? undefined : this.findRow(headerRowId);
+    if (headerRow?.kind !== "turnHeader") return [];
+    return [{
+      op: "row.upserted",
+      row: {
+        ...headerRow,
+        executionModel: {
+          providerId: payload.providerId,
+          modelId: payload.modelId,
+          ...(payload.reasoningLevel ? { options: { reasoningLevel: payload.reasoningLevel } } : {}),
+        },
+      },
+    }];
+  }
 
   private onModelSelected(event: SessionEvent): ConversationDelta[] {
     const payload = event.payload as ModelSelectedPayload;

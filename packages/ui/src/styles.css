@@ -2051,3 +2051,15 @@ body {
 .prompt-mention[data-mention-category="plugins"]::before {
   border-radius: var(--radius-sm);
 }
+/* 手机草稿页展开引导面板时，装饰问候和弹性留白会把主操作挤到视口外。 */
+@media (max-width: 639px) {
+  #conversation:has([data-testid="composer-guided-panel"]) [data-testid="chat-empty"] {
+    display: none;
+  }
+
+  #conversation:has([data-testid="composer-guided-panel"])
+    [data-responsive-centered-empty-layout="true"]::before {
+    flex-basis: 0;
+    min-height: 0;
+  }
+}

@@ -11,7 +11,7 @@ export function StudioSettingsDisclosure({
   collapseLabel: string;
   expandLabel: string;
 }) {
-  const [expanded, setExpanded] = useState(true);
+  const [expanded, setExpanded] = useState(false);
   const contentId = useId();
   const Icon = expanded ? ChevronUp : ChevronDown;
   return (

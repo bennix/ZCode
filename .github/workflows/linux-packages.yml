@@ -5,7 +5,17 @@ on:
 
 jobs:
   deb-rpm:
-    runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runner: ubuntu-24.04
+            arch: x64
+            unpacked: linux-unpacked
+          - runner: ubuntu-24.04-arm
+            arch: arm64
+            unpacked: linux-arm64-unpacked
+    runs-on: ${{ matrix.runner }}
     timeout-minutes: 180
     steps:
       - uses: actions/checkout@v4
@@ -33,12 +43,38 @@ jobs:
         env:
           ZCODE_ENV: production
           ZCODE_LINUX_TARGETS: deb,rpm
-        run: node scripts/bundle.mjs --os linux --arch x64
+        run: node scripts/bundle.mjs --os linux --arch ${{ matrix.arch }}
+
+      - name: Check packaged Computer Use MCP executor
+        env:
+          ZCODE_CUA_PLUGIN_ROOT: packages/desktop/bundled-agents/linux-${{ matrix.arch }}/glm/packages/zcode-cua-plugin
+        run: node packages/zcode-cua/tests/packaged-native-smoke.mjs
+
+      - name: Install X11 test desktop dependencies
+        run: |
+          sudo apt-get install -y xvfb xauth x11-apps xdotool
+
+      - name: Check packaged first-use Computer Use settings
+        env:
+          ZENCODE_PACKAGED_APP_PATH: packages/desktop/dist/${{ matrix.unpacked }}/zcode
+        run: xvfb-run -a node --test packages/desktop/tests/computer-use-settings.e2e.mjs
+
+      - name: Check native X11 observation and click
+        env:
+          ZCODE_CUA_PLUGIN_ROOT: packages/desktop/bundled-agents/linux-${{ matrix.arch }}/glm/packages/zcode-cua-plugin
+        run: xvfb-run -a env XDG_SESSION_TYPE=x11 node packages/zcode-cua/tests/linux-x11-native-action.mjs
+
+      - name: Check native Wayland AT-SPI observation and click
+        env:
+          ZCODE_CUA_PLUGIN_ROOT: packages/desktop/bundled-agents/linux-${{ matrix.arch }}/glm/packages/zcode-cua-plugin
+        run: |
+          sudo apt-get install -y weston dbus-x11 at-spi2-core zenity libglib2.0-bin gsettings-desktop-schemas
+          dbus-run-session -- node packages/zcode-cua/tests/linux-wayland-native-action.mjs
 
       - name: Upload deb and rpm
         uses: actions/upload-artifact@v4
         with:
-          name: zencode-linux-x64
+          name: zencode-linux-${{ matrix.arch }}
           if-no-files-found: error
           path: |
             packages/desktop/dist/*.deb

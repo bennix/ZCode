@@ -401,6 +401,7 @@ export interface AgentRuntimeTurnMethods {
     traceContext: TraceContext;
     metadata?: Record<string, unknown>;
     visibility?: MessageVisibility;
+    sessionInputIds?: string[];
   }): Promise<void>;
   persistAssistantTimelinePartForSession(options: {
     sessionId: SessionId;

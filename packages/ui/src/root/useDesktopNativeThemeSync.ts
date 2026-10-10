@@ -30,6 +30,19 @@ export function useDesktopNativeThemeSync({
       }
       logger.error("[Root] 同步标题栏主题失败", { titleBarTheme, error });
     });
+    void platform.setCodeWorkbenchTheme?.(resolveTheme(theme)).catch((error) => {
+      if (!disposed) logger.error("[Root] 同步源码 IDE 主题失败", { error });
+    });
+
+    if (theme === "system" && platform.setCodeWorkbenchTheme) {
+      const media = window.matchMedia("(prefers-color-scheme: dark)");
+      const sync = () => void platform.setCodeWorkbenchTheme?.(media.matches ? "dark" : "light");
+      media.addEventListener("change", sync);
+      return () => {
+        disposed = true;
+        media.removeEventListener("change", sync);
+      };
+    }
 
     return () => {
       disposed = true;

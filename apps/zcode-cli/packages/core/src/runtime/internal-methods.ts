@@ -165,11 +165,12 @@ export interface AgentRuntimeCoreMethods {
   ): StopActiveForegroundExecutionResult;
   enqueueBackgroundTaskNotification(notification: {
     originMeta?: BackgroundResultOriginMeta;
+    requestId?: string;
     taskId?: string;
     text: string;
     toolName?: string;
     traceContext: TraceContext;
-  }): void;
+  }): Promise<boolean>;
   enqueueSubagentMessage(input: EnqueueSubagentMessageInput): undefined;
   drainPendingRuntimeCommandsForActiveLoop(): Promise<{
     backgroundSubagentResultConsumed: boolean;

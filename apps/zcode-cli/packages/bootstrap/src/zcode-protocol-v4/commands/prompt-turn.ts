@@ -62,7 +62,10 @@ export async function startPromptTurn(
   record: V4SessionRecordView,
   params: StartPromptTurnParams,
 ): Promise<PromptTurnStartResult> {
-  const usesExecutionSelection = params.modelExecution?.selectionScope === "execution";
+  // 自动调度只是可选判断；原模型仍是失败回退，因此必须经过常规就绪校验。
+  const usesExecutionSelection =
+    params.modelExecution?.selectionScope === "execution" &&
+    params.modelExecution.dispatcher === undefined;
   if (!usesExecutionSelection && record.restoreWarning) {
     // app 重启后冷恢复可能跑在 provider registry 推送
     // 之前，record 创建时判「模型不可解析」挂上告警；registry 随后到达时 runtime

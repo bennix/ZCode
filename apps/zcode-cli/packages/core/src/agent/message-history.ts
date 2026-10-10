@@ -35,6 +35,10 @@ export interface ModelInputMessage {
   modelId?: Model["modelId"];
 }
 
+type AssistantExecutionModel = Pick<Model, "providerId" | "modelId"> & {
+  options?: Pick<Model["options"], "reasoningLevel">;
+};
+
 export type RuntimeMessageSource =
   | SystemReminderSource
   | "shared_context"
@@ -52,6 +56,8 @@ export interface RuntimeMessageMessageEntry {
   metadata?: RuntimeMessageMetadata;
   /** 已提交 assistant 自己的 provider tokens；不会发送到 provider。 */
   tokens?: TokenUsageInfo;
+  /** 上一次实际执行档位；仅供 Core 续接选择，不进入 provider messages。 */
+  executionReasoningLevel?: string;
   /** 仅在当前 query 内生效；不得进入 canonical history 或 Session persistence。 */
   queryScope?: "output_token_continuation";
 }
@@ -94,7 +100,7 @@ export interface MessageHistory {
     content: string,
     toolCalls?: ToolCallInput[],
     reasoning?: ReasoningContentInput[],
-    model?: Pick<Model, "providerId" | "modelId">,
+    model?: AssistantExecutionModel,
     tokens?: TokenUsageInfo,
   ): void;
 
@@ -180,7 +186,7 @@ export class MessageHistoryImpl implements MessageHistory {
     content: string,
     toolCalls?: ToolCallInput[],
     reasoning?: ReasoningContentInput[],
-    model?: Pick<Model, "providerId" | "modelId">,
+    model?: AssistantExecutionModel,
     tokens?: TokenUsageInfo,
   ): void {
     const reasoningBlocks = reasoning?.map((block) => cloneReasoningBlock(block)) ?? [];
@@ -202,6 +208,9 @@ export class MessageHistoryImpl implements MessageHistory {
         ...(model ? { providerId: model.providerId, modelId: model.modelId } : {}),
       },
       ...(tokens ? { tokens: cloneTokenUsageInfo(tokens) } : {}),
+      ...(model?.options?.reasoningLevel
+        ? { executionReasoningLevel: model.options.reasoningLevel }
+        : {}),
     });
     this.cacheStats.totalMessages = this.entries.length;
   }
@@ -351,7 +360,7 @@ export function createRuntimeAssistantEntry(
   content: string,
   toolCalls?: readonly ToolCallInput[],
   reasoning?: readonly ReasoningContentInput[],
-  model?: Pick<Model, "providerId" | "modelId">,
+  model?: AssistantExecutionModel,
   tokens?: TokenUsageInfo,
 ): RuntimeMessageMessageEntry {
   const reasoningBlocks = reasoning?.map((block) => cloneReasoningBlock(block)) ?? [];
@@ -373,6 +382,9 @@ export function createRuntimeAssistantEntry(
       ...(model ? { providerId: model.providerId, modelId: model.modelId } : {}),
     },
     ...(tokens ? { tokens: cloneTokenUsageInfo(tokens) } : {}),
+    ...(model?.options?.reasoningLevel
+      ? { executionReasoningLevel: model.options.reasoningLevel }
+      : {}),
   };
 }
 
@@ -419,6 +431,9 @@ export function cloneRuntimeMessageEntry(entry: RuntimeMessageEntry): RuntimeMes
     message: cloneModelInputMessage(entry.message),
     metadata: cloneRuntimeMessageMetadata(entry.metadata),
     ...(entry.tokens ? { tokens: cloneTokenUsageInfo(entry.tokens) } : {}),
+    ...(entry.executionReasoningLevel
+      ? { executionReasoningLevel: entry.executionReasoningLevel }
+      : {}),
     ...(entry.queryScope ? { queryScope: entry.queryScope } : {}),
   };
 }

@@ -64,6 +64,7 @@ export async function saveSessionInput(
         delivery = excluded.delivery,
         payload = excluded.payload,
         time_updated = excluded.time_updated
+      where session_input.status = 'admitted'
       `,
   ).run(
     input.id,
@@ -309,6 +310,63 @@ export async function markSessionInputPromoted(
       where id = ? and session_id = ? and status = 'admitted'
       `,
   ).run(input.promotedMessageID, input.sessionID, Date.now(), input.id, input.sessionID);
+}
+
+export async function promoteSessionInputBatch(
+  db: DatabaseSync,
+  input: {
+    ids: string[];
+    sessionID: SessionId;
+    message: MessageInfo;
+    parts: MessagePart[];
+  },
+): Promise<void> {
+  if (
+    input.ids.length === 0 ||
+    new Set(input.ids).size !== input.ids.length ||
+    input.message.sessionID !== input.sessionID ||
+    input.parts.some(
+      (part) => part.sessionID !== input.sessionID || part.messageID !== input.message.id,
+    )
+  )
+    throw new Error("Invalid background notification promotion batch");
+
+  db.exec("begin immediate");
+  try {
+    const admitted = db.prepare(
+      "select status from session_input where id = ? and session_id = ? and kind = 'backgroundNotification'",
+    );
+    for (const id of input.ids) {
+      // 修复依据：必须先验证整批账本身份，不能在缺失/已结算通知上写入合成消息。
+      if (
+        (admitted.get(id, input.sessionID) as { status?: string } | undefined)?.status !==
+        "admitted"
+      ) {
+        throw new Error(`Background notification is not admitted: ${id}`);
+      }
+    }
+    await saveMessage(db, input.message);
+    for (const part of input.parts) await savePart(db, part);
+    const now = Date.now();
+    const promote = db.prepare(`
+      update session_input
+      set status = 'promoted', promoted_message_id = ?,
+          promoted_sequence = (
+            select coalesce(max(promoted_sequence), -1) + 1
+            from session_input where session_id = ?
+          ), time_updated = ?
+      where id = ? and session_id = ? and status = 'admitted'
+    `);
+    for (const id of input.ids) {
+      if (promote.run(input.message.id, input.sessionID, now, id, input.sessionID).changes !== 1) {
+        throw new Error(`Background notification promotion raced: ${id}`);
+      }
+    }
+    db.exec("commit");
+  } catch (error) {
+    db.exec("rollback");
+    throw error;
+  }
 }
 
 export async function settleSessionInput(

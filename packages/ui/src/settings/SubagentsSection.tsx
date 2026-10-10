@@ -54,6 +54,7 @@ import { SUBAGENT_COLORS, SUBAGENT_COLOR_CLASS } from "@/lib/subagentColors.js";
 import { SettingsResourceGroupHeader } from "@/settings/SettingsResourceGroupHeader.js";
 import { SettingsResourceHeaderActions } from "@/settings/SettingsResourceHeaderActions.js";
 import { SettingsBreadcrumbReporter } from "@/settings/SettingsHeaderBreadcrumb.js";
+import { AgentModelDispatchSettings } from "@/settings/AgentModelDispatchSettings.js";
 import { SettingsFormTextarea } from "@/settings/SettingsFormTextarea.js";
 import {
   SubagentReasoningField,
@@ -1713,6 +1714,10 @@ export function SubagentsSection({ onManageModels }: SubagentsSectionProps) {
   const hasSearchResultEmpty = Boolean(query.trim()) && filteredAgentCount === 0;
   return (
     <div className="space-y-6">
+      <AgentModelDispatchSettings
+        modelGroups={chatModelSelectGroups}
+        onManageModels={onManageModels}
+      />
       <div className="flex min-w-0 flex-wrap items-center gap-3">
         <div className="flex min-w-0 flex-wrap items-center gap-3">
           <PluginScopeMenu

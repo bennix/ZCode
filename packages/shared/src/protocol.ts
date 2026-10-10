@@ -316,6 +316,10 @@ export interface AppSettings {
   askUserQuestionAutoResolutionEnabled?: boolean;
   /** 是否完整保留 Model I/O；开启后不轮转、不限额重置、不压缩或裁剪，鉴权信息仍会脱敏。 */
   modelConnectionFallback?: import("./model-selection.js").ModelSelection | null;
+  /** 新任务模型调度默认关闭；会话的执行模型选择不由此字段持久改写。 */
+  agentModelDispatchEnabled?: boolean;
+  /** 独立于执行模型的调度判断模型；缺省或失效时不调度。 */
+  agentModelDispatcher?: import("./model-selection.js").ModelSelection | null;
   modelIoFullRetentionEnabled?: boolean;
   /** 设置页中每个 Provider Family 当前唯一的结构化连接选择。 */
   providerFamilyConnectionSelections?: ProviderFamilyConnectionSelectionSettings;

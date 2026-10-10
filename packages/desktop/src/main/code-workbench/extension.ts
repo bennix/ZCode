@@ -19,8 +19,12 @@ export async function writeWorkbenchExtension(extensions: string) {
         main: "./extension.cjs",
         extensionKind: ["workspace"],
         capabilities: { untrustedWorkspaces: { supported: true } },
-        activationEvents: ["onCommand:zencode.askAI"],
+        activationEvents: ["onStartupFinished", "onCommand:zencode.askAI"],
         contributes: {
+          themes: [
+            { label: "ZenCode Light", uiTheme: "vs", path: "./themes/light.json" },
+            { label: "ZenCode Dark", uiTheme: "vs-dark", path: "./themes/dark.json" },
+          ],
           commands: [
             { command: "zencode.askAI", title: "ZenCode: 将选中代码交给 AI / Ask AI" },
             {
@@ -55,12 +59,81 @@ export async function writeWorkbenchExtension(extensions: string) {
       2,
     ),
   );
+  await mkdir(join(root, "themes"), { recursive: true });
+  for (const [mode, palette] of Object.entries({
+    light: { background: "#f8f8f8", panel: "#ffffff", sidebar: "#f0f0f0", input: "#ffffff", foreground: "#0d0d0d", border: "#0d0d0d1a", accent: "#0b7fff" },
+    dark: { background: "#161616", panel: "#202020", sidebar: "#161616", input: "#2b2b2b", foreground: "#f8f8f8", border: "#ffffff1a", accent: "#4099ff" },
+  })) {
+    await writeFile(join(root, "themes", `${mode}.json`), JSON.stringify({
+      name: `ZenCode ${mode === "light" ? "Light" : "Dark"}`,
+      type: mode,
+      colors: {
+        "foreground": palette.foreground,
+        "focusBorder": palette.accent,
+        "editor.background": palette.background,
+        "editor.foreground": palette.foreground,
+        "sideBar.background": palette.sidebar,
+        "sideBar.foreground": palette.foreground,
+        "activityBar.background": palette.sidebar,
+        "activityBar.foreground": palette.foreground,
+        "titleBar.activeBackground": palette.panel,
+        "titleBar.activeForeground": palette.foreground,
+        "tab.activeBackground": palette.background,
+        "tab.inactiveBackground": palette.panel,
+        "panel.background": palette.panel,
+        "statusBar.background": palette.panel,
+        "statusBar.foreground": palette.foreground,
+        "editorGroupHeader.tabsBackground": palette.panel,
+        "input.background": palette.input,
+        "dropdown.background": palette.input,
+        "menu.background": palette.input,
+        "list.activeSelectionBackground": palette.accent + "33",
+        "list.hoverBackground": palette.accent + "1a",
+        "editorGroup.border": palette.border,
+        "panel.border": palette.border,
+        "sideBar.border": palette.border,
+      },
+    }, null, 2));
+  }
   await writeFile(
     join(root, "extension.cjs"),
     `
 const vscode = require('vscode');
 const parseExtensionReference = ${parseExtensionReference.toString()};
 exports.activate = context => {
+ // 主题由 ZenCode 外层拥有；扩展通过已鉴权的本机桥接接收变更，再交给 VS Code 配置 API。
+ let disposed = false;
+ context.subscriptions.push({ dispose() { disposed = true; } });
+ void (async () => {
+  while (!disposed) {
+   try {
+    const response = await fetch(process.env.ZENCODE_IDE_BRIDGE_URL.replace('/context', '/theme-stream'), {
+     headers: { Authorization: 'Bearer ' + process.env.ZENCODE_IDE_BRIDGE_TOKEN }
+    });
+    if (!response.ok || !response.body) throw new Error('ZenCode theme bridge unavailable');
+    const reader = response.body.getReader();
+    const decoder = new TextDecoder();
+    let buffer = '';
+    while (!disposed) {
+     const { value, done } = await reader.read();
+     if (done) break;
+     buffer += decoder.decode(value, { stream: true });
+     let boundary;
+     while ((boundary = buffer.indexOf('\\n\\n')) >= 0) {
+      const event = buffer.slice(0, boundary);
+      buffer = buffer.slice(boundary + 2);
+      const theme = event.startsWith('data: ') ? event.slice(6).trim() : '';
+      if (theme === 'light' || theme === 'dark') {
+       const name = theme === 'light' ? 'ZenCode Light' : 'ZenCode Dark';
+       const config = vscode.workspace.getConfiguration('workbench');
+       if (config.get('colorTheme') !== name) await config.update('colorTheme', name, vscode.ConfigurationTarget.Global);
+      }
+     }
+    }
+   } catch { /* 子进程或桥接暂时不可用时重连，不影响编辑。 */ }
+   if (!disposed) await new Promise(resolve => setTimeout(resolve, 1000));
+  }
+ })();
  context.subscriptions.push(vscode.commands.registerCommand('zencode.importExtension', async () => {
   try {
    const kind = await vscode.window.showQuickPick(['网页链接或扩展 ID / Web link or ID', '本地 VSIX / Local VSIX'], { placeHolder: '导入 VS Code 扩展 / Import extension' });

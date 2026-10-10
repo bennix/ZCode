@@ -1,5 +1,5 @@
 import { cn } from "@/components/lib/utils.js";
-import { ZenMuxLogo } from "@/components/ui/ZenMuxLogo.js";
+import { ZenCodeAppLogo } from "@/components/ui/ZenCodeAppLogo.js";
 
 export function WindowsTopLeftLogo({
   className,
@@ -19,7 +19,7 @@ export function WindowsTopLeftLogo({
         className,
       )}
     >
-      <ZenMuxLogo className={cn("pointer-events-none size-5 select-none", imageClassName)} />
+      <ZenCodeAppLogo className={cn("pointer-events-none size-5 select-none", imageClassName)} />
     </div>
   );
 }

@@ -97,6 +97,7 @@ export interface ExploreSubagentRuntimeResult {
 
 export interface ParentTaskNotificationCommand {
   originMeta: BackgroundResultOriginMeta;
+  requestId: string;
   text: string;
   traceContext: TraceContext;
   taskId: string;
@@ -104,7 +105,7 @@ export interface ParentTaskNotificationCommand {
 
 export type EnqueueParentTaskNotification = (
   notification: ParentTaskNotificationCommand,
-) => undefined;
+) => Promise<boolean>;
 
 export interface ExploreSubagentPortOptions {
   runExploreAgent: (
@@ -113,7 +114,7 @@ export interface ExploreSubagentPortOptions {
   ) => Promise<ExploreSubagentRuntimeResult>;
   emitParentEvent: (event: SessionEvent, traceContext: TraceContext) => Promise<void>;
   // background completion 必须同步写入父 runtime command queue；
-  // 返回 undefined 可让 TypeScript 拒绝 async enqueue，避免 fake-notified。
+  // 同步布尔回执可拒绝 async enqueue，并区分真正入队与 shutdown/stale 丢弃。
   enqueueParentTaskNotification?: EnqueueParentTaskNotification;
   outputRootDir?: string;
   profiles?: readonly AgentProfile[];
@@ -1528,7 +1529,7 @@ async function finalizeBackgroundCompletion(
       totalTokens: completed.output.totalTokens,
     },
   }));
-  enqueueBackgroundNotification(
+  await enqueueBackgroundNotification(
     options,
     registry,
     lifecycle.agentId,
@@ -1606,7 +1607,7 @@ async function finalizeBackgroundFailure(
       durationMs: totalDurationMs,
     },
   }));
-  enqueueBackgroundNotification(
+  await enqueueBackgroundNotification(
     options,
     registry,
     lifecycle.agentId,
@@ -1703,7 +1704,7 @@ async function finalizeBackgroundStopped(
     ...stopped.task,
     notified: current.notified,
   }));
-  const enqueued = enqueueBackgroundNotification(
+  const enqueued = await enqueueBackgroundNotification(
     options,
     registry,
     stopped.task.taskId,
@@ -1827,13 +1828,45 @@ async function emitRuntimeTaskSubagentStoppedEvent(
   await options.emitParentEvent(event, traceContext);
 }
 
-function enqueueBackgroundNotification(
+const pendingNotificationAdmissions = new WeakMap<
+  RuntimeTaskRegistry,
+  Map<string, Promise<boolean>>
+>();
+
+export function enqueueBackgroundNotification(
   options: ExploreSubagentPortOptions,
   registry: RuntimeTaskRegistry,
   taskId: string,
   message: string,
   traceContext: TraceContext,
-): boolean {
+): Promise<boolean> {
+  let pending = pendingNotificationAdmissions.get(registry);
+  if (!pending) {
+    pending = new Map();
+    pendingNotificationAdmissions.set(registry, pending);
+  }
+  const existing = pending.get(taskId);
+  if (existing) return existing;
+  const admission = deliverBackgroundNotification(options, registry, taskId, message, traceContext);
+  pending.set(taskId, admission);
+  void admission.then(
+    () => {
+      if (pending.get(taskId) === admission) pending.delete(taskId);
+    },
+    () => {
+      if (pending.get(taskId) === admission) pending.delete(taskId);
+    },
+  );
+  return admission;
+}
+
+async function deliverBackgroundNotification(
+  options: ExploreSubagentPortOptions,
+  registry: RuntimeTaskRegistry,
+  taskId: string,
+  message: string,
+  traceContext: TraceContext,
+): Promise<boolean> {
   if (!options.enqueueParentTaskNotification) {
     options.logger?.warn("Skipped subagent background notification without parent queue", {
       ...traceContextToLogContext(traceContext),
@@ -1856,17 +1889,37 @@ function enqueueBackgroundNotification(
     return false;
   }
 
+  if (!task.notificationRequestId) {
+    options.logger?.warn("Skipped subagent background notification without lifecycle request ID", {
+      ...traceContextToLogContext(traceContext),
+      event: "subagent.background.notification.missing_request_id",
+      module: "core.subagent",
+      taskId,
+    });
+    return false;
+  }
+
   try {
-    options.enqueueParentTaskNotification({
+    const accepted = await options.enqueueParentTaskNotification({
       originMeta: {
         backgroundSource: "subagent",
         title: task.description.trim() || taskId,
         workId: taskId,
       },
       taskId,
+      requestId: task.notificationRequestId,
       text: message,
       traceContext,
     });
+    if (!accepted) {
+      options.logger?.warn("Subagent background notification was rejected by parent runtime", {
+        ...traceContextToLogContext(traceContext),
+        event: "subagent.background.notification.rejected",
+        module: "core.subagent",
+        taskId,
+      });
+      return false;
+    }
   } catch (error) {
     options.logger?.warn("Failed to enqueue subagent background notification", {
       ...traceContextToLogContext(traceContext),

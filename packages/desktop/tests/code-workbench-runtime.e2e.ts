@@ -57,9 +57,10 @@ test(
       await page.keyboard.press("Enter");
       await page.locator(".monaco-editor textarea").first().waitFor();
       await page.locator(".monaco-editor .view-lines").first().click();
-      await page.locator(".monaco-editor textarea").first().focus();
+      // Bug 原因：Monaco 的 ime-text-area 是 readonly；直接 focus 它会把真实编辑焦点夺走。
       await page.keyboard.press("Meta+End");
       await page.keyboard.type("// edited in workbench", { delay: 30 });
+      await page.screenshot({ path: join(root, "editing-before-save.png") });
       await page.getByText("// edited in workbench", { exact: false }).first().waitFor();
       await page.keyboard.press("F1");
       await page.locator(".quick-input-widget input").fill(">File: Save");

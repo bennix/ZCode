@@ -3,6 +3,8 @@ import { CodeWorkbenchLayoutContext } from "@/lib/codeWorkbenchLayout.js";
 import { useTaskActivitySound } from "@/hooks/useTaskActivitySound.js";
 import { resolveSelectionSideInheritedModel } from "@/lib/selectionSideInheritedModel.js";
 import { useStartPlanRecommendation } from "@/hooks/useStartPlanRecommendation.js";
+import { dispatchExecutionForSubmission } from "@/v4/composer/agentModelDispatch.js";
+import { SharedModelContextPanel } from "@/v4/SharedModelContextPanel.js";
 import type { SessionCreateSource } from "@zcode/shared";
 import { reportSessionCreate } from "@/lib/sessionCreateTelemetry.js";
 import { getLocalTtftObserver } from "@/v4/telemetry/localTtftObserver.js";
@@ -602,6 +604,13 @@ export function SessionPane({
   const lease = currentScopedLease(leaseBinding, layer, sessionId);
   const state = useConversationProjection(lease);
   const snapshot = state.snapshot;
+  const manualModelOverrideRef = useRef(false);
+  const manualModelOverrideSessionRef = useRef(sessionId);
+  useEffect(() => {
+    const previous = manualModelOverrideSessionRef.current;
+    if (previous && previous !== sessionId) manualModelOverrideRef.current = false;
+    manualModelOverrideSessionRef.current = sessionId;
+  }, [sessionId]);
   useTaskActivitySound(snapshot, workspaceIdentity?.trim() || workspacePath);
   const newlyCreatedSessionIdRef = useRef<string | null>(null);
   const shareDraft = useConversationShareSelectionStore((storeState) =>
@@ -2618,6 +2627,7 @@ export function SessionPane({
         return "blocked" as const;
       }
       const currentRoutingMode = snapshotRef.current?.inputRouting.mode;
+      let startPlanChangedSelection = false;
       if (
         currentRoutingMode === "choice" &&
         !heldQueueDisposition &&
@@ -2632,10 +2642,18 @@ export function SessionPane({
         const chosen = await recommendStartPlan(original);
         if (!chosen) return "blocked" as const;
         if (chosen !== original) {
+          startPlanChangedSelection = true;
           onAcceptedSelection = captureAcceptedModelSelection(chosen, original);
           submission = { ...submission, modelSelection: chosen };
         }
       }
+      const dispatchExecution = dispatchExecutionForSubmission({
+        settings: sharedSettings ?? null,
+        view: modelSelectionView,
+        routingMode: sessionId === null ? null : (currentRoutingMode ?? "reject"),
+        manualModelOverride: manualModelOverrideRef.current || startPlanChangedSelection,
+        submissionSelection: submission.modelSelection,
+      });
       const prewarmTargetBeforeSend =
         sessionId === null ? prewarmBindingRef.current?.sessionId : null;
       if (prewarmTargetBeforeSend) {
@@ -2756,6 +2774,7 @@ export function SessionPane({
               {
                 text: effectiveText,
                 ...submission,
+                ...(dispatchExecution ? { modelExecution: dispatchExecution } : {}),
                 ...(readyAttachments.length > 0 ? { attachments: readyAttachments } : {}),
                 ...(sharedContextRefs?.length ? { context_refs: sharedContextRefs } : {}),
               },
@@ -2806,7 +2825,11 @@ export function SessionPane({
             "createSession",
             {
               workspaceId: workspaceKey,
-              firstInput: { text: effectiveText, ...submission },
+              firstInput: {
+                text: effectiveText,
+                ...submission,
+                ...(dispatchExecution ? { modelExecution: dispatchExecution } : {}),
+              },
               ...draftConfigPayload,
             },
             null,
@@ -2853,6 +2876,7 @@ export function SessionPane({
             text: effectiveText,
             attachments: readyAttachments,
             ...submission,
+            ...(dispatchExecution ? { modelExecution: dispatchExecution } : {}),
             ...(sharedContextRefs?.length ? { context_refs: sharedContextRefs } : {}),
           },
           newSessionId,
@@ -2877,6 +2901,7 @@ export function SessionPane({
         {
           text: effectiveText,
           ...submission,
+          ...(dispatchExecution ? { modelExecution: dispatchExecution } : {}),
           ...(readyAttachments.length > 0 ? { attachments: readyAttachments } : {}),
           ...(options?.requestedDelivery
             ? {
@@ -2908,6 +2933,8 @@ export function SessionPane({
     [
       dispatchCommand,
       recommendStartPlan,
+      sharedSettings,
+      modelSelectionView,
       captureAcceptedModelSelection,
       dispatchSlashCommand,
       ensureDraftModelReadyForSend,
@@ -3463,6 +3490,7 @@ export function SessionPane({
         branch: "composer-submission-intent",
       });
       handleDraftSelectModel(resolvedProvider, model);
+      manualModelOverrideRef.current = true;
     },
     [draftConfigRef, handleDraftSelectModel],
   );
@@ -3470,6 +3498,7 @@ export function SessionPane({
   const handleSelectThought = useCallback(
     (thought: string, _modelContext: { provider: string; model: string }) => {
       handleDraftSelectThought(thought);
+      manualModelOverrideRef.current = true;
     },
     [handleDraftSelectThought],
   );
@@ -4579,6 +4608,9 @@ export function SessionPane({
           onMoveItem={handleReorderQueueItem}
           onResume={handleResumeQueue}
         />
+      ) : null}
+      {sessionId && snapshot && sharedSettings?.agentModelDispatchEnabled === true ? (
+        <SharedModelContextPanel snapshot={snapshot} />
       ) : null}
       {/* v4 权限/问答等待态只是 runtime 的阻塞交互，必须和 composer
           共享 timeline bottom dock；渲染在 SessionPane 外层会脱离主列宽度并挤占下半屏。 */}

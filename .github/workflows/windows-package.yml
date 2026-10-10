@@ -5,7 +5,17 @@ on:
 
 jobs:
   nsis:
-    runs-on: windows-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runner: windows-latest
+            arch: x64
+            unpacked: win-unpacked
+          - runner: windows-11-arm
+            arch: arm64
+            unpacked: win-arm64-unpacked
+    runs-on: ${{ matrix.runner }}
     timeout-minutes: 180
     steps:
       - uses: actions/checkout@v4
@@ -26,11 +36,26 @@ jobs:
         working-directory: packages/desktop
         env:
           ZCODE_ENV: production
-        run: node scripts/bundle.mjs --os win --arch x64
+        run: node scripts/bundle.mjs --os win --arch ${{ matrix.arch }}
+
+      - name: Check packaged Computer Use MCP executor
+        env:
+          ZCODE_CUA_PLUGIN_ROOT: packages/desktop/bundled-agents/win32-${{ matrix.arch }}/glm/packages/zcode-cua-plugin
+        run: node packages/zcode-cua/tests/packaged-native-smoke.mjs
+
+      - name: Check packaged first-use Computer Use settings
+        env:
+          ZENCODE_PACKAGED_APP_PATH: packages/desktop/dist/${{ matrix.unpacked }}/ZenCode.exe
+        run: node --test packages/desktop/tests/computer-use-settings.e2e.mjs
+
+      - name: Check native Windows UIA observation and click
+        env:
+          ZCODE_CUA_PLUGIN_ROOT: packages/desktop/bundled-agents/win32-${{ matrix.arch }}/glm/packages/zcode-cua-plugin
+        run: node packages/zcode-cua/tests/windows-uia-native-action.mjs
 
       - name: Upload installer
         uses: actions/upload-artifact@v4
         with:
-          name: zencode-windows-x64
+          name: zencode-windows-${{ matrix.arch }}
           if-no-files-found: error
           path: packages/desktop/dist/*.exe

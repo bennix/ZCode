@@ -255,6 +255,23 @@ async function runRuntimeCommand(
       }
       return;
     }
+    if (command.mode === "background-response-continuation") {
+      // 合成 user message 已和账本原子提交；恢复只续模型，不能再次 promotion。
+      await this.executeTurnCommand(command.text, undefined, {
+        abortSignal: foregroundExecution.controller.signal,
+        inputSource: "background_task",
+        inputVisibility: "model-only",
+        recordedInputMessageId: command.promotedMessageId,
+        skipInputRecord: true,
+        skipUserPromptSubmitHooks: true,
+        ...(command.originMeta ? { originMeta: command.originMeta } : {}),
+        ...(command.backgroundSource ? { backgroundSource: command.backgroundSource } : {}),
+        backgroundSubagentResultConsumed: command.backgroundSubagentResultConsumed === true,
+        workflowResultConsumed: command.workflowResultConsumed === true,
+        traceContext: command.traceContext,
+      });
+      return;
+    }
     if (command.mode === "subagent-message") {
       this.logger?.debug("Subagent response command started", {
         ...traceContextToLogContext(command.traceContext),
@@ -318,11 +335,32 @@ async function runTaskNotificationBatch(
   this: AgentRuntimeInternal,
   commands: readonly TaskNotificationRuntimeCommand[],
 ): Promise<void> {
-  const eligibleCommands = commands.filter(
-    (command) =>
-      !isStaleBranchRuntimeCommand(this, command) &&
-      !shouldSuppressTaskNotificationRuntimeCommand.call(this, command),
-  );
+  const eligibleCommands: TaskNotificationRuntimeCommand[] = [];
+  for (const command of commands) {
+    if (
+      isStaleBranchRuntimeCommand(this, command) ||
+      shouldSuppressTaskNotificationRuntimeCommand.call(this, command)
+    )
+      continue;
+    let ledger: { status?: string } | null | undefined;
+    try {
+      ledger = await this.sessionStore?.getSessionInputById?.(String(command.id));
+    } catch (error) {
+      // 账本仍为 admitted 时，重启恢复可以重新投递；读取失败不能构造未校验的模型输入。
+      this.logger?.warn("Failed to verify background notification ledger before delivery", {
+        ...traceContextToLogContext(command.traceContext),
+        commandId: command.id,
+        errorMessage: error instanceof Error ? error.message : String(error),
+        event: "background_task.notification.ledger_read_failed",
+        module: "core.runtime",
+      });
+      return;
+    }
+    // TaskOutput 可在 admission 之后、批次出队之前读走结果并结算账本。
+    // 只允许仍为 admitted 的命令进入模型轮；终态和缺失项不能合成 user notice。
+    if (this.sessionStore?.getSessionInputById && ledger?.status !== "admitted") continue;
+    eligibleCommands.push(command);
+  }
   const firstCommand = eligibleCommands[0];
   if (!firstCommand) return;
 

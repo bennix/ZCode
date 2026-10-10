@@ -1062,6 +1062,14 @@ export interface TaskUsageQueryResult {
   reasoningTokens: number;
   cacheCreationTokens: number;
   cacheReadTokens: number;
+  /** 每次 API 请求报告的 Token 合计；不会扣除重复上下文前缀。 */
+  requestTotalTokens: number;
+  requestInputTokens: number;
+  requestOutputTokens: number;
+  requestCacheCreationTokens: number;
+  requestCacheReadTokens: number;
+  mainRequestTokens: number;
+  dispatchRequestTokens: number;
   modelRequestCount: number;
   modelErrorCount: number;
   inputBaselineBySource: Record<string, number>;
@@ -1165,6 +1173,13 @@ export interface SessionStorePort {
    */
   promoteSessionInput?(input: {
     id: string;
+    sessionID: SessionId;
+    message: MessageInfo;
+    parts: MessagePart[];
+  }): Promise<void>;
+  /** 后台通知批量 promotion：同一事务提交一条合成消息、parts 与全部账本认领。 */
+  promoteSessionInputBatch?(input: {
+    ids: string[];
     sessionID: SessionId;
     message: MessageInfo;
     parts: MessagePart[];

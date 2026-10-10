@@ -190,6 +190,7 @@ async function renderConversationSharePage(): Promise<void> {
 function createWebPlatform(): IPlatformService {
   return {
     canSelectFilePath: false,
+    isDesktopRuntime: false,
     // Web 端无法打开系统目录选择框
     selectDirectory: () => Promise.resolve(null),
     // Web 端无法打开系统文件选择框

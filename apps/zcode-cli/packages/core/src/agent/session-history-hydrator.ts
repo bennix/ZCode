@@ -140,7 +140,13 @@ export async function hydrateMessageHistoryFromSession(input: {
       ),
       reasoning,
       message.info.modelId && message.info.providerId
-        ? { modelId: message.info.modelId, providerId: message.info.providerId }
+        ? {
+            modelId: message.info.modelId,
+            providerId: message.info.providerId,
+            ...(message.info.reasoningLevel
+              ? { options: { reasoningLevel: message.info.reasoningLevel } }
+              : {}),
+          }
         : undefined,
       message.info.tokens,
     );

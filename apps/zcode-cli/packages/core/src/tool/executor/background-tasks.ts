@@ -141,7 +141,7 @@ export class BackgroundTaskTracker {
         toolName: toolCall.name,
       });
       updateRuntimeBackgroundTask(this.deps, toolCall, taskId, "lost");
-      this.maybeEnqueueBackgroundTaskNotification(
+      await this.maybeEnqueueBackgroundTaskNotification(
         toolCall,
         taskId,
         "lost",
@@ -232,7 +232,7 @@ export class BackgroundTaskTracker {
             toolName: toolCall.name,
           });
           updateRuntimeBackgroundTask(this.deps, toolCall, taskId, "lost");
-          this.maybeEnqueueBackgroundTaskNotification(
+          await this.maybeEnqueueBackgroundTaskNotification(
             toolCall,
             taskId,
             "lost",
@@ -286,7 +286,7 @@ export class BackgroundTaskTracker {
           toolName: toolCall.name,
         });
         updateRuntimeBackgroundTask(this.deps, toolCall, taskId, snapshot.status, snapshot);
-        this.maybeEnqueueBackgroundTaskNotification(
+        await this.maybeEnqueueBackgroundTaskNotification(
           toolCall,
           taskId,
           snapshot.status,
@@ -463,14 +463,14 @@ export class BackgroundTaskTracker {
     );
   }
 
-  private maybeEnqueueBackgroundTaskNotification(
+  private async maybeEnqueueBackgroundTaskNotification(
     toolCall: ExecutableToolCall,
     taskId: string,
     status: string,
     snapshot: BackgroundTaskSnapshot | undefined,
     traceContext: TraceContext,
     output?: Record<string, unknown>,
-  ): void {
+  ): Promise<void> {
     if (!this.deps.enqueueBackgroundTaskNotification) {
       this.deps.logger?.debug?.("Background task notification queue unavailable", {
         ...traceContextToLogContext(traceContext),
@@ -548,7 +548,7 @@ export class BackgroundTaskTracker {
       return;
     }
     try {
-      this.deps.enqueueBackgroundTaskNotification({
+      const accepted = await this.deps.enqueueBackgroundTaskNotification({
         ...(toolCall.name === "Bash"
           ? {
               originMeta: {
@@ -578,6 +578,7 @@ export class BackgroundTaskTracker {
         toolName: toolCall.name,
         traceContext,
       });
+      if (!accepted) throw new Error("Parent runtime rejected background task notification");
     } catch (error) {
       releaseRuntimeBackgroundTaskNotification(this.deps, toolCall, taskId);
       this.deps.logger?.warn("Background task notification enqueue failed", {

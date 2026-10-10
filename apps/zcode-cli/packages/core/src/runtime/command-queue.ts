@@ -1,5 +1,6 @@
-import type { TraceContext, TurnState } from "./deps.js";
+import type { MessageId, TraceContext, TurnState } from "./deps.js";
 import type { BackgroundResultOriginMeta, WorkflowLaunchMeta } from "@zcode/contracts";
+import { uuidv7 } from "@zcode/shared";
 import type {
   ActiveTurnStartReservation,
   ContinueActiveTargetLoopOptions,
@@ -13,6 +14,7 @@ export type RuntimeCommandMode =
   | "target-continuation"
   | "target-continuation-loop"
   | "task-notification"
+  | "background-response-continuation"
   | "subagent-message"
   | "control-only-turn";
 export type RuntimeCommandId = string & {
@@ -72,6 +74,18 @@ export interface TaskNotificationRuntimeCommand extends RuntimeCommandBase {
   readonly toolName?: string;
 }
 
+/** `promoted` 后崩溃、尚无任何 assistant 时只续模型轮，不再合成第二条 user 输入。 */
+export interface BackgroundResponseContinuationRuntimeCommand extends RuntimeCommandBase {
+  readonly branchGeneration: number;
+  readonly mode: "background-response-continuation";
+  readonly promotedMessageId: MessageId;
+  readonly text: string;
+  readonly originMeta?: BackgroundResultOriginMeta;
+  readonly backgroundSource?: BackgroundResultOriginMeta["backgroundSource"];
+  readonly backgroundSubagentResultConsumed?: boolean;
+  readonly workflowResultConsumed?: boolean;
+}
+
 export interface SubagentMessageRuntimeCommand extends RuntimeCommandBase {
   readonly branchGeneration: number;
   readonly mode: "subagent-message";
@@ -111,6 +125,7 @@ export type RuntimeCommand =
   | TargetContinuationRuntimeCommand
   | TargetContinuationLoopRuntimeCommand
   | TaskNotificationRuntimeCommand
+  | BackgroundResponseContinuationRuntimeCommand
   | SubagentMessageRuntimeCommand
   | ControlOnlyTurnRuntimeCommand;
 
@@ -134,11 +149,10 @@ const RUNTIME_COMMAND_PRIORITY_ORDER: Record<RuntimeCommandPriority, number> = {
   later: 2,
 };
 
-let runtimeCommandIdSequence = 0;
-
 export function createRuntimeCommandId(): RuntimeCommandId {
-  runtimeCommandIdSequence += 1;
-  return `runtime_command_${runtimeCommandIdSequence}` as RuntimeCommandId;
+  // 修复依据：通知 ID 同时是 durable session_input 主键；进程内序号重启后会
+  // 从 1 重用并覆盖旧账本 payload，恢复命令必须保留原 ID，新命令须全局唯一。
+  return `runtime_command_${uuidv7()}` as RuntimeCommandId;
 }
 
 export function createRuntimeCommandQueue(): RuntimeCommandQueue {

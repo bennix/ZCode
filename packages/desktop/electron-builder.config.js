@@ -1,4 +1,5 @@
 import { verifyWorkbenchBundle, stageWorkbenchBundle } from "./scripts/prepare-code-workbench.mjs";
+import { signWorkbenchNativeFiles } from "./scripts/sign-code-workbench.mjs";
 /* eslint-disable max-lines -- Electron Builder config keeps related packaging hooks together so build order stays explicit. */
 import { cpSync, existsSync, mkdirSync, mkdtempSync, rmSync } from "node:fs";
 import { readdir, writeFile } from "node:fs/promises";
@@ -505,7 +506,10 @@ export default {
     `node_modules/node-pty/prebuilds/${targetPlatform.key}/**`,
   ],
   beforePack: async (context) => {
-    await verifyWorkbenchBundle(resolve(import.meta.dirname, "bundled-workbench", targetPlatform.key), targetPlatform);
+    await verifyWorkbenchBundle(
+      resolve(import.meta.dirname, "bundled-workbench", targetPlatform.key),
+      targetPlatform,
+    );
     runTimedSync("beforePack:restoreTargetNodePtyPrebuild", () =>
       restoreTargetNodePtyPrebuild({ desktopPackageRoot, targetPlatform }),
     );
@@ -545,11 +549,20 @@ export default {
     await stageElectronNotices(context.appOutDir, resources, framework.version);
   },
   afterPack: async (context) => {
-    await runTimedAsync("afterPack:stageWorkbenchBundle", () => stageWorkbenchBundle(
-      resolve(import.meta.dirname, "bundled-workbench", targetPlatform.key),
-      resolve(resolvePackagedResourcesDir(context), "code-workbench"),
-      targetPlatform,
-    ));
+    const packagedWorkbenchPath = resolve(resolvePackagedResourcesDir(context), "code-workbench");
+    await runTimedAsync("afterPack:stageWorkbenchBundle", () =>
+      stageWorkbenchBundle(
+        resolve(import.meta.dirname, "bundled-workbench", targetPlatform.key),
+        packagedWorkbenchPath,
+        targetPlatform,
+      ),
+    );
+    if (context.electronPlatformName === "darwin" && shouldEnableMacSigning) {
+      await runTimedAsync("afterPack:signWorkbenchNativeFiles", async () => {
+        const count = await signWorkbenchNativeFiles(packagedWorkbenchPath, rawMacSigningIdentity);
+        console.log(`[afterPack] signed code-workbench Mach-O files=${count}`);
+      });
+    }
     const actualWindowsTarget =
       context.electronPlatformName === "win32"
         ? resolveElectronBuilderWindowsTarget({
@@ -699,6 +712,7 @@ export default {
     signIgnore: [
       "[/\\\\]Contents[/\\\\]Resources[/\\\\]glm([/\\\\]|$)",
       "[/\\\\]Contents[/\\\\]Resources[/\\\\]tools([/\\\\]|$)",
+      "[/\\\\]Contents[/\\\\]Resources[/\\\\]code-workbench([/\\\\]|$)",
     ],
   },
   win: {
@@ -772,19 +786,21 @@ export default {
     installerHeaderIcon: "build/icon_installer.ico",
   },
   detectUpdateChannel: false,
-  publish: buildMetadata.githubUpdateRepository ? {
-    provider: "github",
-    owner: buildMetadata.githubUpdateRepository.split("/")[0],
-    repo: buildMetadata.githubUpdateRepository.split("/")[1],
-    releaseType: "release",
-  } : {
-    provider: "generic",
-    // 当前 OSS/CDN 对多 Range 请求返回 206，但 Content-Type 仍是 application/x-msdownload，
-    // electron-updater 会因缺少 multipart/byteranges 直接回退整包下载。关闭 multiple range 后仍走差分，
-    // 只是按单 Range 顺序拉取差异块，避免 Windows 用户更新时从约 15MB 退化成 300MB+ 全量包。
-    useMultipleRangeRequest: false,
-    // 新客户端运行时使用服务端 manifest provider；这里仅保留 electron-builder 必需的
-    // generic publish 占位，避免打包产物继续携带可配置的旧 stable feed。
-    url: "http://localhost:8081",
-  },
+  publish: buildMetadata.githubUpdateRepository
+    ? {
+        provider: "github",
+        owner: buildMetadata.githubUpdateRepository.split("/")[0],
+        repo: buildMetadata.githubUpdateRepository.split("/")[1],
+        releaseType: "release",
+      }
+    : {
+        provider: "generic",
+        // 当前 OSS/CDN 对多 Range 请求返回 206，但 Content-Type 仍是 application/x-msdownload，
+        // electron-updater 会因缺少 multipart/byteranges 直接回退整包下载。关闭 multiple range 后仍走差分，
+        // 只是按单 Range 顺序拉取差异块，避免 Windows 用户更新时从约 15MB 退化成 300MB+ 全量包。
+        useMultipleRangeRequest: false,
+        // 新客户端运行时使用服务端 manifest provider；这里仅保留 electron-builder 必需的
+        // generic publish 占位，避免打包产物继续携带可配置的旧 stable feed。
+        url: "http://localhost:8081",
+      },
 };

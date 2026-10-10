@@ -202,7 +202,23 @@ export function useAppPanels(options: {
   // 交互说明：侧栏显隐按钮放在 App 外层，而不是 Sidebar 内部。
   // 这样即使侧栏被隐藏，入口也仍然留在左上角，不会出现"收起后没有地方再展开"的问题；
   // 同时这里统一处理 macOS 红绿灯安全区，避免按钮和系统窗口控件重叠。
-  const [isSidebarVisible, setIsSidebarVisible] = useState(true);
+  const [isSidebarVisible, setIsSidebarVisible] = useState(
+    () =>
+      Boolean(isDesktop) ||
+      typeof window === "undefined" ||
+      !window.matchMedia("(max-width: 639px)").matches,
+  );
+  useEffect(() => {
+    if (isDesktop || typeof window === "undefined") return;
+    const narrowScreen = window.matchMedia("(max-width: 639px)");
+    // 修复原因：手机 Web 首屏仍按桌面默认展开侧栏，320px 主输入被裁到视口外。
+    // 只在跨入窄屏时收起；用户随后主动打开侧栏不被重渲染覆盖。
+    const collapseOnNarrow = (event: MediaQueryListEvent) => {
+      if (event.matches) setIsSidebarVisible(false);
+    };
+    narrowScreen.addEventListener("change", collapseOnNarrow);
+    return () => narrowScreen.removeEventListener("change", collapseOnNarrow);
+  }, [isDesktop]);
   const [browserNavigationRequest, setBrowserNavigationRequest] =
     useState<BrowserNavigationRequest | null>(null);
   const [allRecentClosedSidePaneTabs, setAllRecentClosedSidePaneTabs] = useState<
@@ -329,13 +345,17 @@ export function useAppPanels(options: {
       );
       const activeTab = current?.tabs.find((tab) => tab.id === current.activeTabId);
       // IDE 当前的显隐是工作区布局，不继承新任务历史中的侧栏收起偏好。
-      const preserveWorkbench = activeTab?.type === "browser" &&
-        activeTab.purpose === "code-workbench" && activeTab.workspaceKey === activeWorkspaceKey;
+      const preserveWorkbench =
+        activeTab?.type === "browser" &&
+        activeTab.purpose === "code-workbench" &&
+        activeTab.workspaceKey === activeWorkspaceKey;
       const resolved = resolveSidePaneScopeState(
         current,
         { workspaceKey: activeWorkspaceKey, ownerTaskId: sidePaneOwnerId },
         preferredTabId,
-        preserveWorkbench ? latestSidePaneMemoryRef.current.isSidePaneCollapsed : collapsedPreference,
+        preserveWorkbench
+          ? latestSidePaneMemoryRef.current.isSidePaneCollapsed
+          : collapsedPreference,
       );
       setIsSidePaneCollapsed(resolved.isSidePaneCollapsed);
       logger.debug("[App] 同步对话右侧面板 scope", {

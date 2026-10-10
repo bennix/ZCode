@@ -2186,6 +2186,7 @@ function ConversationComposerImpl({
         <V4ComposerControlToggles
           workspacePath={workspacePath}
           workspaceIdentity={workspaceIdentity}
+          remoteSessionId={remoteSessionId}
         />
         <Button
           type="button"
@@ -2295,7 +2296,7 @@ function ConversationComposerImpl({
       {workspaceOpen || studioOpen ? (
         <div
           data-testid="composer-guided-panel"
-          className="mb-3 max-h-[min(60dvh,calc(100dvh-14rem))] min-h-0 overflow-y-auto overscroll-contain rounded-2xl"
+          className="mb-3 max-h-[min(60dvh,calc(100dvh-14rem))] min-h-0 overflow-y-auto overscroll-contain rounded-2xl max-sm:max-h-[min(48dvh,calc(100dvh-21rem))]"
         >
           {workspaceOpen ? <WorkspaceAgentBoard modelSelectionView={modelSelectionView} /> : null}
           {studioOpen ? <StudioPanel modelSelectionView={modelSelectionView} /> : null}

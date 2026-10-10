@@ -50,8 +50,13 @@ export const commandPayloadSchemas = {
         text: z.string(),
         attachments: z.array(attachmentRefSchema).optional(),
         modelSelection: modelSelectionSchema.optional(),
+        modelExecution: modelExecutionSchema.optional(),
         mode: submissionModeSchema.optional(),
         planEnabled: z.boolean().optional(),
+      })
+      .refine((value) => !value.modelExecution || Boolean(value.modelSelection), {
+        message: "modelExecution requires modelSelection",
+        path: ["modelExecution"],
       })
       .optional(),
     config: createSessionRequestedConfigSchema.optional(),

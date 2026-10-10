@@ -14,7 +14,7 @@ index; detailed behavior belongs to each feature spec.
 | Moved/resized geometry in exported PPTX | Existing editable exporter | Open edited export and compare coordinates |
 | WPS parity: arrows, shapes, images/SVG, no blank pages | Existing exporter | Open original user fixture and regenerated output in WPS |
 | ZenCoder X-Title on model requests | shared/zenmux.ts constant present | Audit all actual request routes and header precedence |
-| ZenMux macOS icon across app surfaces, vivid dimensional treatment | zenmux-app-icon.md and prior source changes | Audit packaged icon, Dock, startup and settings |
+| ZenCode 蓝底章鱼图标覆盖应用入口 | zencode-brand-icon.md | 验证打包 icon、Dock、首次启动与设置；不能使用 Z 字母 |
 | Reported screenshot failures and no-change edits | edit-no-change.md; commit 564e60f | Recheck associated runtime case; no image-only assumptions |
 | Skills installed in AI chat appear in Settings | conversation-skill-install.md; commit 7351007 | Verify create/install/refresh end-to-end |
 | All submitted inputs and attachments → vector RAG + cited wiki | Incomplete local-text prototype | Durable queue, attachment extraction, settings, deletion, wiki and retrieval |

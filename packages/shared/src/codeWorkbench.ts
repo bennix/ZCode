@@ -3,6 +3,7 @@ export const codeWorkbenchRequestSchema = z
   .object({
     workspacePath: z.string().min(1),
     workspaceIdentity: z.string().optional(),
+    theme: z.enum(["light", "dark"]).optional(),
   })
   .strict();
 export type CodeWorkbenchRequest = z.infer<typeof codeWorkbenchRequestSchema>;

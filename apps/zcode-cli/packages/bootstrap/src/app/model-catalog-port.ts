@@ -25,6 +25,23 @@ interface ModelCatalogPortDeps {
   currentSelection: () => ModelSelection | undefined;
 }
 
+/** 只把官方直连 API 的已知模型标记为同模型 effort 调整可保留缓存。 */
+export function effortChangePreservesCache(input: {
+  apiType?: string | null;
+  baseUrl?: string | null;
+  modelId: string;
+}): boolean {
+  if (input.apiType !== "anthropic-messages" || !/^claude-(?:opus|sonnet)(?:-|$)/i.test(input.modelId))
+    return false;
+  if (!input.baseUrl) return true;
+  try {
+    const url = new URL(input.baseUrl);
+    return url.protocol === "https:" && url.hostname === "api.anthropic.com" && !url.port && !url.username && !url.password;
+  } catch {
+    return false;
+  }
+}
+
 /**
  * 造 {@link ModelCatalogPort}。
  *
@@ -52,6 +69,11 @@ export function createModelCatalogPort(deps: ModelCatalogPortDeps): ModelCatalog
           // 就会出现「picker 里默认 high、`subagent_model` 不写档位时默认 low」这种只有用户
           // 会发现的偏差。没有档位的模型整个字段缺席（空数组 + 无默认）。
           const defaultReasoningLevel = reasoning.values.at(-1);
+          const preservesEffortCache = effortChangePreservesCache({
+            apiType: provider.config.api?.resolveModelApiType(model.modelId),
+            baseUrl: provider.config.api?.baseUrl,
+            modelId: model.modelId,
+          });
           const contextWindow = model.config.properties.contextWindow;
           // `providerName` 在注册表里是 `string | null | undefined`（config-service.ts 把空串
           // 归一成 `null`），而端口契约上是 `string | undefined`。三种「没名字」在这里合成
@@ -66,6 +88,7 @@ export function createModelCatalogPort(deps: ModelCatalogPortDeps): ModelCatalog
             ...(providerLabel ? { providerLabel } : {}),
             reasoningLevels,
             ...(defaultReasoningLevel === undefined ? {} : { defaultReasoningLevel }),
+            ...(preservesEffortCache ? { effortChangePreservesCache: true as const } : {}),
             ...(contextWindow === undefined ? {} : { contextWindow }),
             // 身份两段相等即当前选择；options 不是身份的一部分（与 workflow-actor-model.ts
             // 的 pin 比对同一条判据）。整张表至多一条为真。

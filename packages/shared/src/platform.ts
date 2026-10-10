@@ -535,6 +535,8 @@ export type CuaOsSupport =
  * 业务服务（文件、终端、凭据等）走 IServiceAccessor 的 RPC 通道。
  */
 export interface IPlatformService {
+  /** 仅本机 Electron 宿主注入；Web 占位方法不能作为桌面能力证明。 */
+  isDesktopRuntime?: boolean;
   /** 当前平台的文件选择框是否能返回 agent 可访问的本地绝对路径 */
   canSelectFilePath?: boolean;
 
@@ -967,6 +969,7 @@ export interface IPlatformService {
 
   acknowledgeCodeWorkbenchContext?(requestId: string, accepted: boolean): Promise<void>;
   openCodeWorkbench?(request: CodeWorkbenchRequest): Promise<{ url: string }>;
+  setCodeWorkbenchTheme?(theme: "light" | "dark"): Promise<void>;
   onCodeWorkbenchContext?(callback: (context: CodeWorkbenchContext) => void): () => void;
 
   /** 用指定编辑器打开路径 */

@@ -10,6 +10,7 @@ export function createModelExecutionContext(
   return {
     ...(input.memoryExtraction ? { memoryExtraction: input.memoryExtraction } : {}),
     selectionScope: "execution",
+    ...(input.dispatcher ? { dispatcher: input.dispatcher } : {}),
     ...(requestAuth
       ? {
           requestDependencies: { requestAuth: { source: { resolve: async () => requestAuth } } },

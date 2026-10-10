@@ -9,8 +9,9 @@ test("IDE fills workspace while original composer docks bottom right without rem
       contents: `
  import React,{useState,useEffect} from 'react';import {createRoot} from 'react-dom/client';
  import {ResizablePanelGroup,ResizablePanel,ResizableHandle} from './packages/ui/src/components/ui/resizable.tsx';
+ import {shouldShowWorkspaceHeader} from './packages/ui/src/lib/codeWorkbenchLayout.ts';
  function Composer(){const [text,setText]=useState('');useEffect(()=>{window.mounts=(window.mounts||0)+1},[]);return <input aria-label="AI" value={text} onChange={e=>setText(e.target.value)}/>}
- function App(){const [focus,setFocus]=useState(false);return <><button onClick={()=>setFocus(!focus)}>Toggle IDE</button><div style={{height:700,width:1000}}><ResizablePanelGroup data-code-workbench-focus={focus?'true':undefined} layoutId="fixture-ide" panelIds={['conversation-column','browser']} style={{display:'flex',height:'100%',width:'100%'}}><ResizablePanel id="conversation-column" defaultSize="52%" minSize="35%"><Composer/></ResizablePanel><ResizableHandle data-workspace-side-pane-resize-handle="true"/><ResizablePanel id="browser" defaultSize="48%"><div data-side-pane-tabs-list style={{height:48}}><span>IDE tab</span></div><div data-browser-toolbar style={{height:48}}>Address and navigation</div><div data-browser-viewport-toolbar>Viewport controls</div><div data-ide-content>IDE content</div></ResizablePanel></ResizablePanelGroup></div></>}
+ function App(){const [focus,setFocus]=useState(false);return <><button onClick={()=>setFocus(!focus)}>Toggle IDE</button><div style={{height:700,width:1000}}><ResizablePanelGroup data-code-workbench-focus={focus?'true':undefined} layoutId="fixture-ide" panelIds={['conversation-column','browser']} style={{display:'flex',height:'100%',width:'100%'}}><ResizablePanel id="conversation-column" defaultSize="52%" minSize="35%">{focus?<div data-ai-dock-header>ZenCode AI</div>:null}{shouldShowWorkspaceHeader({mainViewHasHeader:true,workbenchFocused:focus,hasActiveTask:true,desktop:true})?<div data-workspace-header-frame><div data-workspace-header-variant>Workspace header</div></div>:null}<Composer/></ResizablePanel><ResizableHandle data-workspace-side-pane-resize-handle="true"/><ResizablePanel id="browser" defaultSize="48%"><div data-side-pane-tabs-list style={{height:48}}><span>IDE tab</span></div><div data-browser-toolbar style={{height:48}}>Address and navigation</div><div data-browser-viewport-toolbar>Viewport controls</div><div data-ide-content>IDE content</div></ResizablePanel></ResizablePanelGroup></div></>}
  createRoot(document.getElementById('root')).render(<App/>);`,
       resolveDir: process.cwd(),
       loader: "tsx",
@@ -34,6 +35,8 @@ test("IDE fills workspace while original composer docks bottom right without rem
     await page.addScriptTag({ content: result.outputFiles[0].text });
     await page.getByLabel("AI").fill("keep my draft");
     await page.getByText("Toggle IDE").click();
+    assert.equal(await page.locator("[data-ai-dock-header]").count(), 1);
+    assert.equal(await page.locator("[data-workspace-header-frame]").count(), 0);
     assert.equal(await page.getByText("IDE tab").isVisible(), false);
     assert.equal(await page.locator("[data-browser-toolbar]").isVisible(), false);
     assert.equal(await page.locator("[data-browser-viewport-toolbar]").isVisible(), false);
@@ -58,6 +61,7 @@ test("IDE fills workspace while original composer docks bottom right without rem
     assert.equal(await page.getByLabel("AI").count(), 1);
     assert.equal(await page.evaluate(() => window.mounts), 1);
     await page.getByText("Toggle IDE").click();
+    assert.equal(await page.locator("[data-workspace-header-frame]").count(), 1);
     assert.equal(await page.getByLabel("AI").inputValue(), "keep my draft");
     assert.equal(await page.evaluate(() => window.mounts), 1);
     assert.equal(await page.getByText("IDE tab").isVisible(), true);

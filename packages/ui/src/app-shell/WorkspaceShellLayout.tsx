@@ -1,5 +1,10 @@
 import "./codeWorkbenchLayout.css";
-import { CodeWorkbenchLayoutContext } from "@/lib/codeWorkbenchLayout.js";
+import {
+  CodeWorkbenchLayoutContext,
+  shouldAutoCollapseConversationSidePane,
+  shouldFocusCodeWorkbench,
+  shouldShowWorkspaceHeader,
+} from "@/lib/codeWorkbenchLayout.js";
 /* eslint-disable max-lines -- workspace shell 当前集中编排 sidebar、chat、terminal 和 browser pane 的布局联动，先保持单文件收口，避免为满足行数限制打散关键布局状态。*/
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type {
@@ -377,11 +382,19 @@ export const WorkspaceShellLayout = memo(function WorkspaceShellLayoutComponent(
   const workspaceShellRef = useRef<HTMLDivElement | null>(null);
   const workspaceSidebarPanelElementRef = useRef<HTMLDivElement | null>(null);
   const conversationPanelElementRef = useRef<HTMLDivElement | null>(null);
+  const [workbenchUi, setWorkbenchUi] = useState<{
+    collapsed: boolean;
+    suppressedTabId: string | null;
+  }>({ collapsed: false, suppressedTabId: null });
+  const activeWorkbenchTab = sidePaneState?.tabs.find(
+    (tab) => tab.id === sidePaneState.activeTabId,
+  );
   const conversationAutoCollapseStateRef = useRef({
     handleToggleSidebar,
     handleToggleSidePane,
     isSidebarVisible,
     isSidePaneOpen,
+    isWorkbenchFocused: false,
     workspaceKey,
   });
   const conversationAutoCollapseResizeTimerRef = useRef<number | null>(null);
@@ -427,6 +440,15 @@ export const WorkspaceShellLayout = memo(function WorkspaceShellLayoutComponent(
     rememberExpandedSize: true,
     resizeOnInitialVisibleMount: false,
   });
+  const isWorkbenchFocused = Boolean(
+    workspaceMainView !== "automations" &&
+    workspaceMainView !== "plugin-store" &&
+    shouldFocusCodeWorkbench({
+      activeTab: activeWorkbenchTab,
+      suppressedTabId: workbenchUi.suppressedTabId,
+      sidePaneVisible: isSidePaneVisible,
+    }),
+  );
   const workspaceSessionActionDisabled =
     Boolean(workspaceReadOnlyReason) || reloadSessionDisabled || reloadSessionPending;
   // 文件树打开时任务列表整屏滑出，侧栏里的 New Task 入口也随之不可见。
@@ -442,9 +464,17 @@ export const WorkspaceShellLayout = memo(function WorkspaceShellLayoutComponent(
       handleToggleSidePane,
       isSidebarVisible,
       isSidePaneOpen,
+      isWorkbenchFocused,
       workspaceKey,
     };
-  }, [handleToggleSidebar, handleToggleSidePane, isSidebarVisible, isSidePaneOpen, workspaceKey]);
+  }, [
+    handleToggleSidebar,
+    handleToggleSidePane,
+    isSidebarVisible,
+    isSidePaneOpen,
+    isWorkbenchFocused,
+    workspaceKey,
+  ]);
 
   useEffect(() => {
     if (workspaceMainView !== "chat") {
@@ -467,8 +497,11 @@ export const WorkspaceShellLayout = memo(function WorkspaceShellLayoutComponent(
       const {
         handleToggleSidebar: collapseSidebar,
         isSidebarVisible: latestIsSidebarVisible,
+        isWorkbenchFocused: latestIsWorkbenchFocused,
         workspaceKey: latestWorkspaceKey,
       } = conversationAutoCollapseStateRef.current;
+
+      if (latestIsWorkbenchFocused) return;
 
       if (latestIsSidebarVisible && widthPx < CONVERSATION_AUTO_COLLAPSE_SIDEBAR_WIDTH_PX) {
         logger.info("[WorkspaceShellLayout] conversation 过窄，自动收起左侧栏", {
@@ -489,12 +522,24 @@ export const WorkspaceShellLayout = memo(function WorkspaceShellLayoutComponent(
       const {
         handleToggleSidePane: collapseSidePane,
         isSidePaneOpen: latestIsSidePaneOpen,
+        isWorkbenchFocused: latestIsWorkbenchFocused,
         workspaceKey: latestWorkspaceKey,
       } = conversationAutoCollapseStateRef.current;
 
+      // Bug 原因：IDE 聚焦态的 AI 停靠区设计上小于普通会话的 480px 阈值；
+      // 原 resize 策略把系统全屏切换当作窄会话，误收起承载 IDE 的侧面板。
+      if (latestIsWorkbenchFocused) return;
+
       // 功能说明：自动收起只响应用户改变窗口尺寸后的 conversation 实际宽度。
       // 不监听 conversation 自身 ResizeObserver，避免用户手动打开面板时又被策略关回去。
-      if (latestIsSidePaneOpen && widthPx < CONVERSATION_AUTO_COLLAPSE_SIDE_PANE_WIDTH_PX) {
+      if (
+        shouldAutoCollapseConversationSidePane({
+          widthPx,
+          thresholdPx: CONVERSATION_AUTO_COLLAPSE_SIDE_PANE_WIDTH_PX,
+          isSidePaneOpen: latestIsSidePaneOpen,
+          isWorkbenchFocused: latestIsWorkbenchFocused,
+        })
+      ) {
         logger.info("[WorkspaceShellLayout] conversation 过窄，自动收起右侧面板", {
           widthPx: Math.round(widthPx),
           thresholdPx: CONVERSATION_AUTO_COLLAPSE_SIDE_PANE_WIDTH_PX,
@@ -1414,28 +1459,12 @@ export const WorkspaceShellLayout = memo(function WorkspaceShellLayoutComponent(
       });
     }
   }, [activeTaskId, workspaceKey]);
-  const [workbenchFocus, setWorkbenchFocus] = useState<{
-    collapsed?: boolean;
-    url: string;
-    workspaceKey: string;
-  } | null>(null);
-  const activeWorkbenchTab = sidePaneState?.tabs.find(
-    (tab) => tab.id === sidePaneState.activeTabId,
-  );
-  const isWorkbenchFocused = Boolean(
-    workspaceMainView !== "automations" &&
-    workspaceMainView !== "plugin-store" &&
-    isSidePaneVisible &&
-    workbenchFocus?.workspaceKey === workspaceKey &&
-    activeWorkbenchTab?.type === "browser" &&
-    activeWorkbenchTab.initialUrl === workbenchFocus?.url,
-  );
   const handleOpenWorkbenchUrl = useCallback(
     (url: string) => {
-      setWorkbenchFocus({ url, workspaceKey });
+      setWorkbenchUi({ collapsed: false, suppressedTabId: null });
       handleOpenBrowserUrl(url, { purpose: "code-workbench" });
     },
-    [handleOpenBrowserUrl, workspaceKey],
+    [handleOpenBrowserUrl],
   );
   const renderSidePanePanel = () => (
     <AnimatedSidePanePanel
@@ -1518,8 +1547,12 @@ export const WorkspaceShellLayout = memo(function WorkspaceShellLayoutComponent(
   // 手机远控无 active task 时仍不渲染桌面 chrome，继续遵守 replayable overlay 边界。
   const shouldRenderMainViewHeader =
     workspaceMainView !== "automations" && workspaceMainView !== "plugin-store";
-  const shouldRenderWorkspaceHeader =
-    shouldRenderMainViewHeader && (activeTaskId !== null || isDesktop);
+  const shouldRenderWorkspaceHeader = shouldShowWorkspaceHeader({
+    mainViewHasHeader: shouldRenderMainViewHeader,
+    workbenchFocused: isWorkbenchFocused,
+    hasActiveTask: activeTaskId !== null,
+    desktop: Boolean(isDesktop),
+  });
   // ErrorBoundary resetKeys 的数组如果每次 render 都重新创建，
   // 即使 workspace/task 没变化也会在 React DevTools Components 轨道里持续表现为子树 props 变化。
   const workspaceOnlyResetKeys = useMemo(() => [workspaceKey], [workspaceKey]);
@@ -1559,6 +1592,9 @@ export const WorkspaceShellLayout = memo(function WorkspaceShellLayoutComponent(
           id="sidebar"
           className={cn(
             "w-[var(--workspace-sidebar-panel-width)] max-w-[50%] flex-none overflow-hidden duration-200 ease-out transition-[width,opacity] data-[workspace-sidebar-resizing=true]:transition-opacity",
+            // 修复依据：窄屏 Web 侧栏作为覆盖层，打开时不再把会话挤出 320px 视口。
+            !isDesktop &&
+              "max-sm:absolute max-sm:inset-y-0 max-sm:left-0 max-sm:z-10 max-sm:h-full max-sm:max-w-[85vw]",
             // 拖动侧栏宽度时如果继续过渡 width，会让指针移动和实际宽度之间产生滞后。
             // 拖拽 active 通过 DOM 标记切 transition，避免 pointerdown/up 为了切 class 重渲染整棵 workspace。
             isSidebarPanelVisible ? "opacity-100" : "pointer-events-none opacity-0",
@@ -1650,6 +1686,7 @@ export const WorkspaceShellLayout = memo(function WorkspaceShellLayoutComponent(
             onPointerUp={(event) => finishWorkspaceSidebarResize(event)}
             className={cn(
               "group/handle relative z-10 flex h-full w-1 shrink-0 touch-none cursor-ew-resize items-center justify-center bg-transparent outline-none [app-region:no-drag] focus:outline-none focus-visible:ring-0",
+              !isDesktop && "max-sm:hidden",
               "after:pointer-events-none after:absolute after:rounded-full after:bg-foreground-subtlest/50 after:opacity-0 after:transition-opacity after:content-[''] after:inset-y-[var(--workspace-panel-radius)] after:w-0.5",
               "hover:after:opacity-100 data-[separator=hover]:after:opacity-100 data-[separator=active]:after:opacity-100 focus-visible:after:opacity-100 [[data-workspace-sidebar-resizing=true]_&]:after:opacity-100",
               hasDesktopPanelInset && "after:inset-y-[var(--workspace-resize-handle-inset)]",
@@ -1662,6 +1699,8 @@ export const WorkspaceShellLayout = memo(function WorkspaceShellLayoutComponent(
           id="content"
           className={cn(
             "flex min-w-[320px] flex-1 flex-col",
+            // 手机 Web 顶部侧栏按钮浮在 shell 内；预留同高空间，避免压住引导面板标题。
+            !isDesktop && "max-sm:min-w-0 max-sm:pt-14",
             hasDesktopPanelInset ? "p-1 pl-0 pt-0" : "p-0",
           )}
         >
@@ -1673,7 +1712,9 @@ export const WorkspaceShellLayout = memo(function WorkspaceShellLayoutComponent(
           <CodeWorkbenchLayoutContext.Provider value={isWorkbenchFocused}>
             <ResizablePanelGroup
               data-code-workbench-focus={isWorkbenchFocused ? "true" : undefined}
-              data-workbench-dock-collapsed={isWorkbenchFocused && workbenchFocus?.collapsed ? "true" : undefined}
+              data-workbench-dock-collapsed={
+                isWorkbenchFocused && workbenchUi.collapsed ? "true" : undefined
+              }
               layoutId="workspace-body-layout"
               panelIds={WORKSPACE_BODY_PANEL_IDS}
               className="min-h-0 flex-1"
@@ -1715,11 +1756,33 @@ export const WorkspaceShellLayout = memo(function WorkspaceShellLayoutComponent(
                       {isWorkbenchFocused ? (
                         <div className="flex h-11 shrink-0 items-center justify-between border-b border-border px-3 text-ui-sm">
                           <span>ZenCode AI</span>
-                          <Button variant="ghost" size="sm" aria-expanded={!workbenchFocus?.collapsed}
-                            onClick={() => setWorkbenchFocus(current => current ? {...current, collapsed: !current.collapsed} : current)}>
-                            {intl.formatMessage({id: workbenchFocus?.collapsed ? "workbench.expandAI" : "workbench.collapseAI"})}
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            aria-expanded={!workbenchUi.collapsed}
+                            onClick={() =>
+                              setWorkbenchUi((current) => ({
+                                ...current,
+                                collapsed: !current.collapsed,
+                              }))
+                            }
+                          >
+                            {intl.formatMessage({
+                              id: workbenchUi.collapsed
+                                ? "workbench.expandAI"
+                                : "workbench.collapseAI",
+                            })}
                           </Button>
-                          <Button variant="ghost" size="sm" onClick={() => setWorkbenchFocus(null)}>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() =>
+                              setWorkbenchUi((current) => ({
+                                ...current,
+                                suppressedTabId: activeWorkbenchTab?.id ?? null,
+                              }))
+                            }
+                          >
                             {intl.formatMessage({ id: "workbench.returnToChat" })}
                           </Button>
                         </div>

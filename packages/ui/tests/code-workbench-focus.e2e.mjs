@@ -20,3 +20,23 @@ test('AI send scope transition retains IDE; manual tab choice and workspace isol
  await page.getByText('Other workspace',{exact:true}).click();assert.equal(await page.locator('output').textContent(),'');
  }finally{await browser.close()}
 });
+
+test('restored IDE tab regains focus while return and ordinary tabs stay in chat layout', async () => {
+ const result = await build({stdin:{contents:`
+ import React,{useState} from 'react';import {createRoot} from 'react-dom/client';
+ import {shouldFocusCodeWorkbench} from './packages/ui/src/lib/codeWorkbenchLayout.ts';
+ const restored={id:'restored',type:'browser',purpose:'code-workbench'};
+ const ordinary={id:'ordinary',type:'browser'};
+ function App(){const [tab,setTab]=useState(restored);const [suppressed,setSuppressed]=useState(null);
+ const focused=shouldFocusCodeWorkbench({activeTab:tab,suppressedTabId:suppressed,sidePaneVisible:true});
+ return <><button onClick={()=>setSuppressed(tab.id)}>Return to chat</button><button onClick={()=>setTab(ordinary)}>Ordinary tab</button><button onClick={()=>setTab(restored)}>Restored IDE</button><button onClick={()=>{setSuppressed(null);setTab({id:'new-ide',type:'browser',purpose:'code-workbench'})}}>Open IDE again</button><output>{focused?'focused':'chat'}</output></>}
+ createRoot(document.getElementById('root')).render(<App/>);`,resolveDir:process.cwd(),loader:'tsx'},bundle:true,write:false,platform:'browser',jsx:'automatic',tsconfig:'packages/ui/tsconfig.json'});
+ const browser=await chromium.launch({channel:'chrome',headless:true});
+ try {const page=await browser.newPage();await page.setContent('<div id="root"></div>');await page.addScriptTag({content:result.outputFiles[0].text});
+ assert.equal(await page.locator('output').textContent(),'focused');
+ await page.getByText('Return to chat').click();assert.equal(await page.locator('output').textContent(),'chat');
+ await page.getByText('Ordinary tab').click();assert.equal(await page.locator('output').textContent(),'chat');
+ await page.getByText('Restored IDE').click();assert.equal(await page.locator('output').textContent(),'chat');
+ await page.getByText('Open IDE again').click();assert.equal(await page.locator('output').textContent(),'focused');
+ }finally{await browser.close()}
+});

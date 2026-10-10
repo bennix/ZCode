@@ -672,6 +672,8 @@ export interface ModelRequestPayload {
   messages: ModelMessage[];
   providerId: string;
   modelId: string;
+  /** 本次请求的实际推理档位；不代表 Session Selection 被修改。 */
+  reasoningLevel?: string;
   querySource?: string;
   temperature?: number;
   maxTokens?: number;

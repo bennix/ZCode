@@ -7,6 +7,7 @@ export function createDesktopPlatform(options: {
   isLocalDevelopmentRuntime: boolean;
 }): IPlatformService {
   return {
+    isDesktopRuntime: true,
     canSelectFilePath: true,
     createLocalMediaPreviewUrl: buildLocalMediaPreviewUrl,
     isLocalDevelopmentRuntime: options.isLocalDevelopmentRuntime,
@@ -37,8 +38,10 @@ export function createDesktopPlatform(options: {
     migrateLegacyCommonMcp: (payload) => window.zcode.migrateLegacyCommonMcp(payload),
     openExternal: (url) => window.zcode.openExternal(url),
     openFeedback: () => window.zcode.executeDesktopCommand(DesktopCommandIds.OpenFeedback),
-    acknowledgeCodeWorkbenchContext: (requestId, accepted) => window.zcode.acknowledgeCodeWorkbenchContext(requestId, accepted),
+    acknowledgeCodeWorkbenchContext: (requestId, accepted) =>
+      window.zcode.acknowledgeCodeWorkbenchContext(requestId, accepted),
     openCodeWorkbench: (request) => window.zcode.openCodeWorkbench(request),
+    setCodeWorkbenchTheme: (theme) => window.zcode.setCodeWorkbenchTheme(theme),
     onCodeWorkbenchContext: (callback) => window.zcode.onCodeWorkbenchContext(callback),
     openCommunity: () => window.zcode.executeDesktopCommand(DesktopCommandIds.OpenCommunity),
     canOpenCommunity: (locale) => window.zcode.canOpenCommunity(locale),

@@ -50,6 +50,7 @@ import {
   type RuntimeMessageEntry,
 } from "../../agent/message-history.js";
 import type { AgentRuntimeInternal } from "../internal.js";
+import { recoverAdmittedBackgroundNotification } from "./background-notifications.js";
 
 function hasSteerInput(request: Pick<TurnSteerInput, "attachments" | "input">): boolean {
   return request.input.trim().length > 0 || Boolean(request.attachments?.length);
@@ -857,42 +858,103 @@ export async function editPendingInputById(
   let attachedFromQueue = false;
   if (options.delivery === "guide" && activeTurn?.steerable && !pendingInput) {
     const projection = await this.rebuildProjection();
-    const held = projection.pendingSteerInputs.find(item => item.pendingInputId === options.pendingInputId);
+    const held = projection.pendingSteerInputs.find(
+      (item) => item.pendingInputId === options.pendingInputId,
+    );
     const record = await this.sessionStore?.getSessionInputById?.(options.pendingInputId);
-    if (held && record?.status === "admitted" && record.kind === "sendText" && (record.payload.attachments === undefined || (Array.isArray(record.payload.attachments) && record.payload.attachments.length === 0)) &&
-      this.activeTurn === activeTurn && activeTurn.steerable &&
-      !this.pendingInputReservations.has(options.pendingInputId)) {
-      pendingInput = { id: held.pendingInputId, input: held.input, queuedAt: held.queuedAt,
-        traceId: held.traceId, turnId: activeTurn.turnId, commandKind: "sendText", delivery: "queue",
-        intent: held.intent, source: held.source, inputPresentation: held.inputPresentation,
-        toolDisallowlist: held.toolDisallowlist };
+    if (
+      held &&
+      record?.status === "admitted" &&
+      record.kind === "sendText" &&
+      (record.payload.attachments === undefined ||
+        (Array.isArray(record.payload.attachments) && record.payload.attachments.length === 0)) &&
+      this.activeTurn === activeTurn &&
+      activeTurn.steerable &&
+      !this.pendingInputReservations.has(options.pendingInputId)
+    ) {
+      pendingInput = {
+        id: held.pendingInputId,
+        input: held.input,
+        queuedAt: held.queuedAt,
+        traceId: held.traceId,
+        turnId: activeTurn.turnId,
+        commandKind: "sendText",
+        delivery: "queue",
+        intent: held.intent,
+        source: held.source,
+        inputPresentation: held.inputPresentation,
+        toolDisallowlist: held.toolDisallowlist,
+      };
       activeTurn.pendingInputs.push(pendingInput);
       attachedFromQueue = true;
     }
   }
   // 修复：引导只能原位提升当前纯文字项，不能删除后重发或抢占正在执行的任务。
   if (options.delivery === "guide") {
-    const reasonCode = !activeTurn ? "guide.noActiveTurn" : !activeTurn.steerable ? "guide.turnNotSteerable"
-      : !pendingInput ? "guide.itemMissing" : pendingInput.attachments?.length ? "guide.attachmentsUnsupported"
-      : pendingInput.commandKind && pendingInput.commandKind !== "sendText" ? "guide.kindUnsupported"
-      : this.pendingInputReservations.has(pendingInput.id) ? "guide.itemReserved" : undefined;
+    const reasonCode = !activeTurn
+      ? "guide.noActiveTurn"
+      : !activeTurn.steerable
+        ? "guide.turnNotSteerable"
+        : !pendingInput
+          ? "guide.itemMissing"
+          : pendingInput.attachments?.length
+            ? "guide.attachmentsUnsupported"
+            : pendingInput.commandKind && pendingInput.commandKind !== "sendText"
+              ? "guide.kindUnsupported"
+              : this.pendingInputReservations.has(pendingInput.id)
+                ? "guide.itemReserved"
+                : undefined;
     if (reasonCode || !activeTurn || !pendingInput) {
-      this.logger?.warn("Guide promotion rejected", { sessionId: this.sessionId, pendingInputId: options.pendingInputId,
-        traceId: options.traceContext.traceId, reasonCode });
+      this.logger?.warn("Guide promotion rejected", {
+        sessionId: this.sessionId,
+        pendingInputId: options.pendingInputId,
+        traceId: options.traceContext.traceId,
+        reasonCode,
+      });
       return false;
     }
     this.pendingInputReservations.set(pendingInput.id, `guide:${pendingInput.id}`);
     let promoted = false;
     try {
-      const intent = pendingInput.intent ? { ...pendingInput.intent, requestedDelivery: "guide" as const, admittedDelivery: "guide" as const, fallbackReasonCode: undefined } : undefined;
-      await this.sessionStore?.updateSessionInputs?.({ sessionID: this.sessionId, updates: [{ id: pendingInput.id, text: options.newText, delivery: "guide", ...(intent ? { intent } : {}) }] });
+      const intent = pendingInput.intent
+        ? {
+            ...pendingInput.intent,
+            requestedDelivery: "guide" as const,
+            admittedDelivery: "guide" as const,
+            fallbackReasonCode: undefined,
+          }
+        : undefined;
+      await this.sessionStore?.updateSessionInputs?.({
+        sessionID: this.sessionId,
+        updates: [
+          {
+            id: pendingInput.id,
+            text: options.newText,
+            delivery: "guide",
+            ...(intent ? { intent } : {}),
+          },
+        ],
+      });
       // 模型可能在持久化期间结束；迟到的点击不能复活已结束 turn。
       if (this.activeTurn !== activeTurn) {
-        await this.sessionStore?.updateSessionInputs?.({ sessionID: this.sessionId, updates: [{ id: pendingInput.id, delivery: pendingInput.delivery ?? "queue", ...(pendingInput.intent ? {intent: pendingInput.intent} : {}) }] });
+        await this.sessionStore?.updateSessionInputs?.({
+          sessionID: this.sessionId,
+          updates: [
+            {
+              id: pendingInput.id,
+              delivery: pendingInput.delivery ?? "queue",
+              ...(pendingInput.intent ? { intent: pendingInput.intent } : {}),
+            },
+          ],
+        });
         return false;
       }
-      this.logger?.info("Guide promotion accepted", { sessionId: this.sessionId, pendingInputId: pendingInput.id,
-        turnId: activeTurn.turnId, traceId: options.traceContext.traceId });
+      this.logger?.info("Guide promotion accepted", {
+        sessionId: this.sessionId,
+        pendingInputId: pendingInput.id,
+        turnId: activeTurn.turnId,
+        traceId: options.traceContext.traceId,
+      });
       pendingInput.delivery = "guide";
       pendingInput.intent = intent;
       promoted = await this.editPendingInputById({ ...options, delivery: undefined });
@@ -1388,19 +1450,50 @@ export async function restorePersistedPendingInputs(
   this: AgentRuntimeInternal,
   traceContext: TraceContext,
 ): Promise<number> {
-  // 修复：用户文字引导恢复为 held，不自动启动；后台通知和普通队列仍按旧规则清扫。
-  const recovered:TurnSteerInput[]=[];
-  const recoveredIds=new Set<string>();
+  // 修复依据：后台通知已在 durable 账本 admission，重启应重建内存投递视图；
+  // 用户文字引导仍恢复为 held，普通队列依旧按既有语义清扫。
+  const recovered: TurnSteerInput[] = [];
+  const recoveredIds = new Set<string>();
   try {
     const admitted =
       (await this.sessionStore?.listSessionInputs?.({
         sessionID: this.sessionId,
         status: "admitted",
       })) ?? [];
-    for (const record of admitted.sort((a,b)=>a.admittedSequence-b.admittedSequence)) {
-      if(record.delivery==="guide"&&record.kind==="sendText"&&record.payload.text.trim()){
-        const intent=record.payload.intent as TurnSteerInput["intent"];
-        recovered.push({input:record.payload.text,pendingInputId:record.id,commandKind:"sendText",delivery:"guide",...(intent?{intent}:{}),traceContext});
+    for (const record of admitted.sort((a, b) => a.admittedSequence - b.admittedSequence)) {
+      if (record.kind === "backgroundNotification") {
+        const recoveredNotification = recoverAdmittedBackgroundNotification(
+          record,
+          this.branchGeneration,
+          traceContext,
+        );
+        if (recoveredNotification.command) {
+          // 修复依据：resume 可能在同一进程重复调用；账本仍为 admitted 时，
+          // 同一 requestId 只能在内存投递视图出现一次。
+          if (!this.runtimeCommandQueue.snapshot().some((command) => command.id === record.id)) {
+            // resume 完成历史与 hook 恢复后才启动 drain；此处只重建内存队列。
+            this.runtimeCommandQueue.enqueue(recoveredNotification.command);
+          }
+        } else {
+          await this.sessionStore?.settleSessionInput?.({
+            id: record.id,
+            sessionID: this.sessionId,
+            status: "discarded",
+            reason: recoveredNotification.reason ?? "invalid_notification_payload",
+          });
+        }
+        continue;
+      }
+      if (record.delivery === "guide" && record.kind === "sendText" && record.payload.text.trim()) {
+        const intent = record.payload.intent as TurnSteerInput["intent"];
+        recovered.push({
+          input: record.payload.text,
+          pendingInputId: record.id,
+          commandKind: "sendText",
+          delivery: "guide",
+          ...(intent ? { intent } : {}),
+          traceContext,
+        });
         recoveredIds.add(record.id);
         continue;
       }
@@ -1423,7 +1516,9 @@ export async function restorePersistedPendingInputs(
   }
 
   const projection = await this.rebuildProjection();
-  const pendingInputs = projection.pendingSteerInputs.filter(item=>!recoveredIds.has(item.pendingInputId));
+  const pendingInputs = projection.pendingSteerInputs.filter(
+    (item) => !recoveredIds.has(item.pendingInputId),
+  );
 
   const pendingByTurn = new Map<TurnId, PendingSteerInputInfo[]>();
   for (const pendingInput of pendingInputs) {
@@ -1460,6 +1555,6 @@ export async function restorePersistedPendingInputs(
     });
   }
 
-  for(const input of recovered)await this.enqueueDeferredInput(input);
+  for (const input of recovered) await this.enqueueDeferredInput(input);
   return recovered.length;
 }
