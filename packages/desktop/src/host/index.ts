@@ -15,6 +15,8 @@
  */
 import { createHostDatabaseStartup } from "./hostDatabaseStartup.js";
 import { randomUUID } from "node:crypto";
+import { existsSync } from "node:fs";
+import { join } from "node:path";
 import {
   MessagePortProtocol,
   ChannelServer,
@@ -2792,6 +2794,14 @@ parentPort.on("message", async (e: Electron.MessageEvent) => {
     if (msg.packagedResourcesPath) {
       process.env[ZCODE_PACKAGED_RESOURCES_PATH_ENV] = msg.packagedResourcesPath;
     }
+    logger.info("installed Agent resource readiness", {
+      hasResourceRoot: Boolean(msg.packagedResourcesPath),
+      bundleExists: msg.packagedResourcesPath
+        ? existsSync(join(msg.packagedResourcesPath, "glm", "zcode.cjs"))
+        : false,
+      explicitCommand: Boolean(process.env.ZCODE_AGENT_SERVER_COMMAND),
+      electronRuntime: Boolean(process.versions.electron),
+    });
     let basePortClosed = false;
     port.once("close", () => {
       basePortClosed = true;

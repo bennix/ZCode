@@ -39,7 +39,8 @@ test("fresh desktop exposes Computer Use settings and shares the plugin toggle",
       ...(process.env.ZENCODE_TEST_APP_LANG ? [`--lang=${process.env.ZENCODE_TEST_APP_LANG}`] : []),
     ],
     {
-      cwd: repoRoot,
+      // 已安装应用若从 checkout 启动，findUpward 可能借到源码 Agent，掩盖包内资源故障。
+      cwd: packagedExecutable ? root : repoRoot,
       env: {
         ...process.env,
         HOME: join(root, "home"),
