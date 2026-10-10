@@ -3,7 +3,7 @@ import { execFile, spawn } from "node:child_process";
 import { mkdtemp, rm } from "node:fs/promises";
 import { createServer } from "node:net";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { dirname, join } from "node:path";
 import { test } from "node:test";
 import { promisify } from "node:util";
 import { chromium } from "playwright-core";
@@ -221,9 +221,21 @@ test(
         return;
       }
       if (process.platform === "darwin") {
+        const appBundlePath = dirname(dirname(dirname(executable)));
+        const { stdout } = await execFileAsync("plutil", [
+          "-extract",
+          "CFBundleIdentifier",
+          "raw",
+          join(appBundlePath, "Contents", "Info.plist"),
+        ]);
+        const bundleId = stdout.trim();
+        assert.match(bundleId, /^[A-Za-z0-9.-]+$/u);
+        // 同一 bundle ID 可能已有另一份安装包在运行；按测试子进程 PID 激活，避免误操作用户窗口。
         await execFileAsync("osascript", [
+          "-l",
+          "JavaScript",
           "-e",
-          'tell application id "dev.zcode.app.preview" to activate',
+          `ObjC.import("AppKit"); const target = $.NSRunningApplication.runningApplicationWithProcessIdentifier(${child.pid}); if (!target) throw new Error("packaged app process missing"); target.activateWithOptions($.NSApplicationActivateIgnoringOtherApps);`,
         ]);
       }
       await page.bringToFront();

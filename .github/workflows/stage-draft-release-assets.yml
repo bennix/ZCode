@@ -1,0 +1,92 @@
+name: Stage draft release assets
+
+on:
+  workflow_dispatch:
+    inputs:
+      windows_run_id:
+        description: Successful Windows package run ID
+        required: true
+        type: string
+      linux_run_id:
+        description: Successful Linux packages run ID
+        required: true
+        type: string
+      expected_sha:
+        description: Exact product source commit SHA
+        required: true
+        type: string
+
+permissions:
+  actions: read
+  contents: write
+
+jobs:
+  stage:
+    runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - platform: windows
+            arch: x64
+            workflow: Windows package
+          - platform: windows
+            arch: arm64
+            workflow: Windows package
+          - platform: linux
+            arch: x64
+            workflow: Linux packages
+          - platform: linux
+            arch: arm64
+            workflow: Linux packages
+    steps:
+      - name: Verify source and draft release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          EXPECTED_SHA: ${{ inputs.expected_sha }}
+          SOURCE_RUN_ID: ${{ matrix.platform == 'windows' && inputs.windows_run_id || inputs.linux_run_id }}
+          SOURCE_WORKFLOW: ${{ matrix.workflow }}
+        run: |
+          set -euo pipefail
+          [[ "$EXPECTED_SHA" =~ ^[0-9a-f]{40}$ ]]
+          [[ "$SOURCE_RUN_ID" =~ ^[0-9]+$ ]]
+          run_json="$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$SOURCE_RUN_ID")"
+          test "$(jq -r '.name' <<< "$run_json")" = "$SOURCE_WORKFLOW"
+          test "$(jq -r '.conclusion' <<< "$run_json")" = 'success'
+          test "$(jq -r '.head_repository.full_name' <<< "$run_json")" = "$GITHUB_REPOSITORY"
+          test "$(jq -r '.head_sha' <<< "$run_json")" = "$EXPECTED_SHA"
+          release_json="$(gh release view v3.14.27 --repo "$GITHUB_REPOSITORY" --json isDraft,targetCommitish)"
+          test "$(jq -r '.isDraft' <<< "$release_json")" = 'true'
+          test "$(jq -r '.targetCommitish' <<< "$release_json")" = "$EXPECTED_SHA"
+
+      - name: Download candidate packages
+        uses: actions/download-artifact@v4
+        with:
+          name: zencode-${{ matrix.platform }}-${{ matrix.arch }}
+          path: staged
+          run-id: ${{ matrix.platform == 'windows' && inputs.windows_run_id || inputs.linux_run_id }}
+          github-token: ${{ github.token }}
+
+      - name: Upload and verify draft assets
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PLATFORM: ${{ matrix.platform }}
+          ARCH: ${{ matrix.arch }}
+        run: |
+          set -euo pipefail
+          if [ "$PLATFORM" = windows ]; then
+            files=("staged/ZenCode-3.14.27-win-${ARCH}.exe")
+          elif [ "$ARCH" = x64 ]; then
+            files=(staged/ZenCode-3.14.27-linux-amd64.deb staged/ZenCode-3.14.27-linux-x86_64.rpm)
+          else
+            files=(staged/ZenCode-3.14.27-linux-arm64.deb staged/ZenCode-3.14.27-linux-aarch64.rpm)
+          fi
+          for file in "${files[@]}"; do
+            test -f "$file"
+            name="${file##*/}"
+            digest="sha256:$(sha256sum "$file" | cut -d' ' -f1)"
+            gh release upload v3.14.27 "$file" --repo "$GITHUB_REPOSITORY"
+            remote="$(gh release view v3.14.27 --repo "$GITHUB_REPOSITORY" --json assets | jq -r --arg name "$name" '[.assets[] | select(.name == $name) | .digest] | if length == 1 then .[0] else empty end')"
+            test "$remote" = "$digest"
+            echo "$name $digest"
+          done
