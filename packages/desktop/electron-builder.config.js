@@ -68,6 +68,7 @@ import {
 import { replaceAppAsarFromStaging } from "./scripts/app-asar-repack.mjs";
 import {
   patchNsisInstallSectionFile,
+  patchNsisOnInitStagesFile,
   restoreNsisInstallSectionFileSync,
 } from "./scripts/patch-nsis-install-section.mjs";
 
@@ -104,6 +105,8 @@ const requireFromConfig = createRequire(import.meta.url);
 let nsisInstallSectionPatched = false;
 let nsisInstallSectionOriginalSource = null;
 let nsisInstallSectionPath = null;
+let nsisOnInitOriginalSource = null;
+let nsisOnInitPath = null;
 const desktopElectronVersion = requireFromConfig("./package.json").devDependencies.electron;
 const asarCliPath = resolve(
   dirname(requireFromConfig.resolve("@electron/asar/package.json")),
@@ -526,15 +529,38 @@ export default {
     const patchResult = await runTimedAsync("beforePack:patchNsisInstallSection", () =>
       patchNsisInstallSectionFile(nsisInstallSectionPath),
     );
+    nsisOnInitPath = resolve(
+      dirname(requireFromConfig.resolve("app-builder-lib/package.json")),
+      "templates",
+      "nsis",
+      "installer.nsi",
+    );
+    let onInitPatchResult;
+    try {
+      onInitPatchResult = await runTimedAsync("beforePack:patchNsisOnInitStages", () =>
+        patchNsisOnInitStagesFile(nsisOnInitPath),
+      );
+    } catch (error) {
+      restoreNsisInstallSectionFileSync({
+        filePath: nsisInstallSectionPath,
+        originalSource: patchResult.originalSource,
+      });
+      throw error;
+    }
     nsisInstallSectionPatched = true;
     nsisInstallSectionOriginalSource = patchResult.originalSource;
-    if (patchResult.changed) {
+    nsisOnInitOriginalSource = onInitPatchResult.originalSource;
+    if (patchResult.changed || onInitPatchResult.changed) {
       // electron-builder 在当前进程内随后才会编译 NSIS；等整个构建进程退出后恢复 node_modules
       // 中的上游模板，避免把一次打包的定制内容永久留在开发依赖里。
       process.once("exit", () => {
         restoreNsisInstallSectionFileSync({
           filePath: nsisInstallSectionPath,
           originalSource: nsisInstallSectionOriginalSource,
+        });
+        restoreNsisInstallSectionFileSync({
+          filePath: nsisOnInitPath,
+          originalSource: nsisOnInitOriginalSource,
         });
       });
     }

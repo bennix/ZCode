@@ -36,4 +36,6 @@ Windows x64 CI 曾在静默安装启动后约 4 秒，以 `0xC0000005` 崩溃；
 
 3.14.28 候选的首次 x64 崩溃记录只有 `installer-process-started role=outer`，没有 `customInit` 的 `installer-initialized`；Windows Application Error 指向 `System.dll` 偏移 `0x1581`。因此失败发生在 electron-builder `.onInit` 的 `preInit` 与 `customInit` 之间。该区间包含单实例互斥的 `System::Call CreateMutex`、UAC 判断及安装模式初始化，单凭模块名和阶段日志仍不能断定具体指令。后续公开安装验收应在隔离 runner 的安装器进程上预设 Windows Error Reporting 小型崩溃转储；失败时上传转储及阶段日志，成功时不保留转储。转储只用于定位异常，不改变退出码或把失败转成通过。若转储不可用，记录这一事实并继续保留原始系统事件。
 
+3.14.28 公开 ARM64 安装复验 `38093690258` 再次在同一区间崩溃。WER 转储确认 x86 安装器运行于 Windows ARM64，`System.dll+0x1581` 读取 `0x0b212000` 触发访问违规；它尚不能区分系统架构检查、单实例互斥或安装模式初始化的具体调用。下一候选包在 electron-builder `.onInit` 的架构检查前后、单实例互斥前后、安装模式初始化后记录阶段，保留上游执行顺序、互斥和提权语义；这些标记只写已存在的文件日志，不调用 `System.dll`。模板补丁必须有精确锚点、重复应用幂等和构建退出恢复，模板结构变化应使构建失败而不是静默漏掉诊断。验收先用对应架构的候选安装器从零安装并运行首次设置及 About 检查，再根据最后一个到达的阶段和转储决定修复；单次通过仍不证明偶发故障消失。发布资产只有经过候选验证才能替换。
+
 候选验收允许只提供一个平台的成功构建 run ID 与完整源码 SHA，用于单独验证 Windows 安装器或 Linux 包；未提供的平台 job 全部跳过，不能偷偷改从已发布 Release 下载。提供两个 run ID 时执行全平台检查。发布版模式仍要求三个候选输入都为空，并校验固定的公开资产哈希。

@@ -2,6 +2,7 @@ import { readFile, writeFile } from "node:fs/promises";
 import { writeFileSync } from "node:fs";
 
 const PATCH_MARKER = "; zcode-installer-details-v1";
+const ON_INIT_PATCH_MARKER = "; zencode-on-init-stages-v1";
 
 function optionalMacro(name) {
   return [`!ifmacrodef ${name}`, `  !insertmacro ${name}`, "!endif"].join("\n");
@@ -81,9 +82,67 @@ export function patchNsisInstallSectionSource(source) {
   return sourceEol === "\r\n" ? patched.replaceAll("\n", "\r\n") : patched;
 }
 
+/** NSIS 初始化边界诊断：仅写文件日志，不改变上游检查顺序。 */
+export function patchNsisOnInitStagesSource(source) {
+  const sourceEol = source.includes("\r\n") ? "\r\n" : "\n";
+  let patched = source.replaceAll("\r\n", "\n").replaceAll("\r", "\n");
+  if (patched.includes(ON_INIT_PATCH_MARKER)) {
+    return source;
+  }
+
+  const initAnchor = [
+    "    !insertmacro check64BitAndSetRegView",
+    "",
+    "    !ifdef ONE_CLICK",
+    "      !insertmacro ALLOW_ONLY_ONE_INSTALLER_INSTANCE",
+    "    !else",
+    "      ${IfNot} ${UAC_IsInnerInstance}",
+    "        !insertmacro ALLOW_ONLY_ONE_INSTALLER_INSTANCE",
+    "      ${EndIf}",
+    "    !endif",
+    "",
+    "    !insertmacro initMultiUser",
+  ].join("\n");
+  const replacement = [
+    `    ${ON_INIT_PATCH_MARKER}`,
+    '    !insertmacro ZCodeReportInstallerStage "architecture-check-started"',
+    "    !insertmacro check64BitAndSetRegView",
+    '    !insertmacro ZCodeReportInstallerStage "architecture-check-completed"',
+    "",
+    "    !ifdef ONE_CLICK",
+    '      !insertmacro ZCodeReportInstallerStage "single-instance-check-started"',
+    "      !insertmacro ALLOW_ONLY_ONE_INSTALLER_INSTANCE",
+    '      !insertmacro ZCodeReportInstallerStage "single-instance-check-completed"',
+    "    !else",
+    "      ${IfNot} ${UAC_IsInnerInstance}",
+    '        !insertmacro ZCodeReportInstallerStage "single-instance-check-started"',
+    "        !insertmacro ALLOW_ONLY_ONE_INSTALLER_INSTANCE",
+    '        !insertmacro ZCodeReportInstallerStage "single-instance-check-completed"',
+    "      ${EndIf}",
+    "    !endif",
+    "",
+    '    !insertmacro ZCodeReportInstallerStage "install-mode-started"',
+    "    !insertmacro initMultiUser",
+    '    !insertmacro ZCodeReportInstallerStage "install-mode-initialized"',
+  ].join("\n");
+  patched = replaceRequired(patched, initAnchor, replacement, "installer.nsi onInit checks");
+  return sourceEol === "\r\n" ? patched.replaceAll("\n", "\r\n") : patched;
+}
+
 export async function patchNsisInstallSectionFile(filePath) {
   const source = await readFile(filePath, "utf8");
   const patched = patchNsisInstallSectionSource(source);
+  if (patched === source) {
+    return { changed: false, originalSource: null };
+  }
+
+  await writeFile(filePath, patched, "utf8");
+  return { changed: true, originalSource: source };
+}
+
+export async function patchNsisOnInitStagesFile(filePath) {
+  const source = await readFile(filePath, "utf8");
+  const patched = patchNsisOnInitStagesSource(source);
   if (patched === source) {
     return { changed: false, originalSource: null };
   }
