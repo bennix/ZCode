@@ -25,3 +25,5 @@ Windows 安装器若在执行安装命令前后发生进程级崩溃，验收 jo
 若安装后仍报 `unsupported_runtime`，Host 在 `InitLocal` 后、数据库准备前记录一次不含路径值的诊断：是否收到资源根、该根下 Agent JS bundle 是否存在、是否有显式 Agent 命令覆盖、是否为 Electron runtime。此记录用于把资源缺失与 resolver 优先级问题分开，不能将诊断记录当成可用性通过。
 
 安装后 E2E 的应用进程工作目录必须是隔离的临时目录，不能是仓库 checkout；否则 `findUpward` 能从源码树找到 Agent，掩盖包内资源缺失。开发态测试仍可从仓库根启动。
+
+Linux 构建流水线在上传候选 deb/rpm 后，必须安装该架构的 deb 并从系统入口运行首次启动 E2E。这样每次改动可直接看到已安装包的 Host 诊断和真实启动结果；构建 job 若因此失败，artifact 可供取证但不能晋升。独立候选验收仍负责跨平台正式发布门禁。
