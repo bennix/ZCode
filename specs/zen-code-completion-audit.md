@@ -2,6 +2,8 @@
 
 下表记录发布前逐项验收基线；2026-10-10 正式包的更新证据见下方“3.14.26 发布验收”。测试通过只证明对应场景，不推断未覆盖的平台或安装形态。
 
+2026-10-11：品牌补丁作为 3.14.27 候选准备中。根包版本与 Windows/Linux 构建、晋升和安装后验收工作流已对齐 3.14.27。当前公开 Latest 和本地唯一已公证 DMG 仍为 3.14.26；3.14.27 的构建、安装后测试、Mac 公证和发布均待执行。
+
 ## 3.14.26 发布验收
 
 - macOS Apple Silicon：`d9d307ac` 产品源码的 Developer ID 签名、Apple 公证（提交 ID `0bda88dd-d5ae-46be-908c-25e782af8b05`）、DMG 装订与验证通过；挂载 App 通过严格 `codesign` 和 Gatekeeper `Notarized Developer ID` 检查；隔离目录首次电脑控制设置 E2E 通过。本地唯一留存与 GitHub 公开文件均为 `release-artifacts/ZenCode-3.14.26-mac-arm64.dmg`，SHA-256 `89b45e77e4e30cedd059e0c1eb4dbcaaa71ba1365e7913172af1f27175c6f343`。本轮签名期间 Apple 时间戳服务多次不可用，最终仅对该瞬时错误做有限重试，签名参数与 Gatekeeper 验收未放宽。
@@ -25,6 +27,10 @@
 | 后台子 Agent 结果交付                     | `specs/agent-background-notification.md`；持久化通知统一要求原子结算；promoted 合成输入若尚无子 assistant，重启按消息 ID 续一次模型轮，不重复写 user 消息；批量合并、重复恢复与分支变化测试通过；独立 Node 子进程在原子 promotion 提交后被 SIGKILL，父进程重开 SQLite 确认两条 promoted 账本只对应一条完整合成 user 消息、无 assistant；新增独立子进程在最终回复落盘后被 SIGKILL，重开 SQLite 仍有一份 promoted 账本、一份合成 user 和一份已完成 assistant               | 已有部分 assistant 或工具输出时仍不自动重跑；完整 Host 重启与流式/工具副作用跨崩溃幂等验收仍未完成                                                                                                                    |
 
 ## 验收原则
+
+- 2026-10-11：后续源码品牌巡检发现 Web 登录、强制升级窗、Finder/Windows 右键菜单、外部链接确认及 Windows 电脑控制提示仍有用户可见的 `ZCode`。已将这些显示文案改为 `ZenCode`，保留旧 Finder workflow 文件名与协议标识以兼容已安装用户；中英登录、控制提示、插件名称和 OpenRouter 标题定向测试通过，架构检查、类型检查和 Lint 通过。该改动尚未进入 3.14.26 公布安装包，后续发布必须重新构建并验收，不能把源码结果当作已发布结果。
+- 2026-10-11：重新挂载本地唯一留存的已公证 `ZenCode-3.14.26-mac-arm64.dmg`，提取包内 `.background.tiff` 并目视核对，安装拖拽窗口标题已是 `ZenCode`，不再是用户截图中的 `ZCODE`；验证后已卸载镜像。此项证明该 DMG 的背景品牌，不替代 Windows/Linux 标题栏验收。
+- 2026-10-11：用户截图的 `Must be in ProcessingInput or AggregatingResults phase` 与本机 2026-10-10 日志吻合：ZenMux 主模型 SSE 空输出超时后选择连接回退模型，但当时的运行时代码未将 turn machine 从 `awaiting_model_response` 推进到可再次发请求的阶段。当前源码在回退时调用 `abandonModelRequest()`；定向 `turn-machine-connection-fallback.test.ts` 通过，且 `d9d307ac` 发布源码包含该修复。现有证据尚未覆盖真实 ZenMux 连接超时后，安装包自动回退并成功完成整轮任务。
 
 2026-10-10：`ZENCODE_IDE_TEST_ROOT=/tmp/zencode-ide-two-instance-check pnpm exec tsx --test packages/desktop/tests/code-workbench-theme.test.mjs` 的 4 项均通过，其中新增两个同时运行的真实内置 IDE 实例分别接收主题流，验证 A 浅/B 深与 A 深/B 浅。该证据提升了运行时隔离覆盖，但仍不是两个 Electron 窗口的打包应用验收。
 
