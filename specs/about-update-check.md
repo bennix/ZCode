@@ -27,6 +27,6 @@ Windows GitHub provider 使用一个 `latest.yml`。x64 与 ARM64 规范安装�
 
 ## Linux DEB/RPM 边界
 
-当前交付 Linux DEB/RPM，不交付 AppImage。`electron-updater` 的 Linux AppImage 更新器在没有 `APPIMAGE` 环境变量时会返回空结果且不发 `update-not-available` 事件；不能让 About 永远停在“检查中”，也不能显示“已是最新”作为没有执行请求的替代结果。Linux 包安装方式由系统包管理器负责，Main updater 应返回明确的“请通过安装来源或 GitHub Release 检查/安装更新”结果，About 的按钮恢复可操作状态。该结果的来源是本机包格式，不从 UI 推断。以后若引入 Linux 自动更新，先定义受信任的发布元数据、包管理器所有权与更新安装路径，再改此规则。
+当前交付 Linux DEB/RPM，不交付 AppImage。`electron-updater` 的 Linux AppImage 更新器在没有 `APPIMAGE` 环境变量时会返回空结果且不发 `update-not-available` 事件；启动轮询、渠道刷新、强制更新和手动检查都不得调用这个无效更新器。不能让 About 永远停在“检查中”，也不能显示“已是最新”作为没有执行请求的替代结果。Linux 包安装方式由系统包管理器负责，Main updater 应返回明确的“请通过安装来源或 GitHub Release 检查/安装更新”结果，About 的按钮恢复可操作状态。该结果的来源是本机包格式，不从 UI 推断。以后若引入 Linux 自动更新，先定义受信任的发布元数据、包管理器所有权与更新安装路径，再改此规则。
 
 验收必须从两架构的已安装 DEB 以及 RPM 中打开 About、触发检查并看到确定结果；单测中的空 Promise 不代替已安装包验收。修复进入新的正式安装资产前，不得把源码或未发布候选的结果归给 3.14.28 公共包。

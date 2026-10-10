@@ -1383,6 +1383,10 @@ export function refreshAutoUpdaterReleaseChannel(
     logger.info(`[auto-update] skip ${reason}: not packaged`);
     return;
   }
+  if (isPackageManagedLinuxUpdateRuntime(process.platform, process.env.APPIMAGE)) {
+    logger.info(`[auto-update] skip ${reason}: Linux package manager owns updates`);
+    return;
+  }
 
   if (menuState.kind === "download-progress" || menuState.kind === "update-downloaded") {
     logger.info(`[auto-update] skip ${reason}: state=${menuState.kind} channel=${nextChannel}`);
@@ -1495,6 +1499,18 @@ export async function initAutoUpdater(options: InitAutoUpdaterOptions = {}): Pro
   }
   autoUpdaterDisabledForProductFlavor = false;
   if (!canUseAutoUpdaterInCurrentRuntime()) return;
+
+  if (isPackageManagedLinuxUpdateRuntime(process.platform, process.env.APPIMAGE)) {
+    // 修复依据：DEB/RPM 启动时若进入 AppImage 更新器，空结果不会产生完成事件，
+    // 菜单会一直停在 checking；在配置轮询前明确保持 idle。
+    if (autoUpdatePollTimer) {
+      clearInterval(autoUpdatePollTimer);
+      autoUpdatePollTimer = null;
+    }
+    setAutoUpdaterMenuState({ kind: "idle", enabled: true });
+    logger.info("[auto-update] Linux package manager owns updates; skip AppImage updater init");
+    return;
+  }
 
   onBeforeQuitAndInstall = options.onBeforeQuitAndInstall;
   if (options.locale) {
@@ -1826,6 +1842,10 @@ export function requestForceAutoUpdate(
     const message = "not packaged";
     logger.info(`[force-update] 自动升级跳过：${message}`);
     onStateChange({ kind: "dev-skipped", message });
+    return dispose;
+  }
+  if (isPackageManagedLinuxUpdateRuntime(process.platform, process.env.APPIMAGE)) {
+    onStateChange({ kind: "dev-skipped", message: "Linux package manager owns updates" });
     return dispose;
   }
 
