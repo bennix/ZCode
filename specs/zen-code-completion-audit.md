@@ -33,6 +33,7 @@
 
 ## 验收原则
 
+- 2026-10-11：源码中 macOS 电脑控制授权、Helper 安装失败和拖拽预检查的用户可见错误前缀从 `ZCode Computer Use` 统一为 `ZenCode Computer Use`；拒绝授权的安全边界不变。真实入口回归测试 `cua-permission-brand.test.mjs` 通过，类型检查、架构检查和 Lint（75 条既有警告、0 错误）通过。此提交尚未进入公开 3.14.27 安装包，不能将源码修正算作已发布验收。
 - 2026-10-11：后续源码品牌巡检发现 Web 登录、强制升级窗、Finder/Windows 右键菜单、外部链接确认及 Windows 电脑控制提示仍有用户可见的 `ZCode`。已将这些显示文案改为 `ZenCode`，保留旧 Finder workflow 文件名与协议标识以兼容已安装用户；中英登录、控制提示、插件名称和 OpenRouter 标题定向测试通过，架构检查、类型检查和 Lint 通过。该改动未进入 3.14.26 安装包，已进入 3.14.27 发布源码及重建资产。
 - 2026-10-11：曾重新挂载已公证的 `ZenCode-3.14.26-mac-arm64.dmg`，提取包内 `.background.tiff` 并目视核对，安装拖拽窗口标题已是 `ZenCode`，不再是用户截图中的 `ZCODE`；验证后已卸载镜像。该旧 DMG 已被本地 3.14.27 唯一留存包取代；此项不替代 Windows/Linux 标题栏验收。
 - 2026-10-11：用户截图的 `Must be in ProcessingInput or AggregatingResults phase` 与本机 2026-10-10 日志吻合：ZenMux 主模型 SSE 空输出超时后选择连接回退模型，但当时的运行时代码未将 turn machine 从 `awaiting_model_response` 推进到可再次发请求的阶段。当前源码在回退时调用 `abandonModelRequest()`；定向 `turn-machine-connection-fallback.test.ts` 通过，且 `d9d307ac` 发布源码包含该修复。现有证据尚未覆盖真实 ZenMux 连接超时后，安装包自动回退并成功完成整轮任务。
