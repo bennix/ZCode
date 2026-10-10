@@ -101,6 +101,15 @@ jobs:
           ZENCODE_E2E_SCREENSHOT_PATH: ${{ runner.temp }}/installed-first-use.png
         run: |
           $installer = Join-Path $env:RUNNER_TEMP 'ZenCode-3.14.28-win-${{ matrix.arch }}.exe'
+          # 修复依据：System.dll 的偶发崩溃发生在 NSIS customInit 前；只靠阶段日志无法定位原生指令。
+          # 一次性 runner 的 WER 小型转储用于失败取证，不能改变安装器原始退出码。
+          $dumpDir = Join-Path $env:RUNNER_TEMP 'nsis-dumps'
+          New-Item -ItemType Directory -Path $dumpDir -Force | Out-Null
+          $dumpKey = 'HKLM:\SOFTWARE\Microsoft\Windows\Windows Error Reporting\LocalDumps\ZenCode-3.14.28-win-${{ matrix.arch }}.exe'
+          New-Item -Path $dumpKey -Force | Out-Null
+          New-ItemProperty -Path $dumpKey -Name DumpFolder -PropertyType ExpandString -Value $dumpDir -Force | Out-Null
+          New-ItemProperty -Path $dumpKey -Name DumpType -PropertyType DWord -Value 1 -Force | Out-Null
+          New-ItemProperty -Path $dumpKey -Name DumpCount -PropertyType DWord -Value 2 -Force | Out-Null
           $process = Start-Process -FilePath $installer -ArgumentList '/S' -Wait -PassThru
           if ($process.ExitCode -ne 0) { throw "Installer exited $($process.ExitCode)" }
           $installed = Get-ChildItem (Join-Path $env:LOCALAPPDATA 'Programs') -Recurse -Filter ZenCode.exe -ErrorAction SilentlyContinue | Select-Object -First 1
@@ -119,9 +128,15 @@ jobs:
           } else {
             Write-Output 'NSIS installer stage log missing'
           }
+          $dumpDir = Join-Path $env:RUNNER_TEMP 'nsis-dumps'
+          if (Test-Path $dumpDir) {
+            Get-ChildItem $dumpDir -Filter '*.dmp' | Select-Object Name, Length, LastWriteTime | Format-Table
+          } else {
+            Write-Output 'Windows Error Reporting dump directory missing'
+          }
           $since = (Get-Date).AddMinutes(-20)
           Get-WinEvent -FilterHashtable @{ LogName = 'Application'; StartTime = $since; Id = 1000,1001 } -ErrorAction SilentlyContinue |
-            Where-Object { $_.Message -match 'ZenCode|ZenCode-3\\.14\\.26' } |
+            Where-Object { $_.Message -match 'ZenCode' } |
             Select-Object -First 5 TimeCreated, ProviderName, Id, Message |
             Format-List
       - uses: actions/upload-artifact@v4
@@ -130,6 +145,13 @@ jobs:
           name: installed-windows-${{ matrix.arch }}-screenshot
           path: ${{ runner.temp }}/installed-first-use.png
           if-no-files-found: ignore
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: nsis-${{ matrix.arch }}-crash-dump
+          path: ${{ runner.temp }}/nsis-dumps/*.dmp
+          if-no-files-found: ignore
+          retention-days: 3
 
   linux-deb:
     needs: validate-source
