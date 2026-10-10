@@ -5,6 +5,7 @@ import { join, resolve, win32 } from "node:path";
 import type { ConnectOptions } from "@zcode/server/remote";
 import { listSSHConfigAliasesFromLocalConfig } from "@zcode/services/node";
 import { DEV_HELPER_APP_NAME, HELPER_APP_NAME } from "@zcode/zcode-cua/broker/helperConstants";
+import { resolveMacComputerUseExecutablePath } from "@zcode/zcode-cua";
 import {
   ZCODE_APP_VERSION_ENV,
   ZCODE_AGENT_RUNTIME,
@@ -60,7 +61,11 @@ function isTruthyRuntimeEnvOverride(name: string): boolean {
 // 这里允许测试显式隔离运行时身份，正常桌面/远控路径保持原来的默认值。
 export const runtimeApplicationName =
   readRuntimeEnvOverride("ZCODE_DESKTOP_APPLICATION_NAME") ??
-  (isLocalDevelopmentRuntime ? "ZenCode Dev" : isPreviewPackagedRuntime ? "ZenCode Preview" : "ZenCode");
+  (isLocalDevelopmentRuntime
+    ? "ZenCode Dev"
+    : isPreviewPackagedRuntime
+      ? "ZenCode Preview"
+      : "ZenCode");
 // Electron 的 app.getPath("home") 不一定跟随测试进程里的 HOME 覆盖。
 // e2e 默认工作区依赖 home 路径，因此提供显式覆盖，避免测试写到开发者真实 ~/ZCodeProject。
 export const runtimeHomePath = readRuntimeEnvOverride("ZCODE_DESKTOP_HOME_DIR");
@@ -398,6 +403,38 @@ export function resolveBundledGlmBinaryPath(): string | undefined {
   return resolveBundledZCodeAgentBinaryPath();
 }
 
+export function resolveBundledMacCuaPluginRoot(): string | undefined {
+  if (process.platform !== "darwin") return undefined;
+  const platformKey = resolvePlatformKeyForPackagedApp();
+  // 当前桌面 Agent 是 resources/glm/zcode.cjs；旧 native zcode-agent 路径可能根本不存在。
+  // 插件与 JS bundle 同属 glm 资产，直接从各环境的 glm 根解析，避免拿不存在的旧二进制定位。
+  const roots = [
+    isElectronAppPackaged()
+      ? join(process.resourcesPath, "glm", "packages", "zcode-cua-plugin")
+      : null,
+    join(process.cwd(), "bundled-agents", platformKey, "glm", "packages", "zcode-cua-plugin"),
+    join(
+      process.cwd(),
+      "packages",
+      "desktop",
+      "bundled-agents",
+      platformKey,
+      "glm",
+      "packages",
+      "zcode-cua-plugin",
+    ),
+    join(
+      import.meta.dirname,
+      "../../bundled-agents",
+      platformKey,
+      "glm",
+      "packages",
+      "zcode-cua-plugin",
+    ),
+  ].filter((root): root is string => Boolean(root));
+  return roots.find((root) => existsSync(resolveMacComputerUseExecutablePath(root)));
+}
+
 function resolveHostProcessBinaryEnv(
   envVar: string,
   hostProcessLocalEnv: Record<string, string>,
@@ -477,6 +514,7 @@ export function buildHostProcessEnv(hostProcessLocalEnv: Record<string, string>)
     larkCliBinaryPath,
   );
   const dataBaseDir = getDataBaseDir();
+  const bundledMacCuaPluginRoot = resolveBundledMacCuaPluginRoot();
   const rawInheritedEnv = {
     ...hostProcessLocalEnv,
     ...readDefinedProcessEnv(),
@@ -533,6 +571,8 @@ export function buildHostProcessEnv(hostProcessLocalEnv: Record<string, string>)
   // 三层里有两层不写这个键，空对象无法覆盖 inheritedEnv，所以先无条件删掉继承值再按决策 spread 回去。
   // 少了这一行，production 包和 dev 的非法取值都会原样穿透到 Host。
   delete inheritedEnv[ZCODE_DYNAMIC_WORKFLOW_MODE_ENV];
+  // 设置页只使用本次应用随包执行器；不继承用户 shell 指向其它二进制的插件路径。
+  delete inheritedEnv.ZCODE_CUA_PLUGIN_ROOT;
 
   return {
     ...inheritedEnv,
@@ -559,6 +599,7 @@ export function buildHostProcessEnv(hostProcessLocalEnv: Record<string, string>)
       ? { [ZCODE_CUA_BUNDLED_HELPER_APP_PATH_ENV]: bundledCuaHelperAppPath }
       : {}),
     ...(resolvedGlmBinaryPath ? { GLM_BINARY_PATH: resolvedGlmBinaryPath } : {}),
+    ...(bundledMacCuaPluginRoot ? { ZCODE_CUA_PLUGIN_ROOT: bundledMacCuaPluginRoot } : {}),
     ...(resolvedLarkCliBinaryPath ? { ZCODE_LARK_CLI_BINARY: resolvedLarkCliBinaryPath } : {}),
   };
 }

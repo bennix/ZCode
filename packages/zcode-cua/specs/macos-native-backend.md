@@ -7,6 +7,7 @@
 - 用户显式启用电脑控制并获得系统辅助功能、屏幕录制权限后，模型才能观察和操作桌面应用。按钮的启用状态不能代替权限、原生执行器或工具注册的就绪状态。
 - macOS 使用 MIT 许可的 `maka-agent/maka-cu` 原生可访问性观察与输入分发实现，随本地构建打包。Windows 和 Linux 的独立原生后端及能力边界见 `windows-linux-native-backends.md`。
 - 外部浏览器（如 Brave）属于桌面应用控制目标；内置浏览器继续使用 `browser-use`，两者入口和能力说明分开。
+- macOS 设置页的权限状态与授权入口必须绑定同一随包 `OpenComputerUse` 执行器。旧 `cua-helper/ZCode Computer Use.app` 不随当前正式包安装，不能继续作为设置页状态或授权路径。状态查询调用执行器只读 `doctor --json --no-onboarding`，明确展示锁屏状态与辅助功能、屏幕录制的系统授权；授权按钮直接启动该执行器的原生引导，不再提示用户拖入不存在的 Helper.app。
 
 ## 所有者与接口
 
@@ -14,6 +15,8 @@
 - `computer-use-client.mjs` 作为宿主 Node 模块加载；bootstrap 必须将 REPL 的 `globalThis` 显式传给 client，client 才能读取注入的 CUA bridge。模块自己的 `globalThis` 不属于 REPL 上下文。
 - 本机原生执行器通过受控的 stdio JSON-RPC `maka.cu/2` 接口连接。必须先 `host.hello`，再 `session.begin`；一次 `observe` 返回的元素 token 与 digest 仅能用于该 snapshot 的 `dispatch.element`，不可按索引重新匹配另一帧。
 - 进程路径来自随应用打包并校验的 `bin/macos-<arch>/OpenComputerUse`，本地 `ZCODE_CUA_DEV_MODE=1` 时才允许显式 `ZCODE_CUA_EXECUTOR_PATH` 供诊断。不得在运行时下载二进制；上游实质代码与安装包均保留 MIT 版权和许可声明。
+- Desktop Main 拥有授权窗口的子进程和本窗口操作取消；Host 中的权限服务只发起无副作用的只读诊断。两者从同一官方插件资产根解析执行器，不能各自维护第二份 Helper 安装状态。权限成功与否以执行器重新诊断为准；关闭引导仅结束本次子进程，不改变插件启停或 Agent 会话。
+- 旧 `restartHelper` 服务接口在新执行器路径上只重新读取原生诊断以兼容旧 UI 调用方，不声称重启不存在的常驻 Helper；真正需要刷新 TCC 进程状态时由原生引导提示用户重启应用。
 - 本地与手机远控复用桌面 Host attachment、同一 CLI 会话和 runtime。`workspaceIdentity?.trim() || workspacePath` 用于身份隔离；远程请求保留 `remoteSessionId`。桌面实时流与手机可重放恢复只改变投递方式，不复制原生会话。
 
 ```text
@@ -22,6 +25,13 @@
                                                    → maka-cu 子进程 → macOS 权限/应用
 观察返回 snapshot/token/digest → 模型选择动作 → runtime 校验同一会话与 snapshot → 原生分发
 取消、会话结束或子进程退出 → runtime 废弃 token/图片并结束原生 session
+```
+
+```text
+设置页打开 → Host 读取官方插件路径 → OpenComputerUse doctor --json --no-onboarding
+          → 权限事实投影给 UI（锁屏与缺权分别显示）
+用户点击授权 → Main 从同一官方插件路径直接启动 OpenComputerUse 原生引导
+用户关闭/完成 → Main 结束操作 → Host 重新诊断 → UI 更新
 ```
 
 ## 失败与时序
@@ -39,3 +49,4 @@
 3. 旧 token、变更的 digest、跨会话 token 均被拒绝；未知执行结果不自动重试。
 4. 用户取消、关闭会话及原生进程异常退出后，不能继续操作，也不遗留截图。
 5. 桌面直接会话与手机远控同一会话分别验证实时和重放语义。
+6. 打包版 Mac 设置页在缺权时展示原生诊断结果，点击授权能打开 `OpenComputerUse` 的原生引导；不引用旧 Helper.app。尚未打开项目时仍可查询本机权限并引导授权。已授权时显示已授权，锁屏时不把 `capture_failed` 错判为缺少屏幕录制授权；引导取消不影响 Agent 会话或插件状态。

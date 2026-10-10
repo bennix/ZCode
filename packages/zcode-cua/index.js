@@ -2,8 +2,14 @@ import { spawn } from "node:child_process";
 import { createHash, randomUUID } from "node:crypto";
 import { mkdtemp, readFile, realpath, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
-import { dirname, join, resolve, sep } from "node:path";
+import { dirname, join, sep } from "node:path";
 import { createMcpNativeRuntime } from "./mcp-native.js";
+import { resolveMacComputerUseExecutablePath } from "./native-diagnostics.js";
+
+export {
+  readMacComputerUseDoctor,
+  resolveMacComputerUseExecutablePath,
+} from "./native-diagnostics.js";
 
 const METHODS = new Set([
   "permissions.check",
@@ -28,7 +34,7 @@ export function createComputerUseRuntime(options = {}) {
   const executable =
     developmentExecutor ||
     (env.ZCODE_CUA_PLUGIN_ROOT
-      ? resolve(env.ZCODE_CUA_PLUGIN_ROOT, "bin", `macos-${process.arch}`, "OpenComputerUse")
+      ? resolveMacComputerUseExecutablePath(env.ZCODE_CUA_PLUGIN_ROOT, process.arch)
       : "");
   let host;
   let starting;

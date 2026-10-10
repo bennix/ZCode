@@ -55,7 +55,7 @@ jobs:
           test "$(jq -r '.conclusion' <<< "$run_json")" = 'success'
           test "$(jq -r '.head_repository.full_name' <<< "$run_json")" = "$GITHUB_REPOSITORY"
           test "$(jq -r '.head_sha' <<< "$run_json")" = "$EXPECTED_SHA"
-          release_json="$(gh release view v3.14.27 --repo "$GITHUB_REPOSITORY" --json isDraft,targetCommitish)"
+          release_json="$(gh release view v3.14.28 --repo "$GITHUB_REPOSITORY" --json isDraft,targetCommitish)"
           test "$(jq -r '.isDraft' <<< "$release_json")" = 'true'
           test "$(jq -r '.targetCommitish' <<< "$release_json")" = "$EXPECTED_SHA"
 
@@ -75,18 +75,18 @@ jobs:
         run: |
           set -euo pipefail
           if [ "$PLATFORM" = windows ]; then
-            files=("staged/ZenCode-3.14.27-win-${ARCH}.exe")
+            files=("staged/ZenCode-3.14.28-win-${ARCH}.exe")
           elif [ "$ARCH" = x64 ]; then
-            files=(staged/ZenCode-3.14.27-linux-amd64.deb staged/ZenCode-3.14.27-linux-x86_64.rpm)
+            files=(staged/ZenCode-3.14.28-linux-amd64.deb staged/ZenCode-3.14.28-linux-x86_64.rpm)
           else
-            files=(staged/ZenCode-3.14.27-linux-arm64.deb staged/ZenCode-3.14.27-linux-aarch64.rpm)
+            files=(staged/ZenCode-3.14.28-linux-arm64.deb staged/ZenCode-3.14.28-linux-aarch64.rpm)
           fi
           for file in "${files[@]}"; do
             test -f "$file"
             name="${file##*/}"
             digest="sha256:$(sha256sum "$file" | cut -d' ' -f1)"
-            gh release upload v3.14.27 "$file" --repo "$GITHUB_REPOSITORY"
-            remote="$(gh release view v3.14.27 --repo "$GITHUB_REPOSITORY" --json assets | jq -r --arg name "$name" '[.assets[] | select(.name == $name) | .digest] | if length == 1 then .[0] else empty end')"
+            gh release upload v3.14.28 "$file" --repo "$GITHUB_REPOSITORY"
+            remote="$(gh release view v3.14.28 --repo "$GITHUB_REPOSITORY" --json assets | jq -r --arg name "$name" '[.assets[] | select(.name == $name) | .digest] | if length == 1 then .[0] else empty end')"
             test "$remote" = "$digest"
             echo "$name $digest"
           done

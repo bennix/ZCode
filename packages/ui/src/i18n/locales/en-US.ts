@@ -2052,12 +2052,16 @@ const enUS: Record<string, string> = {
   "chat.turnNavigator.emptyAssistant": "No assistant text yet",
   "chat.sharedContext.title": "Shared context",
   "chat.sharedContext.usedTokens": "{count} tokens used",
-  "chat.sharedContext.description": "A preview of recent submitted inputs. Model switches use the same session history.",
+  "chat.sharedContext.description":
+    "A preview of recent submitted inputs. Model switches use the same session history.",
   "chat.sharedContext.compacted": "A successful context compaction is visible in this window.",
   "chat.sharedContext.empty": "No submitted user input is visible in this window.",
-  "chat.sharedContext.windowLimited": "Only the recent history window is shown here; earlier content is omitted.",
-  "chat.sharedContext.nearLimit": "This context window is near its limit. Consider compaction or handing key details to a new task.",
-  "chat.sharedContext.cacheLow": "The latest model request had a low cache hit rate; switching models may increase context cost.",
+  "chat.sharedContext.windowLimited":
+    "Only the recent history window is shown here; earlier content is omitted.",
+  "chat.sharedContext.nearLimit":
+    "This context window is near its limit. Consider compaction or handing key details to a new task.",
+  "chat.sharedContext.cacheLow":
+    "The latest model request had a low cache hit rate; switching models may increase context cost.",
   "chat.turnNavigator.runningAssistant": "Assistant is still working",
   "chat.turnNavigator.userFallback": "User query",
   "chat.rewind.conflictConfirm":
@@ -3921,12 +3925,15 @@ const enUS: Record<string, string> = {
   "settings.subagents.title": "Subagents",
   "settings.agentDispatch.title": "Agent model dispatch",
   "chat.executionModel": "Execution model",
-  "settings.agentDispatch.description": "A separate model chooses an execution model when a new task starts. Follow-ups keep the current task's model.",
+  "settings.agentDispatch.description":
+    "A separate model chooses an execution model when a new task starts. Follow-ups keep the current task's model.",
   "settings.agentDispatch.enabled": "Automatically assign task models",
   "settings.agentDispatch.model": "Dispatch model",
   "settings.agentDispatch.chooseModel": "Choose a model",
-  "settings.agentDispatch.unavailable": "The selected dispatch model is unavailable. Tasks will use the original execution model.",
-  "settings.agentDispatch.fallback": "If dispatch fails, the original execution model is used. Dispatch also consumes tokens and may not save tokens every time.",
+  "settings.agentDispatch.unavailable":
+    "The selected dispatch model is unavailable. Tasks will use the original execution model.",
+  "settings.agentDispatch.fallback":
+    "If dispatch fails, the original execution model is used. Dispatch also consumes tokens and may not save tokens every time.",
   "settings.subagents.description":
     "Manage user-level subagent Markdown files consumed by ZenCode Agent.",
   "settings.subagents.workspaceScopeUnsupported":
@@ -5027,7 +5034,8 @@ const enUS: Record<string, string> = {
   "chat.studio.ratio": "Ratio",
   "chat.studio.duration": "Duration (sec)",
   "settings.studioMedia.evaluatorModel": "PPT layout evaluator (JEV)",
-  "settings.studioMedia.evaluatorHelp": "Defaults to typesafe/jev-1.13 via System One. Advice is sent to the repair model above. Leave blank to disable. Local checks continue if evaluation fails.",
+  "settings.studioMedia.evaluatorHelp":
+    "Defaults to typesafe/jev-1.13 via System One. Advice is sent to the repair model above. Leave blank to disable. Local checks continue if evaluation fails.",
   "settings.studioMedia.repairModel": "PPT repair model",
   "settings.studioMedia.followWriter": "Use the drafting model",
   "settings.studioMedia.repairHelp":
@@ -7007,6 +7015,9 @@ const enUS: Record<string, string> = {
   "cuaPermission.status.granted": "Granted",
   "cuaPermission.status.missing": "Missing",
   "cuaPermission.status.unknown": "Unknown",
+  "cuaPermission.status.screenLocked":
+    "The screen is locked. System permissions remain granted; unlock the Mac before using Computer Use.",
+  "cuaPermission.status.unavailableDetail": "Could not read Computer Use permissions: {reason}",
   "cuaPermission.status.stale": "Authorization needs verification",
   "cuaPermission.status.verifying": "Granted, verifying",
   "cuaPermission.probeVerifyingHint":

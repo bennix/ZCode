@@ -105,6 +105,7 @@ export interface CuaPermissionStatus {
   grantOwnerDisplayName?: string | null;
   screenRecording: CuaPermissionState;
   screenCaptureProbeOk?: boolean;
+  screenLocked?: boolean;
   idle?: boolean;
   reason?: string;
 }

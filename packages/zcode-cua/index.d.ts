@@ -37,3 +37,19 @@ export interface ComputerUseRuntimeOptions {
 export declare function createComputerUseRuntime(
   options?: ComputerUseRuntimeOptions,
 ): ComputerUseRuntime;
+
+export interface MacComputerUseDoctorResult {
+  permissions: { accessibility: boolean; screenRecording: boolean };
+  screenLocked: boolean;
+}
+
+export declare function resolveMacComputerUseExecutablePath(
+  pluginRoot: string,
+  arch?: string,
+): string;
+
+export declare function readMacComputerUseDoctor(options: {
+  pluginRoot: string;
+  arch?: string;
+  signal?: AbortSignal;
+}): Promise<MacComputerUseDoctorResult>;

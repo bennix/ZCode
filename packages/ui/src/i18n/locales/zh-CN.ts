@@ -3667,12 +3667,14 @@ const zhCN: Record<string, string> = {
   "settings.subagents.title": "子智能体",
   "settings.agentDispatch.title": "总模型调度",
   "chat.executionModel": "执行模型",
-  "settings.agentDispatch.description": "由独立模型在新任务开始时选择执行模型；当前任务的续接保持原执行模型。",
+  "settings.agentDispatch.description":
+    "由独立模型在新任务开始时选择执行模型；当前任务的续接保持原执行模型。",
   "settings.agentDispatch.enabled": "自动分配任务模型",
   "settings.agentDispatch.model": "调度判断模型",
   "settings.agentDispatch.chooseModel": "选择模型",
   "settings.agentDispatch.unavailable": "所选调度模型当前不可用；任务将使用原执行模型。",
-  "settings.agentDispatch.fallback": "判断失败时使用原执行模型。调度调用也会消耗 Token，不保证每次都节省。",
+  "settings.agentDispatch.fallback":
+    "判断失败时使用原执行模型。调度调用也会消耗 Token，不保证每次都节省。",
   "settings.subagents.description": "管理 ZenCode Agent 运行时消费的用户级子智能体 Markdown 文件。",
   "settings.subagents.workspaceScopeUnsupported": "暂不支持工作区级创建或编辑",
   "settings.subagents.searchPlaceholder": "搜索子智能体...",
@@ -4718,7 +4720,8 @@ const zhCN: Record<string, string> = {
   "chat.studio.ratio": "比例",
   "chat.studio.duration": "时长（秒）",
   "settings.studioMedia.evaluatorModel": "PPT 版面评估模型（JEV）",
-  "settings.studioMedia.evaluatorHelp": "默认 typesafe/jev-1.13，使用 System One 接口。评估建议交给上方修复模型；留空关闭。评估失败时继续本地检查。",
+  "settings.studioMedia.evaluatorHelp":
+    "默认 typesafe/jev-1.13，使用 System One 接口。评估建议交给上方修复模型；留空关闭。评估失败时继续本地检查。",
   "settings.studioMedia.repairModel": "PPT 修复模型",
   "settings.studioMedia.followWriter": "留空跟随成稿模型",
   "settings.studioMedia.repairHelp":
@@ -6679,6 +6682,8 @@ const zhCN: Record<string, string> = {
   "cuaPermission.status.granted": "已授权",
   "cuaPermission.status.missing": "未授权",
   "cuaPermission.status.unknown": "未知",
+  "cuaPermission.status.screenLocked": "屏幕已锁定。系统授权仍保留；解锁后再使用电脑控制。",
+  "cuaPermission.status.unavailableDetail": "无法读取电脑控制权限：{reason}",
   "cuaPermission.status.stale": "授权状态需要重新确认",
   "cuaPermission.status.verifying": "已授权，正在验证",
   "cuaPermission.probeVerifyingHint": "系统授权已存在，正在验证实际控制与截图能力。",

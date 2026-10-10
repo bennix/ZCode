@@ -123,6 +123,17 @@ test("fresh desktop exposes Computer Use settings and shares the plugin toggle",
       .first()
       .click();
     assert.equal(await sectionSwitch.getAttribute("data-state"), "checked");
+    if (process.platform === "darwin" && process.env.ZENCODE_CUA_EXPECT_NATIVE_STATUS === "1") {
+      await page
+        .getByText(/^(?:已授权|Granted)$/)
+        .first()
+        .waitFor({ timeout: 30_000 });
+      assert.equal(await page.getByText(/^(?:已授权|Granted)$/).count(), 2);
+      assert.equal(
+        await page.getByText(/(?:Computer Use executor is not installed|执行器未安装)/).count(),
+        0,
+      );
+    }
   } catch (error) {
     if (page) {
       const body = await page

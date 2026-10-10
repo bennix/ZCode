@@ -84,8 +84,9 @@ export function ComputerUseSection({
     isDesktop && !isWindowsDesktop && !supportsLocalMacWorkspace && isLocalWorkspace;
   const supportsComputerUseSettings =
     supportsLocalMacWorkspace || supportsLocalWindowsWorkspace || supportsLocalLinuxWorkspace;
-  // CUA 权限是 macOS 本机属性：仅完整 macOS 设置需要 Helper workspace 路径。
-  const path = supportsLocalMacWorkspace ? (localWorkspacePath ?? workspacePath) : null;
+  // CUA 权限属于本机执行器；刚安装且尚未打开项目时也必须能查询和引导授权。
+  // 现有服务接口要求 workspacePath，根路径仅充当稳定的本机查询键，不用于文件操作。
+  const path = supportsLocalMacWorkspace ? (localWorkspacePath ?? workspacePath ?? "/") : null;
   // 展示只跟 settled：fresh 每次查询开始都会落回 false，跟着它渲染会让授权按钮的文案
   // 在「验证中…」与终态之间切换、宽度随之跳变。
   const { status, settled, refresh } = useCuaPermissionStatus(path ?? null, workspaceIdentity);
@@ -750,6 +751,19 @@ export function ComputerUseSection({
             </div>
           ) : null}
           {/* macOS 权限引导只保留在 Settings 内，CUA 操作与工具审批流不再自动弹权限 modal。 */}
+          {availableStatus?.screenLocked ? (
+            <p className="rounded-lg border border-warning/40 bg-warning/10 p-3 text-ui-sm text-warning">
+              {intl.formatMessage({ id: "cuaPermission.status.screenLocked" })}
+            </p>
+          ) : null}
+          {status?.available === false ? (
+            <p className="rounded-lg border border-warning/40 bg-warning/10 p-3 text-ui-sm text-warning">
+              {intl.formatMessage(
+                { id: "cuaPermission.status.unavailableDetail" },
+                { reason: status.reason },
+              )}
+            </p>
+          ) : null}
           {!macOsBelowCuaFloor ? (
             <SettingsGroupCard>
               <SettingsRow
