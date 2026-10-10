@@ -120,7 +120,11 @@ try {
     if (inputIndex) break;
     await delay(100);
   }
-  assert.ok(inputIndex, "WinForms text box was not visible in the Windows UIA tree");
+  // 根因待 CI 树诊断确认：列出窗口成功但文本框缺失；输出有界树以区分目标窗口与 UIA 子节点问题。
+  assert.ok(
+    inputIndex,
+    `WinForms text box was not visible in the Windows UIA tree. apps=${(apps.content?.[0]?.text ?? "").slice(0, 1200)} tree=${(observed?.content?.[0]?.text ?? "").slice(0, 5000)}`,
+  );
   const snapshotId = snapshotIdFrom(observed);
   assert.ok(snapshotId, "UIA observation must issue a ZenCode snapshot ID");
   await call(
