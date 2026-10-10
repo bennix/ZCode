@@ -1,0 +1,49 @@
+name: Promote verified Windows release assets
+
+on:
+  workflow_dispatch:
+    inputs:
+      run_id:
+        description: Successful Windows package run ID
+        required: true
+        type: string
+
+permissions:
+  actions: read
+  contents: write
+
+jobs:
+  promote:
+    runs-on: ubuntu-24.04
+    strategy:
+      matrix:
+        arch: [x64, arm64]
+    steps:
+      - name: Verify source run and draft release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          SOURCE_RUN_ID: ${{ inputs.run_id }}
+        run: |
+          [[ "$SOURCE_RUN_ID" =~ ^[0-9]+$ ]]
+          run_json="$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$SOURCE_RUN_ID")"
+          test "$(jq -r '.name' <<< "$run_json")" = 'Windows package'
+          test "$(jq -r '.conclusion' <<< "$run_json")" = 'success'
+          test "$(jq -r '.head_branch' <<< "$run_json")" = 'main'
+          test "$(gh release view v3.14.26 --repo "$GITHUB_REPOSITORY" --json isDraft --jq .isDraft)" = 'true'
+
+      - name: Download verified installer
+        uses: actions/download-artifact@v4
+        with:
+          name: zencode-windows-${{ matrix.arch }}
+          path: release-windows-${{ matrix.arch }}
+          run-id: ${{ inputs.run_id }}
+          github-token: ${{ github.token }}
+
+      - name: Verify and upload installer
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          installer='release-windows-${{ matrix.arch }}/ZenCode-3.14.26-win-${{ matrix.arch }}.exe'
+          test -f "$installer"
+          sha256sum "$installer"
+          gh release upload v3.14.26 "$installer" --repo "$GITHUB_REPOSITORY"
