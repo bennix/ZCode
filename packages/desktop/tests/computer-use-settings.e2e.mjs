@@ -61,7 +61,9 @@ test("fresh desktop exposes Computer Use settings and shares the plugin toggle",
       }
     }
     assert.ok(browser, "Electron did not expose CDP");
-    const page = browser.contexts()[0]?.pages()[0];
+    const context = browser.contexts()[0];
+    // 根因：CDP 端口先于首个 BrowserWindow 可用；等待页面事件，避免把正常启动误判为无窗口。
+    const page = context?.pages()[0] ?? (await context?.waitForEvent("page", { timeout: 30_000 }));
     assert.ok(page, "desktop window did not open");
     await page
       .getByRole("heading", { name: /^(?:欢迎来到 ZenCode|Welcome to ZenCode)$/ })

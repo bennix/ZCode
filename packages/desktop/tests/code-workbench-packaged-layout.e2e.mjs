@@ -70,9 +70,9 @@ test(
     ? "packaged IDE follows ZenCode theme"
     : process.env.ZENCODE_IDE_SYSTEM_THEME_ONLY === "1"
       ? "packaged IDE follows system color scheme"
-    : process.env.ZENCODE_IDE_RESIZE_ONLY === "1"
-      ? "packaged IDE stays focused on window resize"
-      : "packaged IDE keeps its focused layout in native full screen",
+      : process.env.ZENCODE_IDE_RESIZE_ONLY === "1"
+        ? "packaged IDE stays focused on window resize"
+        : "packaged IDE keeps its focused layout in native full screen",
   async () => {
     const executable = process.env.ZENCODE_PACKAGED_APP_PATH?.trim();
     assert.ok(executable, "ZENCODE_PACKAGED_APP_PATH must point to a packaged desktop executable");
@@ -108,7 +108,10 @@ test(
         }
       }
       assert.ok(browser, "packaged app did not expose CDP");
-      const page = browser.contexts()[0]?.pages()[0];
+      const context = browser.contexts()[0];
+      // 根因：CDP 可连接不代表首个 BrowserWindow 已挂载；等待页面事件后再验收包内 UI。
+      const page =
+        context?.pages()[0] ?? (await context?.waitForEvent("page", { timeout: 30_000 }));
       assert.ok(page, "packaged desktop window did not open");
       page.on("console", (message) => {
         recentOutput = (recentOutput + `\n[renderer] ${message.text()}`).slice(-128_000);
