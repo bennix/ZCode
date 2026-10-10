@@ -44,16 +44,23 @@ jobs:
           if ($actual -ne '${{ matrix.sha256 }}') { throw "Installer hash mismatch: $actual" }
       - name: Install and check first-use settings
         shell: pwsh
+        env:
+          ZENCODE_E2E_SCREENSHOT_PATH: ${{ runner.temp }}/installed-first-use.png
         run: |
           $installer = Join-Path $env:RUNNER_TEMP 'ZenCode-3.14.26-win-${{ matrix.arch }}.exe'
-          $installDir = Join-Path $env:RUNNER_TEMP 'ZenCodeInstalled'
-          $process = Start-Process -FilePath $installer -ArgumentList '/S', "/D=$installDir" -Wait -PassThru
+          $process = Start-Process -FilePath $installer -ArgumentList '/S' -Wait -PassThru
           if ($process.ExitCode -ne 0) { throw "Installer exited $($process.ExitCode)" }
-          $app = Join-Path $installDir 'ZenCode.exe'
-          if (-not (Test-Path $app)) { throw "Installed executable missing: $app" }
-          $env:ZENCODE_PACKAGED_APP_PATH = $app
+          $installed = Get-ChildItem (Join-Path $env:LOCALAPPDATA 'Programs') -Recurse -Filter ZenCode.exe -ErrorAction SilentlyContinue | Select-Object -First 1
+          if (-not $installed) { throw 'Installed ZenCode.exe missing under user Programs' }
+          $env:ZENCODE_PACKAGED_APP_PATH = $installed.FullName
           node --test packages/desktop/tests/computer-use-settings.e2e.mjs
           if ($LASTEXITCODE -ne 0) { throw 'Installed app E2E failed' }
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: installed-windows-${{ matrix.arch }}-screenshot
+          path: ${{ runner.temp }}/installed-first-use.png
+          if-no-files-found: ignore
 
   linux-deb:
     strategy:
@@ -90,6 +97,7 @@ jobs:
       - name: Install and check first-use settings
         env:
           ASSET: ZenCode-3.14.26-linux-${{ matrix.arch }}.deb
+          ZENCODE_E2E_SCREENSHOT_PATH: ${{ runner.temp }}/installed-first-use.png
         run: |
           sudo apt-get update
           sudo apt-get install -y xvfb xauth
@@ -98,6 +106,12 @@ jobs:
           app="$(command -v zcode)"
           test -x "$app"
           ZENCODE_PACKAGED_APP_PATH="$app" ZENCODE_TEST_DISABLE_SANDBOX=1 xvfb-run -a node --test packages/desktop/tests/computer-use-settings.e2e.mjs
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: installed-linux-deb-${{ matrix.arch }}-screenshot
+          path: ${{ runner.temp }}/installed-first-use.png
+          if-no-files-found: ignore
 
   linux-rpm:
     strategy:

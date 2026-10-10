@@ -59,6 +59,7 @@ test("fresh desktop exposes Computer Use settings and shares the plugin toggle",
     });
   }
   let browser;
+  let page;
   try {
     for (let attempt = 0; attempt < 150; attempt++) {
       try {
@@ -76,7 +77,7 @@ test("fresh desktop exposes Computer Use settings and shares the plugin toggle",
     );
     const context = browser.contexts()[0];
     // 根因：CDP 端口先于首个 BrowserWindow 可用；等待页面事件，避免把正常启动误判为无窗口。
-    const page = context?.pages()[0] ?? (await context?.waitForEvent("page", { timeout: 30_000 }));
+    page = context?.pages()[0] ?? (await context?.waitForEvent("page", { timeout: 30_000 }));
     assert.ok(page, "desktop window did not open");
     await page
       .getByRole("heading", { name: /^(?:欢迎来到 ZenCode|Welcome to ZenCode)$/ })
@@ -121,6 +122,20 @@ test("fresh desktop exposes Computer Use settings and shares the plugin toggle",
       .first()
       .click();
     assert.equal(await sectionSwitch.getAttribute("data-state"), "checked");
+  } catch (error) {
+    if (page) {
+      const body = await page
+        .locator("body")
+        .innerText()
+        .catch(() => "<unavailable>");
+      const screenshotPath = process.env.ZENCODE_E2E_SCREENSHOT_PATH?.trim();
+      if (screenshotPath) await page.screenshot({ path: screenshotPath }).catch(() => {});
+      // 安装包可能打开了错误页；保留当前页面与有界进程日志，区分 UI 断言和运行时启动问题。
+      console.error(
+        `Installed desktop E2E page=${page.url()} body=${body.slice(0, 1500)} process=${recentOutput}`,
+      );
+    }
+    throw error;
   } finally {
     await browser?.close();
     if (child.exitCode === null && child.signalCode === null) {

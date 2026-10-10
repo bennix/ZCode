@@ -11,3 +11,5 @@ Linux CI 的 Xvfb 环境没有正确配置 Electron SUID sandbox helper，因此
 发布资产的安装后验收由独立、手动触发的 GitHub Actions workflow 执行，直接下载 `v3.14.26` 的规范文件名，并在安装前核对固定 SHA-256。GitHub Release 是资产所有者；测试 job 只在一次性 runner 中安装和运行，不修改 Release，也不将测试机的用户状态带回产物。Windows x64/arm64 在匹配架构 runner 静默安装 NSIS 到 job 专用目录，从安装目录启动 `ZenCode.exe`，执行同一首次电脑控制设置 E2E。Linux x64/arm64 在匹配架构 Ubuntu runner 安装 deb，使用系统安装入口运行相同 E2E；两架构 rpm 在匹配架构 Fedora 容器中完成依赖解析与安装，并检查包身份与可执行入口。RPM 容器检查不冒充完整 GUI E2E。
 
 事件顺序：读取发布资产 → 校验每个资产哈希 → 安装至隔离 runner/容器 → 从安装入口启动 → 首次设置 E2E 或 RPM 安装检查 → 记录各架构结果。任何哈希不符、安装失败、入口缺失或 E2E 失败均使对应 job 失败；不得降级成仅检查下载成功。Windows/Linux 检查仍不能替代真实用户 GNOME/KDE portal 授权、锁屏/RDP 场景或人工视觉复核。
+
+安装后 E2E 若没有出现欢迎页，应记录当前 URL、截断的页面正文与近期进程输出，并在 CI 保留失败截图；页面内容和日志只来自隔离首次启动目录。Windows 静默安装先使用安装器默认安装目录，再从该 runner 的用户 Programs 目录定位安装后的 `ZenCode.exe`，避免把 `/D` 自定义路径参数问题误判成包损坏。安装器仍异常退出时必须保留原始退出码，不把该 job 标为通过。
