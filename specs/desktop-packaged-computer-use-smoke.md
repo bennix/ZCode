@@ -19,3 +19,5 @@ Linux CI 的 Xvfb 环境没有正确配置 Electron SUID sandbox helper，因此
 ## 安装后 Agent 资源根目录
 
 安装后的 Main 是 `resourcesPath` 的唯一所有者。Main 在 `InitLocal` 消息中把绝对资源根目录交给 window-scoped Host；Host 在开始数据库准备前设置该进程的资源路径供 Agent resolver 使用。该顺序不依赖 Electron utility process 对自定义 fork 环境变量的继承行为，也不从 checkout 搜索回退。开发态不传此字段，仍沿用开发解析链。验收以安装器中的应用为准：deb x64/ARM64 的首次启动不能出现 `unsupported_runtime`；Windows 安装成功后执行同样断言。缺少 `resources/glm/zcode.cjs` 时保持显式失败，不从源码树补齐。
+
+Windows 安装器若在执行安装命令前后发生进程级崩溃，验收 job 在失败时记录最近的 Application Error / Windows Error Reporting 事件，保留故障模块和异常码；这些系统事件只用于定位失败，不作为安装成功的替代条件。

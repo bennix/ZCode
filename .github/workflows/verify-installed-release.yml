@@ -106,6 +106,15 @@ jobs:
           $env:ZENCODE_PACKAGED_APP_PATH = $installed.FullName
           node --test packages/desktop/tests/computer-use-settings.e2e.mjs
           if ($LASTEXITCODE -ne 0) { throw 'Installed app E2E failed' }
+      - name: Collect Windows installer crash diagnostics
+        if: failure()
+        shell: pwsh
+        run: |
+          $since = (Get-Date).AddMinutes(-20)
+          Get-WinEvent -FilterHashtable @{ LogName = 'Application'; StartTime = $since; Id = 1000,1001 } -ErrorAction SilentlyContinue |
+            Where-Object { $_.Message -match 'ZenCode|ZenCode-3\\.14\\.26' } |
+            Select-Object -First 5 TimeCreated, ProviderName, Id, Message |
+            Format-List
       - uses: actions/upload-artifact@v4
         if: failure()
         with:
