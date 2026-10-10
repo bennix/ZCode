@@ -10,3 +10,5 @@ afterPack 复制运行时 → 扫描三个资源目录 → 逐个签 Mach-O → 
 验收：扫描包含无扩展名 `OpenComputerUse`、bfs/rg/ugrep、工作台 Node 和 `.node`，排除伪装成可执行文件的 PNG；最终 `codesign --verify --deep --strict` 通过。公证若报告任何 `Invalid` 原生文件，则视为整包失败，修复后必须重新构建、重新提交，不复用被拒 DMG。发布目录和 GitHub 仅保留最新的已公证 DMG；未签名或已拒包不能作为下载入口。
 
 下一版品牌修正发布时，源码 tag、根包版本、Windows/Linux 构建及安装验收工作流、安装包文件名必须一致。Windows/Linux CI 候选包可先上传到同一源码提交指向的 Draft Release，以便从真实安装资产运行安装后验收；只有构建 run 的 `head_sha`、Release 的 target commit 与预期源码相同，且 Release 仍为 draft，才允许这个暂存步骤。先完成跨平台构建与安装验收，再晋升公开资产；Mac DMG 公证及装订验证通过后才替换本地留存的上一版 DMG。发布失败时保留最后一份已公证 DMG，并且不把失败候选设为 Latest。
+
+安装后验收矩阵中的公开资产 SHA-256 必须在每版暂存资产的远端摘要核对后更新；候选构建 run 验收先完成，公开发布后再从正式 Release 下载同名资产复验。Draft Release 的 tag 下载入口不能代替正式下载验收。
