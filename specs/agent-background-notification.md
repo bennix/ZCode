@@ -62,6 +62,7 @@
 多条通知在同一批 promotion 中共用一条合成消息时，恢复按 `promotedMessageID` 分组，只续这一条完整合成正文的模型轮；不得按每个 requestId 各启动一个回复。
 持久化验收要关闭并重开同一 SQLite 文件，确认 `promoted` 账本、合成 user 正文及缺失的子 assistant 可从磁盘重新读取；仅在内存伪造这些记录不能证明崩溃断点可恢复。
 2026-10-10 在本机用独立 Node 子进程提交两条通知的原子 promotion 后立即 `SIGKILL`，父进程重开 SQLite 文件，确认两条账本均为 promoted、只有一条合成 user 消息且没有 assistant。该断点证明 promotion 提交后可从磁盘恢复；不覆盖模型已产生部分 assistant 或工具副作用的窗口。
+2026-10-10 另用独立 Node 子进程将合成 user、promoted 账本及已完成 assistant 回复持久化后立即 `SIGKILL`；重开 SQLite 确认三者仍在且各只有一份。Core 现有恢复测试在发现任何子 assistant 时不会重复入队。两项证据覆盖持久最终回复的存活和内存恢复判定，尚未构成同一打包 Host 的完整重启端到端证明，也不覆盖流式中断与工具副作用幂等。
 
 ```text
 SQLite session_input(promoted) + 合成 user message
