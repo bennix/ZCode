@@ -2,12 +2,50 @@ name: Verify installed 3.14.26 release
 
 on:
   workflow_dispatch:
+    inputs:
+      windows_run_id:
+        description: Successful Windows package run ID (leave empty for published release)
+        required: false
+        type: string
+      linux_run_id:
+        description: Successful Linux packages run ID (leave empty for published release)
+        required: false
+        type: string
+      expected_sha:
+        description: Full 40-character source SHA for candidate runs
+        required: false
+        type: string
 
 permissions:
+  actions: read
   contents: read
 
 jobs:
+  validate-source:
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Validate candidate inputs and source runs
+        env:
+          GH_TOKEN: ${{ github.token }}
+          WINDOWS_RUN_ID: ${{ inputs.windows_run_id }}
+          LINUX_RUN_ID: ${{ inputs.linux_run_id }}
+          EXPECTED_SHA: ${{ inputs.expected_sha }}
+        run: |
+          if [[ -z "$WINDOWS_RUN_ID" && -z "$LINUX_RUN_ID" && -z "$EXPECTED_SHA" ]]; then exit 0; fi
+          [[ "$WINDOWS_RUN_ID" =~ ^[0-9]+$ ]]
+          [[ "$LINUX_RUN_ID" =~ ^[0-9]+$ ]]
+          [[ "$EXPECTED_SHA" =~ ^[0-9a-f]{40}$ ]]
+          for entry in "Windows package:$WINDOWS_RUN_ID" "Linux packages:$LINUX_RUN_ID"; do
+            name="${entry%%:*}"
+            run_id="${entry##*:}"
+            run_json="$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$run_id")"
+            test "$(jq -r '.name' <<< "$run_json")" = "$name"
+            test "$(jq -r '.conclusion' <<< "$run_json")" = 'success'
+            test "$(jq -r '.head_repository.full_name' <<< "$run_json")" = "$GITHUB_REPOSITORY"
+            test "$(jq -r '.head_sha' <<< "$run_json")" = "$EXPECTED_SHA"
+          done
   windows-installer:
+    needs: validate-source
     strategy:
       fail-fast: false
       matrix:
@@ -32,6 +70,7 @@ jobs:
       - name: Install E2E dependencies
         run: pnpm install --frozen-lockfile
       - name: Download and verify published installer
+        if: ${{ !inputs.windows_run_id }}
         shell: pwsh
         env:
           GH_TOKEN: ${{ github.token }}
@@ -42,6 +81,18 @@ jobs:
           $installer = Join-Path $env:RUNNER_TEMP $asset
           $actual = (Get-FileHash -Algorithm SHA256 $installer).Hash.ToLowerInvariant()
           if ($actual -ne '${{ matrix.sha256 }}') { throw "Installer hash mismatch: $actual" }
+      - name: Download candidate installer
+        if: ${{ inputs.windows_run_id }}
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+          SOURCE_RUN_ID: ${{ inputs.windows_run_id }}
+        run: |
+          gh run download $env:SOURCE_RUN_ID --repo $env:GITHUB_REPOSITORY --name 'zencode-windows-${{ matrix.arch }}' --dir $env:RUNNER_TEMP
+          if ($LASTEXITCODE -ne 0) { throw 'Candidate download failed' }
+          $installer = Join-Path $env:RUNNER_TEMP 'ZenCode-3.14.26-win-${{ matrix.arch }}.exe'
+          if (-not (Test-Path $installer)) { throw 'Candidate installer missing' }
+          Write-Output "SHA256 $((Get-FileHash -Algorithm SHA256 $installer).Hash.ToLowerInvariant()) $installer"
       - name: Install and check first-use settings
         shell: pwsh
         env:
@@ -63,6 +114,7 @@ jobs:
           if-no-files-found: ignore
 
   linux-deb:
+    needs: validate-source
     strategy:
       fail-fast: false
       matrix:
@@ -87,6 +139,7 @@ jobs:
       - name: Install E2E dependencies
         run: pnpm install --frozen-lockfile
       - name: Download and verify published deb
+        if: ${{ !inputs.linux_run_id }}
         env:
           GH_TOKEN: ${{ github.token }}
           ASSET: ZenCode-3.14.26-linux-${{ matrix.arch }}.deb
@@ -94,6 +147,17 @@ jobs:
         run: |
           gh release download v3.14.26 --repo "$GITHUB_REPOSITORY" --pattern "$ASSET" --dir "$RUNNER_TEMP"
           echo "$EXPECTED_SHA256  $RUNNER_TEMP/$ASSET" | sha256sum --check -
+      - name: Download candidate deb
+        if: ${{ inputs.linux_run_id }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+          SOURCE_RUN_ID: ${{ inputs.linux_run_id }}
+          ASSET: ZenCode-3.14.26-linux-${{ matrix.arch }}.deb
+          ARTIFACT: zencode-linux-${{ matrix.arch == 'amd64' && 'x64' || 'arm64' }}
+        run: |
+          gh run download "$SOURCE_RUN_ID" --repo "$GITHUB_REPOSITORY" --name "$ARTIFACT" --dir "$RUNNER_TEMP"
+          test -f "$RUNNER_TEMP/$ASSET"
+          sha256sum "$RUNNER_TEMP/$ASSET"
       - name: Install and check first-use settings
         env:
           ASSET: ZenCode-3.14.26-linux-${{ matrix.arch }}.deb
@@ -114,6 +178,7 @@ jobs:
           if-no-files-found: ignore
 
   linux-rpm:
+    needs: validate-source
     strategy:
       fail-fast: false
       matrix:
@@ -128,6 +193,7 @@ jobs:
     timeout-minutes: 90
     steps:
       - name: Download and verify published rpm
+        if: ${{ !inputs.linux_run_id }}
         env:
           GH_TOKEN: ${{ github.token }}
           ASSET: ZenCode-3.14.26-linux-${{ matrix.arch }}.rpm
@@ -135,6 +201,17 @@ jobs:
         run: |
           gh release download v3.14.26 --repo "$GITHUB_REPOSITORY" --pattern "$ASSET" --dir "$RUNNER_TEMP"
           echo "$EXPECTED_SHA256  $RUNNER_TEMP/$ASSET" | sha256sum --check -
+      - name: Download candidate rpm
+        if: ${{ inputs.linux_run_id }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+          SOURCE_RUN_ID: ${{ inputs.linux_run_id }}
+          ASSET: ZenCode-3.14.26-linux-${{ matrix.arch }}.rpm
+          ARTIFACT: zencode-linux-${{ matrix.arch == 'x86_64' && 'x64' || 'arm64' }}
+        run: |
+          gh run download "$SOURCE_RUN_ID" --repo "$GITHUB_REPOSITORY" --name "$ARTIFACT" --dir "$RUNNER_TEMP"
+          test -f "$RUNNER_TEMP/$ASSET"
+          sha256sum "$RUNNER_TEMP/$ASSET"
       - name: Install rpm in matching Fedora container
         env:
           ASSET: ZenCode-3.14.26-linux-${{ matrix.arch }}.rpm
