@@ -37,7 +37,6 @@
 
   Function ${ZCODE_UNINSTALLER_FUNCTION_PREFIX}ZCodeWriteUninstallerLog
     Exch $R9
-    Push $R0
     Push $R1
     Push $R2
 
@@ -46,9 +45,8 @@
     FileOpen $R1 "${ZCODE_UNINSTALLER_LOG_PATH}" a
     IfErrors zcodeUninstallerLogFailed zcodeUninstallerLogWrite
     zcodeUninstallerLogWrite:
-      System::Call "kernel32::GetCurrentProcessId() i.R0"
       FileSeek $R1 0 END
-      FileWrite $R1 "[pid=$R0] $R9$\r$\n"
+      FileWrite $R1 "[role=uninstaller] $R9$\r$\n"
       FileClose $R1
       Goto zcodeUninstallerLogDone
     zcodeUninstallerLogFailed:
@@ -58,7 +56,6 @@
     zcodeUninstallerLogDone:
       Pop $R2
       Pop $R1
-      Pop $R0
       Pop $R9
   FunctionEnd
 
@@ -155,7 +152,6 @@
 
   Function ZCodeWriteInstallerLog
     Exch $R9
-    Push $R0
     Push $R1
     Push $R2
 
@@ -173,9 +169,8 @@
       Sleep 50
       Goto zcodeInstallerLogOpen
     zcodeInstallerLogWrite:
-      System::Call "kernel32::GetCurrentProcessId() i.R0"
       FileSeek $R1 0 END
-      FileWrite $R1 "[pid=$R0] $R9$\r$\n"
+      FileWrite $R1 "[role=$ZCodeInstallerProcessRole] $R9$\r$\n"
       FileClose $R1
       Goto zcodeInstallerLogDone
     zcodeInstallerLogFailed:
@@ -184,7 +179,6 @@
     zcodeInstallerLogDone:
       Pop $R2
       Pop $R1
-      Pop $R0
       Pop $R9
   FunctionEnd
 
