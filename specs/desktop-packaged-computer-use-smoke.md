@@ -29,3 +29,5 @@ Windows 安装器若在执行安装命令前后发生进程级崩溃，验收 jo
 Linux 构建流水线在上传候选 deb/rpm 后，必须安装该架构的 deb 并从系统入口运行首次启动 E2E。这样每次改动可直接看到已安装包的 Host 诊断和真实启动结果；构建 job 若因此失败，artifact 可供取证但不能晋升。独立候选验收仍负责跨平台正式发布门禁。
 
 已安装包的资源根目录由 Main 明确提供时，Agent resolver 必须优先使用该目录的 `glm/zcode.cjs`，即使当前工作目录碰巧位于带 `apps/zcode-cli/.../src/main.ts` 和 `tsx` 的 checkout。若指定的包内 bundle 缺失，则明确失败，不回退到 checkout 的开发入口；开发态无资源根时继续使用原有 dist/source 搜索顺序。显式 `ZCODE_AGENT_SERVER_COMMAND` 仍保持用户覆盖优先级。
+
+Windows 安装器崩溃诊断还应输出 NSIS 自身的阶段日志（若存在），以判断 `System.dll` 异常发生在初始化、清理、解包还是快捷方式阶段；日志缺失本身也是定位证据。不得因日志不存在而覆盖安装器原始失败。

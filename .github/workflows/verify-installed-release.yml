@@ -110,6 +110,13 @@ jobs:
         if: failure()
         shell: pwsh
         run: |
+          $installerLog = Join-Path $env:TEMP 'ZCode-installer.log'
+          if (Test-Path $installerLog) {
+            Write-Output 'Recent NSIS installer stages:'
+            Get-Content $installerLog -Tail 80
+          } else {
+            Write-Output 'NSIS installer stage log missing'
+          }
           $since = (Get-Date).AddMinutes(-20)
           Get-WinEvent -FilterHashtable @{ LogName = 'Application'; StartTime = $since; Id = 1000,1001 } -ErrorAction SilentlyContinue |
             Where-Object { $_.Message -match 'ZenCode|ZenCode-3\\.14\\.26' } |
