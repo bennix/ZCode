@@ -48,9 +48,9 @@
 8. 子进程在初始化前退出（含动态库不兼容）时，调用返回错误而不崩溃；无图形桌面时 `doctor` 如实报告缺少 portal/AT-SPI/输入/截图能力。
 9. Linux x64 与 arm64 的打包流水线在隔离的 Xvfb 图形会话启动 xcalc，经同一 ZenCode runtime 完成 `doctor`、观察、携快照 ID 点击数字 7、再次观察，并确认截图发生变化。此检查验证 X11/XTEST 坐标动作，不代表 GNOME Wayland 的 portal 或 AT-SPI 元素动作已通过。
    9a. Linux x64 与 arm64 的打包流水线在独立 D-Bus 会话中启动 Weston headless 和 Zenity，启用 AT-SPI，使用预置二进制经 ZenCode runtime 观察明确命名的按钮，再携该次 snapshot id 执行元素 `Click`，并验证对话框进程成功退出。此检查证明 Wayland AT-SPI 元素动作，不证明 GNOME portal 截图或坐标输入。
-10. Windows x64 与 arm64 的打包流水线在登录的交互桌面启动独立 WPF 测试窗口，经预置二进制 `list_apps` 找到窗口、`get_app_state` 读到明确命名的 UIA 文本框与按钮。先携快照执行 `set_value`，重新观察后携新快照执行元素 `click`；按钮事件把文本框内容写入一次性哨兵文件并退出，断言写入值等于预期。若 CI runner 没有交互桌面，应明确失败，不能把 MCP 握手当成 GUI 动作通过。该测试不代替锁屏与真实应用的手工验收。
+10. Windows x64 与 arm64 的打包流水线在登录的交互桌面启动独立 WPF 测试窗口，经预置二进制 `list_apps` 找到窗口、`get_app_state` 读到明确命名的 UIA 文本框与按钮。先携快照执行 `set_value`，重新观察后携新快照执行元素 `click`；按钮事件把文本框内容写入一次性哨兵文件，断言写入值等于预期。窗口保持打开直到执行器完成点击后的状态观察，随后由测试清理阶段关闭。若 CI runner 没有交互桌面，应明确失败，不能把 MCP 握手当成 GUI 动作通过。该测试不代替锁屏与真实应用的手工验收。
 
-Windows UIA 节点缺失时，验收错误须附上本次 `get_app_state` 的有限树文本及 `list_apps` 结果，以区分窗口选择、无障碍树为空与测试名称匹配错误；仍保持失败，不将 MCP 握手或仅发现窗口视为通过。GitHub runner 的 WinForms 文本框实际只暴露为无名称 `pane`（其按钮有名称）；验收窗口改用显式设置 AutomationProperties.Name 的 WPF 控件，使观察、ValuePattern 输入和 InvokePattern 点击都可由 UIA 语义验证。
+Windows UIA 节点缺失时，验收错误须附上本次 `get_app_state` 的有限树文本及 `list_apps` 结果，以区分窗口选择、无障碍树为空与测试名称匹配错误；仍保持失败，不将 MCP 握手或仅发现窗口视为通过。GitHub runner 的 WinForms 文本框实际只暴露为无名称 `pane`（其按钮有名称）；验收窗口改用显式设置 AutomationProperties.Name 的 WPF 控件，使观察、ValuePattern 输入和 InvokePattern 点击都可由 UIA 语义验证。上游 `click` 在动作后还读取窗口状态；测试回调若立即关闭窗口会使这次读取报告 `appNotFound`，因此不能在回调内关闭。
 11. Windows/Linux 每个架构打包后还要从该架构的 unpacked 应用启动隔离首次使用 E2E：`HOME`、桌面 userData/sessionData 与 ZenCode 数据目录各自隔离，首次设置页与插件列表中的电脑控制开关均为关闭；手动开启后两处显示一致。该检查验证包内 renderer、Host 与插件管理链，不等于通过 NSIS/deb/rpm 安装器的安装后验收。流水线必须使用各架构对应的 unpacked 目录，不能以开发态 Electron 替代。
 
 ## 本机验证记录

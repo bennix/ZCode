@@ -39,7 +39,8 @@ $button.Content = 'ZenCodeConfirm'
 [System.Windows.Automation.AutomationProperties]::SetName($button, 'ZenCodeConfirm')
 $button.Width = 180
 $button.Height = 48
-$button.Add_Click({ [System.IO.File]::WriteAllText($env:ZCODE_CUA_SMOKE_CLICKED, $textBox.Text); $form.Close() })
+# 根因：执行器在点击后再次观察窗口；回调立即关闭窗口会把成功的点击报告为 appNotFound。
+$button.Add_Click({ [System.IO.File]::WriteAllText($env:ZCODE_CUA_SMOKE_CLICKED, $textBox.Text) })
 $panel.Children.Add($button) | Out-Null
 $form.Content = $panel
 $form.Add_ContentRendered({ [System.IO.File]::WriteAllText($env:ZCODE_CUA_SMOKE_READY, 'ready') })
@@ -147,16 +148,6 @@ try {
   );
   await waitForFile(clickedPath, "UIA button click");
   assert.equal(await readFile(clickedPath, "utf8"), "ZenCodeInputOK");
-  const exit =
-    windowProcess.exitCode === null
-      ? await Promise.race([
-          once(windowProcess, "exit"),
-          delay(10_000).then(() => {
-            throw new Error("WPF fixture did not exit after UIA click");
-          }),
-        ])
-      : [windowProcess.exitCode];
-  assert.equal(exit[0], 0);
   console.log("[computer-use] Windows UIA observation, native text input, and button click passed");
 } finally {
   await runtime.dispose();
