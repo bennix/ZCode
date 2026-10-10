@@ -5,3 +5,9 @@
 Linux CI 的 Xvfb 环境没有正确配置 Electron SUID sandbox helper，因此该**测试进程**显式使用 `--no-sandbox`；发布程序默认启动方式不改变。测试必须等待 CDP 和首个窗口出现，失败时保留近期子进程输出以便判断是启动失败还是 UI 断言失败。
 
 验收场景：macOS、Windows x64/arm64、Linux x64/arm64 的打包程序均可完成上述首次启动场景；Linux CI 不因 sandbox helper 权限误报产品失败，Windows CI 不因临时测试目录的短暂句柄占用误报产品失败。
+
+## 已发布安装器的安装后验收
+
+发布资产的安装后验收由独立、手动触发的 GitHub Actions workflow 执行，直接下载 `v3.14.26` 的规范文件名，并在安装前核对固定 SHA-256。GitHub Release 是资产所有者；测试 job 只在一次性 runner 中安装和运行，不修改 Release，也不将测试机的用户状态带回产物。Windows x64/arm64 在匹配架构 runner 静默安装 NSIS 到 job 专用目录，从安装目录启动 `ZenCode.exe`，执行同一首次电脑控制设置 E2E。Linux x64/arm64 在匹配架构 Ubuntu runner 安装 deb，使用系统安装入口运行相同 E2E；两架构 rpm 在匹配架构 Fedora 容器中完成依赖解析与安装，并检查包身份与可执行入口。RPM 容器检查不冒充完整 GUI E2E。
+
+事件顺序：读取发布资产 → 校验每个资产哈希 → 安装至隔离 runner/容器 → 从安装入口启动 → 首次设置 E2E 或 RPM 安装检查 → 记录各架构结果。任何哈希不符、安装失败、入口缺失或 E2E 失败均使对应 job 失败；不得降级成仅检查下载成功。Windows/Linux 检查仍不能替代真实用户 GNOME/KDE portal 授权、锁屏/RDP 场景或人工视觉复核。

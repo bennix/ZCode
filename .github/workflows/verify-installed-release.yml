@@ -1,0 +1,129 @@
+name: Verify installed 3.14.26 release
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  windows-installer:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runner: windows-latest
+            arch: x64
+            sha256: 63e2f2009c512d668354bf8e402630627cabd70bb075ea87a8239cd1abedb8a9
+          - runner: windows-11-arm
+            arch: arm64
+            sha256: 7b7801caf3a5b63b49b06edc3ae145f4a55137821ba7d9a5cef33b44491ff7f6
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.33.2
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24.14.0
+          cache: pnpm
+      - name: Install E2E dependencies
+        run: pnpm install --frozen-lockfile
+      - name: Download and verify published installer
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          $asset = 'ZenCode-3.14.26-win-${{ matrix.arch }}.exe'
+          gh release download v3.14.26 --repo $env:GITHUB_REPOSITORY --pattern $asset --dir $env:RUNNER_TEMP
+          if ($LASTEXITCODE -ne 0) { throw 'Release download failed' }
+          $installer = Join-Path $env:RUNNER_TEMP $asset
+          $actual = (Get-FileHash -Algorithm SHA256 $installer).Hash.ToLowerInvariant()
+          if ($actual -ne '${{ matrix.sha256 }}') { throw "Installer hash mismatch: $actual" }
+      - name: Install and check first-use settings
+        shell: pwsh
+        run: |
+          $installer = Join-Path $env:RUNNER_TEMP 'ZenCode-3.14.26-win-${{ matrix.arch }}.exe'
+          $installDir = Join-Path $env:RUNNER_TEMP 'ZenCodeInstalled'
+          $process = Start-Process -FilePath $installer -ArgumentList '/S', "/D=$installDir" -Wait -PassThru
+          if ($process.ExitCode -ne 0) { throw "Installer exited $($process.ExitCode)" }
+          $app = Join-Path $installDir 'ZenCode.exe'
+          if (-not (Test-Path $app)) { throw "Installed executable missing: $app" }
+          $env:ZENCODE_PACKAGED_APP_PATH = $app
+          node --test packages/desktop/tests/computer-use-settings.e2e.mjs
+          if ($LASTEXITCODE -ne 0) { throw 'Installed app E2E failed' }
+
+  linux-deb:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runner: ubuntu-24.04
+            arch: amd64
+            sha256: f92f2b1455be5c6d83975ee8123de7e52f36866745d0d06f3d11ec9f1eb08bd2
+          - runner: ubuntu-24.04-arm
+            arch: arm64
+            sha256: 7df68923e38d153efec9b563be6b249ceab09a6c6dd83c5a9acb4e296657b843
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.33.2
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24.14.0
+          cache: pnpm
+      - name: Install E2E dependencies
+        run: pnpm install --frozen-lockfile
+      - name: Download and verify published deb
+        env:
+          GH_TOKEN: ${{ github.token }}
+          ASSET: ZenCode-3.14.26-linux-${{ matrix.arch }}.deb
+          EXPECTED_SHA256: ${{ matrix.sha256 }}
+        run: |
+          gh release download v3.14.26 --repo "$GITHUB_REPOSITORY" --pattern "$ASSET" --dir "$RUNNER_TEMP"
+          echo "$EXPECTED_SHA256  $RUNNER_TEMP/$ASSET" | sha256sum --check -
+      - name: Install and check first-use settings
+        env:
+          ASSET: ZenCode-3.14.26-linux-${{ matrix.arch }}.deb
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y xvfb xauth
+          sudo apt-get install -y "$RUNNER_TEMP/$ASSET"
+          test "$(dpkg-query -W -f='${Version}' zcode)" = '3.14.26'
+          app="$(command -v zcode)"
+          test -x "$app"
+          ZENCODE_PACKAGED_APP_PATH="$app" ZENCODE_TEST_DISABLE_SANDBOX=1 xvfb-run -a node --test packages/desktop/tests/computer-use-settings.e2e.mjs
+
+  linux-rpm:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runner: ubuntu-24.04
+            arch: x86_64
+            sha256: 713e1027626cc189483590cf2bccd917d3f194fce745d11a0ff69509d5763c2c
+          - runner: ubuntu-24.04-arm
+            arch: aarch64
+            sha256: 068d7af1ff550be850c8d351abf1d6a94872bb5af72c6f34630d49b447c10823
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 90
+    steps:
+      - name: Download and verify published rpm
+        env:
+          GH_TOKEN: ${{ github.token }}
+          ASSET: ZenCode-3.14.26-linux-${{ matrix.arch }}.rpm
+          EXPECTED_SHA256: ${{ matrix.sha256 }}
+        run: |
+          gh release download v3.14.26 --repo "$GITHUB_REPOSITORY" --pattern "$ASSET" --dir "$RUNNER_TEMP"
+          echo "$EXPECTED_SHA256  $RUNNER_TEMP/$ASSET" | sha256sum --check -
+      - name: Install rpm in matching Fedora container
+        env:
+          ASSET: ZenCode-3.14.26-linux-${{ matrix.arch }}.rpm
+        run: |
+          docker run --rm -v "$RUNNER_TEMP/$ASSET:/tmp/zencode.rpm:ro" fedora:41 \
+            bash -euc 'dnf install -y /tmp/zencode.rpm && rpm -q zcode && command -v zcode'
