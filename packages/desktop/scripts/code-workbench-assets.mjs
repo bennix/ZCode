@@ -7,8 +7,10 @@ const checksums = {
   "windows-amd64": "bc89bee4caf393cfff7856bf52a815df347cf48bf290339fbbee5314f89c71ab",
 };
 export function workbenchAsset(platform, arch) {
-  const target = `${platform === "darwin" ? "macos" : platform === "win32" ? "windows" : platform}-${arch === "x64" ? "amd64" : arch}`;
+  // 上游尚无 Windows ARM64 归档；Windows 11 ARM64 可通过 x64 兼容层运行独立 IDE 子进程。
+  const runtimeArch = platform === "win32" && arch === "arm64" ? "x64" : arch;
+  const target = `${platform === "darwin" ? "macos" : platform === "win32" ? "windows" : platform}-${runtimeArch === "x64" ? "amd64" : runtimeArch}`;
   const sha256 = checksums[target];
   if (!sha256) throw new Error(`Unsupported IDE platform: ${platform}/${arch}`);
-  return { name: `code-server-${WORKBENCH_VERSION}-${target}`, sha256 };
+  return { name: `code-server-${WORKBENCH_VERSION}-${target}`, sha256, runtimeArch };
 }

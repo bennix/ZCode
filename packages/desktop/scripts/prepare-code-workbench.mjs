@@ -40,6 +40,7 @@ export async function verifyWorkbenchBundle(directory, target) {
     manifest.version !== WORKBENCH_VERSION ||
     manifest.platform !== target.os ||
     manifest.arch !== target.arch ||
+    (manifest.runtimeArch ?? manifest.arch) !== asset.runtimeArch ||
     manifest.sha256 !== asset.sha256
   )
     throw new Error("IDE bundle platform/version mismatch");
@@ -99,6 +100,7 @@ export async function prepareWorkbench(
         version: WORKBENCH_VERSION,
         platform: target.os,
         arch: target.arch,
+        runtimeArch: asset.runtimeArch,
         sha256: asset.sha256,
       }),
     );

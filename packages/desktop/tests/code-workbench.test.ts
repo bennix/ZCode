@@ -8,7 +8,10 @@ test("IDE selects pinned supported platform builds and rejects missing platforms
   assert.match(workbenchAsset("darwin", "arm64").name, /macos-arm64/);
   assert.match(workbenchAsset("win32", "x64").name, /windows-amd64/);
   assert.equal(workbenchAsset("linux", "x64").sha256.length, 64);
-  assert.throws(() => workbenchAsset("win32", "arm64"));
+  const windowsArm = workbenchAsset("win32", "arm64");
+  assert.match(windowsArm.name, /windows-amd64/);
+  assert.equal(windowsArm.runtimeArch, "x64");
+  assert.equal(windowsArm.sha256, workbenchAsset("win32", "x64").sha256);
 });
 test("AI selection cannot escape workspace via sibling prefix or traversal", () => {
   assert.equal(isWithinWorkbench("/project", "/project/src/a.ts"), true);
