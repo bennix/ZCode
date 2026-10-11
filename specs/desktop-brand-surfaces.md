@@ -11,6 +11,7 @@
 - 内置技能在 UI 中显示的中英描述若提到应用、内置浏览器或插件，也使用 `ZenCode`。技能 id、插件目录、来源判定和原始 manifest 不改；只调整官方内置技能的展示描述，不重写第三方技能内容。
 - 强制升级窗口在 renderer 尚不可用时由 Desktop Main 生成；优先读取安装包内蓝章鱼图标，图标缺失时以产品名文字占位，不回退成单独的 `Z` 字母。
 - macOS 电脑控制 Helper 的安装、验签、权限身份和拖拽预检查失败时，返回给界面的错误正文使用 `ZenCode Computer Use`；原有 fail-closed 判定、Helper bundle 身份、权限状态和返回结构保持单一所有者及原顺序。内部协议键、旧目录和文件名保持兼容。
+- 会话订阅在 Agent runtime 反复回收且重连额度耗尽时，连接错误提示使用 `ZenCode` 名称，并继续显示手动“重新连接”入口。`ConversationProjectionStore` 是本地订阅状态的唯一所有者；只更新展示错误，不改重试次数、时序或内部兼容匹配字符串。
 
 ## 所有者与边界
 
@@ -27,3 +28,4 @@
 5. macOS 电脑控制授权入口与拖拽预检查在不支持平台及 Helper 安装失败时返回的错误正文均显示 `ZenCode Computer Use`；失败仍拒绝继续授权。
 6. About 中英文版权行都显示 `ZenCode`，不显示 `ZCode`；从最终安装包打开 About 验证品牌图标、产品名和版权行一致。
 7. 官方内置浏览器、插件创建和 Browser Use 的技能描述显示 ZenCode；第三方技能描述原样保留。
+8. 连续四次 runtime unavailable 后，订阅状态为 error，`lastError` 含 ZenCode 而不含旧产品名；手动重试仍复位退避计数。
