@@ -87,8 +87,9 @@ interface Copy {
   artifactCountOther: string;
 }
 
-// 站点首页本身就是下载入口，没有 /download 这个 path（单独的下载链接会 404）。
-const ZCODE_DOWNLOAD_URL = "https://zcode.z.ai";
+// 分享页的安装帮助指向已发布资产的稳定入口，避免旧官网仍提供过期安装包。
+const ZENCODE_DOWNLOAD_URL = "https://github.com/bennix/ZCode/releases/latest";
+const ZENCODE_WEBSITE_URL = "https://zcode.z.ai";
 
 const COPY: Record<ConversationShareLandingLocale, Copy> = {
   "zh-CN": {
@@ -542,7 +543,7 @@ export function ConversationShareLandingPage({
               >
                 {copy.retryOpen}
               </a>
-              <a className="text-brand underline underline-offset-2" href={ZCODE_DOWNLOAD_URL}>
+              <a className="text-brand underline underline-offset-2" href={ZENCODE_DOWNLOAD_URL}>
                 {copy.downloadZCode}
               </a>
             </div>
@@ -675,7 +676,7 @@ export function ConversationShareLandingStatus({
             {isNotFound ? (
               <a
                 className="rounded-md bg-primary px-4 py-2 text-ui-base text-primary-foreground"
-                href={ZCODE_DOWNLOAD_URL}
+                href={ZENCODE_WEBSITE_URL}
               >
                 {copy.backToHome}
               </a>
