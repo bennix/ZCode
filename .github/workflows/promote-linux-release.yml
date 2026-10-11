@@ -44,7 +44,7 @@ jobs:
           test "$(jq -r '.conclusion' <<< "$run_json")" = 'success'
           test "$(jq -r '.head_repository.full_name' <<< "$run_json")" = "$GITHUB_REPOSITORY"
           test "$(jq -r '.head_sha' <<< "$run_json")" = "$EXPECTED_SHA"
-          test "$(gh release view v3.14.29 --repo "$GITHUB_REPOSITORY" --json isDraft --jq .isDraft)" = 'false'
+          test "$(gh release view v3.14.30 --repo "$GITHUB_REPOSITORY" --json isDraft --jq .isDraft)" = 'false'
 
       - name: Download verified package artifact
         uses: actions/download-artifact@v4
@@ -58,8 +58,8 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          deb=(release-linux-${{ matrix.arch }}/ZenCode-3.14.29-linux-${{ matrix.deb_arch }}.deb)
-          rpm=(release-linux-${{ matrix.arch }}/ZenCode-3.14.29-linux-${{ matrix.rpm_arch }}.rpm)
+          deb=(release-linux-${{ matrix.arch }}/ZenCode-3.14.30-linux-${{ matrix.deb_arch }}.deb)
+          rpm=(release-linux-${{ matrix.arch }}/ZenCode-3.14.30-linux-${{ matrix.rpm_arch }}.rpm)
           test -f "${deb[0]}"
           test -f "${rpm[0]}"
-          node .github/scripts/promote-release-assets.mjs v3.14.29 "$GITHUB_REPOSITORY" "$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT" "${deb[0]}" "${rpm[0]}"
+          node .github/scripts/promote-release-assets.mjs v3.14.30 "$GITHUB_REPOSITORY" "$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT" "${deb[0]}" "${rpm[0]}"

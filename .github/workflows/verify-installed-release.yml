@@ -1,4 +1,4 @@
-name: Verify installed 3.14.29 release
+name: Verify installed 3.14.30 release
 
 on:
   workflow_dispatch:
@@ -77,8 +77,8 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          $asset = 'ZenCode-3.14.29-win-${{ matrix.arch }}.exe'
-          gh release download v3.14.29 --repo $env:GITHUB_REPOSITORY --pattern $asset --dir $env:RUNNER_TEMP
+          $asset = 'ZenCode-3.14.30-win-${{ matrix.arch }}.exe'
+          gh release download v3.14.30 --repo $env:GITHUB_REPOSITORY --pattern $asset --dir $env:RUNNER_TEMP
           if ($LASTEXITCODE -ne 0) { throw 'Release download failed' }
           $installer = Join-Path $env:RUNNER_TEMP $asset
           $actual = (Get-FileHash -Algorithm SHA256 $installer).Hash.ToLowerInvariant()
@@ -92,7 +92,7 @@ jobs:
         run: |
           gh run download $env:SOURCE_RUN_ID --repo $env:GITHUB_REPOSITORY --name 'zencode-windows-${{ matrix.arch }}' --dir $env:RUNNER_TEMP
           if ($LASTEXITCODE -ne 0) { throw 'Candidate download failed' }
-          $installer = Join-Path $env:RUNNER_TEMP 'ZenCode-3.14.29-win-${{ matrix.arch }}.exe'
+          $installer = Join-Path $env:RUNNER_TEMP 'ZenCode-3.14.30-win-${{ matrix.arch }}.exe'
           if (-not (Test-Path $installer)) { throw 'Candidate installer missing' }
           Write-Output "SHA256 $((Get-FileHash -Algorithm SHA256 $installer).Hash.ToLowerInvariant()) $installer"
       - name: Install and check first-use settings
@@ -100,12 +100,12 @@ jobs:
         env:
           ZENCODE_E2E_SCREENSHOT_PATH: ${{ runner.temp }}/installed-first-use.png
         run: |
-          $installer = Join-Path $env:RUNNER_TEMP 'ZenCode-3.14.29-win-${{ matrix.arch }}.exe'
+          $installer = Join-Path $env:RUNNER_TEMP 'ZenCode-3.14.30-win-${{ matrix.arch }}.exe'
           # 修复依据：System.dll 的偶发崩溃发生在 NSIS customInit 前；只靠阶段日志无法定位原生指令。
           # 一次性 runner 的 WER 小型转储用于失败取证，不能改变安装器原始退出码。
           $dumpDir = Join-Path $env:RUNNER_TEMP 'nsis-dumps'
           New-Item -ItemType Directory -Path $dumpDir -Force | Out-Null
-          $dumpKey = 'HKLM:\SOFTWARE\Microsoft\Windows\Windows Error Reporting\LocalDumps\ZenCode-3.14.29-win-${{ matrix.arch }}.exe'
+          $dumpKey = 'HKLM:\SOFTWARE\Microsoft\Windows\Windows Error Reporting\LocalDumps\ZenCode-3.14.30-win-${{ matrix.arch }}.exe'
           New-Item -Path $dumpKey -Force | Out-Null
           New-ItemProperty -Path $dumpKey -Name DumpFolder -PropertyType ExpandString -Value $dumpDir -Force | Out-Null
           New-ItemProperty -Path $dumpKey -Name DumpType -PropertyType DWord -Value 1 -Force | Out-Null
@@ -185,17 +185,17 @@ jobs:
         if: ${{ !inputs.linux_run_id }}
         env:
           GH_TOKEN: ${{ github.token }}
-          ASSET: ZenCode-3.14.29-linux-${{ matrix.arch }}.deb
+          ASSET: ZenCode-3.14.30-linux-${{ matrix.arch }}.deb
           EXPECTED_SHA256: ${{ matrix.sha256 }}
         run: |
-          gh release download v3.14.29 --repo "$GITHUB_REPOSITORY" --pattern "$ASSET" --dir "$RUNNER_TEMP"
+          gh release download v3.14.30 --repo "$GITHUB_REPOSITORY" --pattern "$ASSET" --dir "$RUNNER_TEMP"
           echo "$EXPECTED_SHA256  $RUNNER_TEMP/$ASSET" | sha256sum --check -
       - name: Download candidate deb
         if: ${{ inputs.linux_run_id }}
         env:
           GH_TOKEN: ${{ github.token }}
           SOURCE_RUN_ID: ${{ inputs.linux_run_id }}
-          ASSET: ZenCode-3.14.29-linux-${{ matrix.arch }}.deb
+          ASSET: ZenCode-3.14.30-linux-${{ matrix.arch }}.deb
           ARTIFACT: zencode-linux-${{ matrix.arch == 'amd64' && 'x64' || 'arm64' }}
         run: |
           gh run download "$SOURCE_RUN_ID" --repo "$GITHUB_REPOSITORY" --name "$ARTIFACT" --dir "$RUNNER_TEMP"
@@ -203,13 +203,13 @@ jobs:
           sha256sum "$RUNNER_TEMP/$ASSET"
       - name: Install and check first-use settings
         env:
-          ASSET: ZenCode-3.14.29-linux-${{ matrix.arch }}.deb
+          ASSET: ZenCode-3.14.30-linux-${{ matrix.arch }}.deb
           ZENCODE_E2E_SCREENSHOT_PATH: ${{ runner.temp }}/installed-first-use.png
         run: |
           sudo apt-get update
           sudo apt-get install -y xvfb xauth
           sudo apt-get install -y "$RUNNER_TEMP/$ASSET"
-          test "$(dpkg-query -W -f='${Version}' zcode)" = '3.14.29'
+          test "$(dpkg-query -W -f='${Version}' zcode)" = '3.14.30'
           app="$(command -v zcode)"
           test -x "$app"
           ZENCODE_PACKAGED_APP_PATH="$app" ZENCODE_TEST_DISABLE_SANDBOX=1 xvfb-run -a node --test packages/desktop/tests/computer-use-settings.e2e.mjs
@@ -250,17 +250,17 @@ jobs:
         if: ${{ !inputs.linux_run_id }}
         env:
           GH_TOKEN: ${{ github.token }}
-          ASSET: ZenCode-3.14.29-linux-${{ matrix.arch }}.rpm
+          ASSET: ZenCode-3.14.30-linux-${{ matrix.arch }}.rpm
           EXPECTED_SHA256: ${{ matrix.sha256 }}
         run: |
-          gh release download v3.14.29 --repo "$GITHUB_REPOSITORY" --pattern "$ASSET" --dir "$RUNNER_TEMP"
+          gh release download v3.14.30 --repo "$GITHUB_REPOSITORY" --pattern "$ASSET" --dir "$RUNNER_TEMP"
           echo "$EXPECTED_SHA256  $RUNNER_TEMP/$ASSET" | sha256sum --check -
       - name: Download candidate rpm
         if: ${{ inputs.linux_run_id }}
         env:
           GH_TOKEN: ${{ github.token }}
           SOURCE_RUN_ID: ${{ inputs.linux_run_id }}
-          ASSET: ZenCode-3.14.29-linux-${{ matrix.arch }}.rpm
+          ASSET: ZenCode-3.14.30-linux-${{ matrix.arch }}.rpm
           ARTIFACT: zencode-linux-${{ matrix.arch == 'x86_64' && 'x64' || 'arm64' }}
         run: |
           gh run download "$SOURCE_RUN_ID" --repo "$GITHUB_REPOSITORY" --name "$ARTIFACT" --dir "$RUNNER_TEMP"
@@ -268,7 +268,7 @@ jobs:
           sha256sum "$RUNNER_TEMP/$ASSET"
       - name: Install rpm and check About in matching Fedora container
         env:
-          ASSET: ZenCode-3.14.29-linux-${{ matrix.arch }}.rpm
+          ASSET: ZenCode-3.14.30-linux-${{ matrix.arch }}.rpm
         run: |
           docker run --rm --shm-size=1g \
             -v "$RUNNER_TEMP/$ASSET:/tmp/zencode.rpm:ro" \

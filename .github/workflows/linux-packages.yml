@@ -85,7 +85,7 @@ jobs:
         env:
           DEB_ARCH: ${{ matrix.arch == 'x64' && 'amd64' || 'arm64' }}
         run: |
-          sudo apt-get install -y "./packages/desktop/dist/ZenCode-3.14.29-linux-${DEB_ARCH}.deb"
+          sudo apt-get install -y "./packages/desktop/dist/ZenCode-3.14.30-linux-${DEB_ARCH}.deb"
           test -x "$(command -v zcode)"
           ZENCODE_PACKAGED_APP_PATH="$(command -v zcode)" ZENCODE_TEST_DISABLE_SANDBOX=1 \
             xvfb-run -a node --test packages/desktop/tests/computer-use-settings.e2e.mjs
