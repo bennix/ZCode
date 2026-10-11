@@ -71,6 +71,9 @@ test("published desktop app checks its GitHub update manifest", async () => {
     await page.getByText(/^(?:关于 ZenCode|About ZenCode)$/u).click();
     const aboutPage = await aboutPagePromise;
     await aboutPage.locator("#update-status").waitFor();
+    const aboutText = await aboutPage.locator("body").innerText();
+    assert.match(aboutText, /(?:版权所有|Copyright)\s*©\s*\d{4}\s*ZenCode/u);
+    assert.doesNotMatch(aboutText, /(?:版权所有|Copyright)\s*©\s*\d{4}\s*ZCode/u);
     await aboutPage.waitForFunction(
       () => {
         const text = document.querySelector("#update-status")?.textContent ?? "";
