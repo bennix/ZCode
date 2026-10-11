@@ -463,9 +463,10 @@ export default {
   extraMetadata: {
     version: buildMetadata.appVersion,
     zcodeProductFlavor: desktopProductIdentity.flavor,
-    homepage: "https://zcode.z.ai",
+    // 旧官网仍指向 3.14.5：包管理器打开主页时应到当前公开下载入口。
+    homepage: "https://github.com/bennix/ZCode/releases/latest",
     author: {
-      name: "ZCode",
+      name: "ZenCode",
       email: "dev@zcode.z.ai",
     },
   },

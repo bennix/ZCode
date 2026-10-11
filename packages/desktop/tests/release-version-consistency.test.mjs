@@ -23,3 +23,9 @@ test("release workflows use the root package version for candidate assets", asyn
     assert.deepEqual(new Set(releaseVersions), new Set([manifest.version]), path);
   }
 });
+
+test("desktop package metadata uses ZenCode and the current public download entry", async () => {
+  const { default: config } = await import("../electron-builder.config.js");
+  assert.equal(config.extraMetadata.author.name, "ZenCode");
+  assert.equal(config.extraMetadata.homepage, "https://github.com/bennix/ZCode/releases/latest");
+});
