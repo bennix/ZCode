@@ -70,7 +70,7 @@ import {
   patchNsisAssistedInitStagesFile,
   patchNsisInstallSectionFile,
   patchNsisOnInitStagesFile,
-  patchNsisPerUserFolderStagesFile,
+  patchNsisPerUserFolderFile,
   restoreNsisInstallSectionFileSync,
 } from "./scripts/patch-nsis-install-section.mjs";
 
@@ -527,7 +527,7 @@ export default {
       { file: "installSection.nsh", patch: patchNsisInstallSectionFile },
       { file: "installer.nsi", patch: patchNsisOnInitStagesFile },
       { file: "assistedInstaller.nsh", patch: patchNsisAssistedInitStagesFile },
-      { file: "multiUser.nsh", patch: patchNsisPerUserFolderStagesFile },
+      { file: "multiUser.nsh", patch: patchNsisPerUserFolderFile },
     ];
     const restores = [];
     try {

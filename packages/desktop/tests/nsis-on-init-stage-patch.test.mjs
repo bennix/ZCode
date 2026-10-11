@@ -5,7 +5,7 @@ import test from "node:test";
 import {
   patchNsisAssistedInitStagesSource,
   patchNsisOnInitStagesSource,
-  patchNsisPerUserFolderStagesSource,
+  patchNsisPerUserFolderSource,
 } from "../scripts/patch-nsis-install-section.mjs";
 
 test("NSIS onInit 阶段标记覆盖架构、互斥和安装模式边界", async () => {
@@ -32,7 +32,7 @@ test("NSIS 上游模板锚点变化时明确失败", () => {
   assert.throws(() => patchNsisOnInitStagesSource("Function .onInit\nFunctionEnd"), /缺少预期锚点/);
 });
 
-test("安装模式诊断覆盖管理员、注册表、模式选择和用户目录 System 调用", async () => {
+test("安装模式诊断保留边界，首次用户目录不再解引用 System 指针", async () => {
   const assisted = await readFile(
     "node_modules/app-builder-lib/templates/nsis/assistedInstaller.nsh",
     "utf8",
@@ -42,19 +42,17 @@ test("安装模式诊断覆盖管理员、注册表、模式选择和用户目�
     "utf8",
   );
   const assistedPatched = patchNsisAssistedInitStagesSource(assisted);
-  const multiUserPatched = patchNsisPerUserFolderStagesSource(multiUser);
+  const multiUserPatched = patchNsisPerUserFolderSource(multiUser);
   assert.equal(patchNsisAssistedInitStagesSource(assistedPatched), assistedPatched);
-  assert.equal(patchNsisPerUserFolderStagesSource(multiUserPatched), multiUserPatched);
+  assert.equal(patchNsisPerUserFolderSource(multiUserPatched), multiUserPatched);
   for (const stage of ["uac-completed", "registry-completed", "mode-selection-started"]) {
     assert.match(assistedPatched, new RegExp(`ZCodeReportInstallerStage "${stage}"`));
   }
-  for (const stage of [
-    "user-folder-store-started",
-    "user-folder-store-completed",
-    "user-folder-query-completed",
-    "user-folder-pointer-read-completed",
-    "user-folder-free-completed",
-  ]) {
-    assert.match(multiUserPatched, new RegExp(`ZCodeReportInstallerStage "${stage}"`));
-  }
+  assert.match(multiUserPatched, /ReadRegStr \$perUserInstallationFolder HKCU/u);
+  assert.match(multiUserPatched, /StrCpy \$0 "\$LocalAppData\\Programs"/u);
+  assert.match(multiUserPatched, /!insertmacro GetDParameter \$R0/u);
+  assert.doesNotMatch(
+    multiUserPatched,
+    /SHGetKnownFolderPath|System::Store|CoTaskMemFree|\*\$2\(&w/u,
+  );
 });

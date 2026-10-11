@@ -4,7 +4,7 @@ import { writeFileSync } from "node:fs";
 const PATCH_MARKER = "; zcode-installer-details-v1";
 const ON_INIT_PATCH_MARKER = "; zencode-on-init-stages-v1";
 const ASSISTED_INIT_PATCH_MARKER = "; zencode-assisted-init-stages-v1";
-const USER_FOLDER_PATCH_MARKER = "; zencode-user-folder-stages-v1";
+const USER_FOLDER_PATCH_MARKER = "; zencode-user-folder-default-v2";
 
 function optionalMacro(name) {
   return [`!ifmacrodef ${name}`, `  !insertmacro ${name}`, "!endif"].join("\n");
@@ -170,42 +170,30 @@ export function patchNsisAssistedInitStagesSource(source) {
   return sourceEol === "\r\n" ? patched.replaceAll("\n", "\r\n") : patched;
 }
 
-/** 缩小首次用户安装目录查询中 System 插件的具体出错调用。 */
-export function patchNsisPerUserFolderStagesSource(source) {
+/** 首次普通用户安装直接使用 LocalAppData，避开已证实会崩溃的 System 指针解引用。 */
+export function patchNsisPerUserFolderSource(source) {
   const sourceEol = source.includes("\r\n") ? "\r\n" : "\n";
   let patched = source.replaceAll("\r\n", "\n").replaceAll("\r", "\n");
   if (patched.includes(USER_FOLDER_PATCH_MARKER)) return source;
+  const unsafeFolderLookup = [
+    "      System::Store S",
+    "      # Win7 has a per-user programfiles known folder and this can be a non-default location",
+    "      System::Call 'SHELL32::SHGetKnownFolderPath(g \"${FOLDERID_UserProgramFiles}\", i ${KF_FLAG_CREATE}, p 0, *p .r2)i.r1'",
+    "      ${If} $1 == 0",
+    "        System::Call '*$2(&w${NSIS_MAX_STRLEN} .s)'",
+    "        StrCpy $0 $1",
+    "        System::Call 'OLE32::CoTaskMemFree(p r2)'",
+    "      ${endif}",
+    "      System::Store L",
+  ].join("\n");
   patched = replaceRequired(
     patched,
-    "      System::Store S\n      # Win7 has a per-user programfiles known folder",
+    unsafeFolderLookup,
     [
       `      ${USER_FOLDER_PATCH_MARKER}`,
-      optionalStage("user-folder-store-started", "      "),
-      "      System::Store S",
-      optionalStage("user-folder-store-completed", "      "),
-      "      # Win7 has a per-user programfiles known folder",
+      optionalStage("user-folder-default-selected", "      "),
     ].join("\n"),
-    "per-user folder store",
-  );
-  patched = replaceRequired(
-    patched,
-    "      System::Call 'SHELL32::SHGetKnownFolderPath(g \"${FOLDERID_UserProgramFiles}\", i ${KF_FLAG_CREATE}, p 0, *p .r2)i.r1'",
-    "      System::Call 'SHELL32::SHGetKnownFolderPath(g \"${FOLDERID_UserProgramFiles}\", i ${KF_FLAG_CREATE}, p 0, *p .r2)i.r1'" +
-      `\n${optionalStage("user-folder-query-completed", "      ")}`,
-    "per-user folder query",
-  );
-  patched = replaceRequired(
-    patched,
-    "        System::Call '*$2(&w${NSIS_MAX_STRLEN} .s)'",
-    "        System::Call '*$2(&w${NSIS_MAX_STRLEN} .s)'" +
-      `\n${optionalStage("user-folder-pointer-read-completed", "        ")}`,
-    "per-user folder pointer read",
-  );
-  patched = replaceRequired(
-    patched,
-    "        System::Call 'OLE32::CoTaskMemFree(p r2)'",
-    `        System::Call 'OLE32::CoTaskMemFree(p r2)'\n${optionalStage("user-folder-free-completed", "        ")}`,
-    "per-user folder release",
+    "per-user folder System pointer lookup",
   );
   return sourceEol === "\r\n" ? patched.replaceAll("\n", "\r\n") : patched;
 }
@@ -236,8 +224,8 @@ export async function patchNsisAssistedInitStagesFile(filePath) {
   return patchNsisTemplateFile(filePath, patchNsisAssistedInitStagesSource);
 }
 
-export async function patchNsisPerUserFolderStagesFile(filePath) {
-  return patchNsisTemplateFile(filePath, patchNsisPerUserFolderStagesSource);
+export async function patchNsisPerUserFolderFile(filePath) {
+  return patchNsisTemplateFile(filePath, patchNsisPerUserFolderSource);
 }
 
 async function patchNsisTemplateFile(filePath, patchSource) {

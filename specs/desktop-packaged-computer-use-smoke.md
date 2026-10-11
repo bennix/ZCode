@@ -40,4 +40,6 @@ Windows x64 CI 曾在静默安装启动后约 4 秒，以 `0xC0000005` 崩溃；
 
 候选构建 `38094521592` 两架构成功；独立安装验收 `38095733925` 的 x64 安装、首次设置和 About 检查通过，ARM64 再次以 `0xC0000005` 失败。其阶段日志已确认架构检查和单实例检查完成，进入 `initMultiUser` 后崩溃。下一次诊断只在 `initMultiUser` 的管理员/注册表/模式选择边界，以及普通用户默认目录的 `System::Store`、`SHGetKnownFolderPath`、指针读取和释放边界写阶段；不改变默认目录或权限语义。以最后一个完整阶段缩小原生调用，再提出修复并重建验证。
 
+细分诊断候选构建 `38096288223` 两架构成功；独立安装验收 `38097633311` 的 x64 再次复现崩溃。最后完整阶段是 `user-folder-query-completed`，未到 `user-folder-pointer-read-completed`：故障已定位为 electron-builder 的 `setInstallModePerUser` 在 `SHGetKnownFolderPath` 成功后，通过 `System::Call '*$2(&w${NSIS_MAX_STRLEN} .s)'` 读取返回指针。修复应只替换首次普通用户安装目录的该已确认故障路径：直接使用上游本来提供的 `$LocalAppData\Programs\${APP_FILENAME}`，不再通过 `System.dll` 查询和解引用已知文件夹指针。已有用户安装从 HKCU 读取 `InstallLocation` 的路径和显式 `/D` 覆盖保持原顺序；机器范围安装和卸载逻辑不变。首次安装若系统把 `FOLDERID_UserProgramFiles` 指向非默认位置，将使用 `$LocalAppData\Programs`，这是为消除崩溃而接受的明确行为变化。需用安装器两架构从零安装、首次设置、About 检查及重复安装验证；只成功一次不证明间歇性崩溃消失。
+
 候选验收允许只提供一个平台的成功构建 run ID 与完整源码 SHA，用于单独验证 Windows 安装器或 Linux 包；未提供的平台 job 全部跳过，不能偷偷改从已发布 Release 下载。提供两个 run ID 时执行全平台检查。发布版模式仍要求三个候选输入都为空，并校验固定的公开资产哈希。
