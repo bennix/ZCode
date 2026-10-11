@@ -12,7 +12,7 @@ const digest = (content) => createHash("sha512").update(content).digest("base64"
 
 test("Windows update metadata contains both released installer architectures", async () => {
   const distDir = await mkdtemp(join(tmpdir(), "zencode-win-update-"));
-  const version = "3.14.28";
+  const version = "3.14.29";
   const installers = {
     x64: Buffer.from("signed x64 installer"),
     arm64: Buffer.from("signed arm64 installer"),

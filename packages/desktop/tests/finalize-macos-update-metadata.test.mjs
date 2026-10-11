@@ -11,7 +11,7 @@ const digest = (content) => createHash("sha512").update(content).digest("base64"
 
 test("finalize macOS update metadata after DMG stapling", async () => {
   const distDir = await mkdtemp(join(tmpdir(), "zencode-mac-update-"));
-  const version = "3.14.28";
+  const version = "3.14.29";
   const zipName = `ZenCode-${version}-mac-arm64.zip`;
   const dmgName = `ZenCode-${version}-mac-arm64.dmg`;
   const zip = Buffer.from("signed zip");
