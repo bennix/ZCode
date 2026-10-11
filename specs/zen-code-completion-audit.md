@@ -7,6 +7,8 @@
 - `bennix/ZCode` 的 GitHub Latest Release 仍为 `v3.14.29`，有七个安装包和四个更新资产。本地 `release-artifacts` 仍仅有公证版 `ZenCode-3.14.29-mac-arm64.dmg`，SHA-256 为 `8e8f4c664464ac57c85585657ea766b3a3790498fa1458608e6cd6dcc0dffb31`。
 - `https://zcode.z.ai/cn` 的当前 HTML 仍从 `cdn-zcode.z.ai` 提供 `ZCode-3.14.5` 各平台旧安装包。站点为独立 Next.js 服务；按 `zcode` 检索当前可访问的 `zai-org` 仓库只找到 `ZCode`、插件和反馈仓库，没有站点源码或部署配置。GitHub Latest 的修正不会自动更新这个外部站点。需取得该站点的源码与部署入口后修正品牌和下载资产，再从公开页面复验。
 - `a3b98f9d` 修复会话订阅退避耗尽后的可见旧品牌错误；状态机测试、类型检查、Lint（0 错误、76 条警告）、架构检查通过。此提交晚于 3.14.29 的最终源码，尚未进入任何公开安装包，后续发布需重新构建、签名、公证和跨平台安装验收。
+- 3.14.30 候选源码 `3f74bc7551a916da9927baaa61bd5fc19db0328a` 已推送 `bennix/ZCode` 的 `main`，Draft Release 的 targetCommitish 与之相同。Windows run `38179358379` 和 Linux run `38179358336` 从该 SHA 构建，两个 run 均成功；Linux 候选安装验收 `38180820739` 的 DEB/RPM 四项均成功。Draft 暂存 run `38181175516` 将六个 Windows/Linux 安装包上传并逐项核对 GitHub 远端 SHA-256，状态成功。Windows 候选安装验收 `38181165914` 与第二轮独立 run `38181503238` 的 x64/ARM64 均成功。候选还修正安装包作者名为 ZenCode、将安装包主页临时指向 GitHub Latest；新回归测试验证根版本与发布工作流一致及两项包元数据。
+- 本机曾误把 `/opt/homebrew/opt/node@24` 指向 Node 25，未签名构建已中止并删除；后续从 nodejs.org 下载的 Node 24.14.0 darwin-arm64 tarball 已用官方 SHASUMS256 校验，重新完成准备与源码编译。Developer ID 签名曾两次在 Electron Framework 的 Apple 时间戳请求处失败；独立临时 Mach-O 同样复现，随后在时间戳服务恢复时成功。最终本地签名构建保留 `--timestamp`，仅对这一瞬态错误做四次以内的有限重试，`codesign --verify --deep --strict` 通过，App 版本为 3.14.30。公证提交 `56696d4b-032d-4c7c-963c-c178ecf7cf24` 状态为 Accepted，DMG 装订与验证通过；挂载 App 的严格签名、Gatekeeper、About 更新状态、蓝章鱼品牌、电脑控制首次开关及创作/多 Agent 首次引导测试通过。同一构建的 ZIP 解包后签名检查通过。Draft Release 已有七个安装包与四个更新资产，共 11 个；Mac 四项和 Windows `latest.yml` 的本地 SHA-256 与 GitHub 远端摘要一致。IDE 原生全屏 E2E 因 Mac 再次处于 loginwindow 锁屏而未通过，需解锁后重验。3.14.29 仍是公开版与本地唯一保留 DMG。
 
 ## 3.14.29 发布规则与待验收项
 
