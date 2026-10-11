@@ -236,6 +236,16 @@ jobs:
     runs-on: ${{ matrix.runner }}
     timeout-minutes: 90
     steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.33.2
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24.14.0
+          cache: pnpm
+      - name: Install E2E dependencies
+        run: pnpm install --frozen-lockfile
       - name: Download and verify published rpm
         if: ${{ !inputs.linux_run_id }}
         env:
@@ -256,9 +266,22 @@ jobs:
           gh run download "$SOURCE_RUN_ID" --repo "$GITHUB_REPOSITORY" --name "$ARTIFACT" --dir "$RUNNER_TEMP"
           test -f "$RUNNER_TEMP/$ASSET"
           sha256sum "$RUNNER_TEMP/$ASSET"
-      - name: Install rpm in matching Fedora container
+      - name: Install rpm and check About in matching Fedora container
         env:
           ASSET: ZenCode-3.14.28-linux-${{ matrix.arch }}.rpm
         run: |
-          docker run --rm -v "$RUNNER_TEMP/$ASSET:/tmp/zencode.rpm:ro" fedora:41 \
-            bash -euc 'dnf install -y /tmp/zencode.rpm && rpm -q zcode && command -v zcode'
+          docker run --rm --shm-size=1g \
+            -v "$RUNNER_TEMP/$ASSET:/tmp/zencode.rpm:ro" \
+            -v "$GITHUB_WORKSPACE:/workspace:ro" -w /workspace fedora:41 \
+            bash -euc '
+              dnf install -y /tmp/zencode.rpm nodejs xorg-x11-server-Xvfb
+              rpm -q zcode
+              app="$(command -v zcode)"
+              test -x "$app"
+              Xvfb :99 -ac -screen 0 1280x800x24 >/tmp/zencode-xvfb.log 2>&1 &
+              trap "kill $! 2>/dev/null || true" EXIT
+              export DISPLAY=:99
+              sleep 2
+              ZENCODE_PACKAGED_APP_PATH="$app" ZENCODE_TEST_DISABLE_SANDBOX=1 \
+                node --test packages/desktop/tests/about-update-packaged.e2e.mjs
+            '
