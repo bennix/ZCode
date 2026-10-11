@@ -7,6 +7,9 @@
 - 3.14.28 已公开，后续修复必须使用递增版本 3.14.29。根包版本是桌面构建元数据的唯一所有者；平台安装包、更新清单、GitHub Release tag 和下载入口需指向同一版本与同一最终源码提交。发布前 README 保持指向已公开版本；所有平台资产、更新清单和安装验收通过后再更新下载入口。
 - Windows x64/ARM64 首次安装需从最终候选包独立验收并重复一次，以检查此前间歇性 NSIS 崩溃。Linux 两架构 DEB/RPM 需安装后打开 About 验证包管理器提示。Mac DMG 需签名、公证、装订、挂载后检查版权、更新状态和 Gatekeeper；本地 `release-artifacts` 最终只保留新版本已公证 DMG。
 - 最终公开 Release 需提供七个安装包以及 Mac、Windows 更新元数据。旧版本安装资产只有在新版本公开下载与安装复验通过后清理。
+- 源码 `f8d44b9386d606e8943ca05d4d1105d44a05f487` 的 Windows 构建 `38099886076`、Linux 构建 `38099886367` 双架构成功。Windows 安装后验收 `38101190810` 两项通过，Linux 安装后验收 `38101114315` 四项通过；NSIS 修复的上一候选还通过两轮独立 Windows 安装验收 `38099274969` 与 `38099761103`。这些结果只覆盖所列候选包，不替代公开下载复验。
+- macOS Apple Silicon 的同一源码已用 Node 24.14.0 构建并由 Developer ID 签名。Apple 公证提交 `db52b671-5b59-4a2b-a295-6b46cfc80485` 状态为 Accepted；DMG 装订、挂载 App 严格签名与 Gatekeeper `Notarized Developer ID` 检查通过，版本为 3.14.29。本地 `release-artifacts` 仅保留 `ZenCode-3.14.29-mac-arm64.dmg`，SHA-256 `8e8f4c664464ac57c85585657ea766b3a3790498fa1458608e6cd6dcc0dffb31`，与公开资产摘要一致。
+- `v3.14.29` 已于 2026-10-11 公开，含七个安装包和 `latest-mac.yml`、`latest.yml`、签名 Mac ZIP 及 ZIP blockmap，共 11 个资产；tag 目标为上述最终源码。更新清单从最终资产重新计算并与公开文件逐字节复核。挂载公证 DMG 的 About E2E 从真实 App 打开后显示 ZenCode 版权和“已是最新版本 3.14.29”，不再提示缺少 Mac 更新清单。公开 Windows/Linux 安装复验 `38102464982` 已启动，完成前不清理 3.14.28 的历史安装资产。
 
 ## 3.14.28 发布验收
 
