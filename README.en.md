@@ -13,14 +13,14 @@ ZenCode is an AI coding workspace with desktop, browser, and terminal interfaces
 
 Download the macOS DMG, Windows installer, or Linux packages from the [latest GitHub release](https://github.com/bennix/ZCode/releases/latest). The release page lists only platforms whose builds and checks have completed. Source development instructions follow below.
 
-The current stable release is **3.14.29**. Choose the package for your device:
+The current stable release is **3.14.30**. Choose the package for your device:
 
-| Platform | Package |
-| --- | --- |
-| macOS Apple Silicon | [DMG](https://github.com/bennix/ZCode/releases/download/v3.14.29/ZenCode-3.14.29-mac-arm64.dmg) |
-| Windows x64 / ARM64 | [x64](https://github.com/bennix/ZCode/releases/download/v3.14.29/ZenCode-3.14.29-win-x64.exe) · [ARM64](https://github.com/bennix/ZCode/releases/download/v3.14.29/ZenCode-3.14.29-win-arm64.exe) |
-| Linux x64 | [DEB](https://github.com/bennix/ZCode/releases/download/v3.14.29/ZenCode-3.14.29-linux-amd64.deb) · [RPM](https://github.com/bennix/ZCode/releases/download/v3.14.29/ZenCode-3.14.29-linux-x86_64.rpm) |
-| Linux ARM64 | [DEB](https://github.com/bennix/ZCode/releases/download/v3.14.29/ZenCode-3.14.29-linux-arm64.deb) · [RPM](https://github.com/bennix/ZCode/releases/download/v3.14.29/ZenCode-3.14.29-linux-aarch64.rpm) |
+| Platform            | Package                                                                                                                                                                                                 |
+| ------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| macOS Apple Silicon | [DMG](https://github.com/bennix/ZCode/releases/download/v3.14.30/ZenCode-3.14.30-mac-arm64.dmg)                                                                                                         |
+| Windows x64 / ARM64 | [x64](https://github.com/bennix/ZCode/releases/download/v3.14.30/ZenCode-3.14.30-win-x64.exe) · [ARM64](https://github.com/bennix/ZCode/releases/download/v3.14.30/ZenCode-3.14.30-win-arm64.exe)       |
+| Linux x64           | [DEB](https://github.com/bennix/ZCode/releases/download/v3.14.30/ZenCode-3.14.30-linux-amd64.deb) · [RPM](https://github.com/bennix/ZCode/releases/download/v3.14.30/ZenCode-3.14.30-linux-x86_64.rpm)  |
+| Linux ARM64         | [DEB](https://github.com/bennix/ZCode/releases/download/v3.14.30/ZenCode-3.14.30-linux-arm64.deb) · [RPM](https://github.com/bennix/ZCode/releases/download/v3.14.30/ZenCode-3.14.30-linux-aarch64.rpm) |
 
 ## Setup
 
