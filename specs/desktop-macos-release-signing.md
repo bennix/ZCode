@@ -29,3 +29,10 @@ afterPack 复制运行时 → 扫描三个资源目录 → 逐个签 Mach-O → 
 - 文件计划确认后，运行时只允许 Write/Edit 触及选中文件；无法证明写入范围的工具拒绝执行。路径比较须解析符号链接，并拒绝落到工作区外的路径。workspace hook 环境和仍有后台任务的会话不得激活该限制。
 - 发布前公开下载入口继续指向 3.14.30，本地唯一已公证 DMG 也保持 3.14.30。所有平台的安装包构建与安装验收、Mac 公证及正式下载复验通过后，才更新中英 README、公开 3.14.31，并清理旧版本下载资产。
 - 候选 Release 必须是 draft，target commit 与四个 CI 架构 run 的 head SHA 完全一致。GitHub Release API 的 SHA-256 是公开资产核验依据；失败候选不替换 Latest 和本地已公证 DMG。
+
+## 3.14.32 候选
+
+- 本版移除插件市场列表卡片及详情标题上的付费套餐徽标；目录 `requiresPaidPlan` 元数据、插件权限和安装逻辑保持不变。
+- 新源码、Windows x64/ARM64 与 Linux x64/ARM64 构建必须来自同一提交；macOS arm64 包须通过 Developer ID 签名、公证、装订及 Gatekeeper 验收。
+- 发布前公开下载入口继续指向 3.14.31，本地唯一已公证 DMG 也保持 3.14.31。所有平台构建与安装验收、Mac 公证及正式下载复验通过后，才公开 3.14.32 并更新中英 README。
+- 候选 Release 必须是 draft，target commit 与 CI run 的 head SHA 完全一致。GitHub Release API 的 SHA-256 是公开资产核验依据；失败候选不替换 Latest 和本地已公证 DMG。
