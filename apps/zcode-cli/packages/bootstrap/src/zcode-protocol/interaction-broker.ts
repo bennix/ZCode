@@ -5,6 +5,8 @@ import {
   AMEND_WORKFLOW_TOOL_NAME,
   CREATE_WORKFLOW_TOOL_NAME,
   EXIT_PLAN_MODE_TOOL_NAME,
+  ZENCODE_PRESENT_PLAN_TOOL_NAME,
+  ZencodePresentPlanInputSchema,
   SESSION_ENTRY_USER_INPUT_AUTO_RESOLUTION,
   type AskUserQuestion,
   type PermissionBrokerPort,
@@ -50,6 +52,9 @@ export function createProtocolInteractionBroker(
       }
       if (request.toolName === EXIT_PLAN_MODE_TOOL_NAME) {
         return requestExitPlanModeApproval(context, request, options);
+      }
+      if (request.toolName === ZENCODE_PRESENT_PLAN_TOOL_NAME) {
+        return requestPresentPlan(context, request, options);
       }
       return requestPermission(context, request, options);
     },
@@ -245,6 +250,72 @@ async function requestUserInput(
   );
 
   return userInputResponseToBrokerResult(request, response);
+}
+
+async function requestPresentPlan(
+  context: ZCodeProtocolAgentServerContext,
+  request: PermissionBrokerRequest,
+  options?: PermissionBrokerRequestOptions,
+): Promise<PermissionBrokerResult> {
+  const parsed = ZencodePresentPlanInputSchema.safeParse(request.input);
+  if (!parsed.success) {
+    return { decision: "deny", reason: "Invalid file selection plan", resolvedAt: new Date() };
+  }
+  const plan = parsed.data;
+  const question = `Select the files to include in: ${plan.title}`;
+  const response = await raceClientRequestWithV4Interaction(
+    context,
+    request.requestId,
+    options?.signal,
+    (signal) =>
+      context.requestClient(
+        zcodeProtocolMethods.interactionRequestUserInput,
+        {
+          input: request.input,
+          prompt: request.reason,
+          questions: [{
+            question,
+            header: "Files",
+            multiSelect: true,
+            options: plan.files.map((file) => ({
+              value: file.path,
+              label: file.path,
+              description: `${file.intent}: ${file.reason}`,
+            })),
+          }],
+          requestId: request.requestId,
+          schema: { interaction: "file_selection", toolName: request.toolName, title: plan.title },
+          sessionId: request.sessionId,
+          ...(request.origin ? { origin: request.origin } : {}),
+          toolCallId: request.toolCallId,
+          toolName: request.toolName,
+          turnId: request.turnId,
+        },
+        zcodeUserInputResponseSchema,
+        withInteractionRequestRecovery(options, signal),
+      ),
+    (answer) => v4AnswerToUserInputResponse(answer),
+    createInteractionRegistrationOptions(request, "other"),
+  );
+  if (response.action !== "accept") {
+    return { decision: "deny", reason: "File selection cancelled", resolvedAt: new Date() };
+  }
+  const candidatePaths = new Set(plan.files.map((file) => file.path));
+  const raw = response.content?.answer_0 ?? response.content?.answer;
+  const selectedPaths = Array.isArray(raw) ? raw : [];
+  if (
+    selectedPaths.length === 0 ||
+    selectedPaths.length > candidatePaths.size ||
+    selectedPaths.some((path) => typeof path !== "string" || !candidatePaths.has(path)) ||
+    new Set(selectedPaths).size !== selectedPaths.length
+  ) {
+    return { decision: "deny", reason: "Invalid or empty file selection", resolvedAt: new Date() };
+  }
+  return {
+    decision: "modify",
+    modifiedInput: { ...plan, selectedPaths },
+    resolvedAt: new Date(),
+  };
 }
 
 function v4AnswerToUserInputResponse(answer: V4InteractionAnswer): ZCodeUserInputResponse {

@@ -18,12 +18,18 @@ import {
   parsePromptPptxElementReferences,
   type PptxElementReference,
 } from "@/lib/pptxElementReference.js";
+import {
+  assembleConversationContext,
+  parseConversationContextBlock,
+  type ConversationContextSnapshot,
+} from "@/v4/composer/contextAssembler.js";
 
 interface ComposerPromptContexts {
   codeComments: readonly CodeCommentComposerAttachment[];
   conversationSelections: readonly ConversationSelectionDisplayReference[];
   webElements: readonly WebElementContextComposerAttachment[];
   pptxElements: readonly PptxElementReference[];
+  environment?: ConversationContextSnapshot | null;
 }
 
 export function countComposerPromptContexts(contexts: {
@@ -41,7 +47,7 @@ export function countComposerPromptContexts(contexts: {
 }
 
 /**
- * 四类 context parser 都只识别 prompt 尾块，因此序列化顺序和解析顺序必须严格相反。
+ * context parser 都只识别 prompt 尾块，因此序列化顺序和解析顺序必须严格相反。
  */
 export function serializeComposerPromptContexts(
   text: string,
@@ -53,7 +59,11 @@ export function serializeComposerPromptContexts(
   );
   const withCodeComments = buildPromptWithCodeComments(withSelections, contexts.codeComments);
   const withWebElements = buildPromptWithWebElementContexts(withCodeComments, contexts.webElements);
-  return buildPromptWithPptxElementReferences(withWebElements, contexts.pptxElements);
+  const withPptx = buildPromptWithPptxElementReferences(withWebElements, contexts.pptxElements);
+  const environmentBlock = contexts.environment
+    ? assembleConversationContext(contexts.environment).userContextBlock
+    : "";
+  return environmentBlock ? `${withPptx}\n\n${environmentBlock}` : withPptx;
 }
 
 export function parseComposerPromptContexts(
@@ -65,8 +75,10 @@ export function parseComposerPromptContexts(
   conversationSelections: readonly ConversationSelectionDisplayReference[];
   webElements: WebElementContextComposerAttachment[];
   pptxElements: PptxElementReference[];
+  environmentBlock: string | null;
 } {
-  const pptx = parsePromptPptxElementReferences(content);
+  const environment = parseConversationContextBlock(content);
+  const pptx = parsePromptPptxElementReferences(environment.visibleContent);
   const web = parsePromptWebElementContexts(pptx.visibleContent, workspace);
   const code = parsePromptCodeComments(web.visibleContent, workspace);
   const selections = parsePromptConversationSelections(code.visibleContent);
@@ -76,5 +88,6 @@ export function parseComposerPromptContexts(
     conversationSelections: selections.references,
     webElements: web.webElementContexts,
     pptxElements: pptx.pptxElementReferences,
+    environmentBlock: environment.contextBlock,
   };
 }

@@ -5,6 +5,7 @@ import {prepareWeixinArtifact, readWeixinArtifact, weixinArtifactInstruction} fr
 import { generateWeixinImage, resolveWeixinImageRequest, recentWeixinPhotos } from "./weixinImageGeneration.js";
 import { DEFAULT_STUDIO_IMAGE_MODEL } from "@zcode/shared";
 import { isWeixinActorAllowed } from "./weixinAccess.js";
+import { resolveWeixinFileSelectionReply } from "./weixinFileSelection.js";
 /* eslint-disable max-lines -- Bots 服务仍复用原 RPC 文件名，先把鉴权、命令路由、ZCode Agent 桥接收口集中在同一服务内。 */
 import { Buffer } from "node:buffer";
 import { createHash, randomBytes } from "node:crypto";
@@ -501,7 +502,7 @@ function resolveAutomationBotDeliveryTarget(
 function formatSelectionFallback(selection: SelectionPrompt, locale?: Locale): string {
   const lines = selection.options.map((option, index) => {
     const description = option.description ? ` ${option.description}` : "";
-    return `${index + 1}. ${option.label}${description}`;
+    return `${index + 1}. ${option.label}${description}${selection.requiresToken && selection.token ? ` → ${selection.token} ${index + 1}` : ""}`;
   });
   // Bugfix: 微信这类纯文本通道没有原生选项卡，之前把完整 slash command 和长路径展开，
   // workspace/remote identity 会把消息刷得很长。这里只展示编号，数字解析仍走 pending selection。
@@ -509,7 +510,13 @@ function formatSelectionFallback(selection: SelectionPrompt, locale?: Locale): s
     return `${selection.title}\n${lines.join("\n")}\n\n${formatBotMessage(locale, "selectionTextHintNoCancel")}`;
   }
   const cancelLabel = selection.cancelLabel ?? formatBotMessage(locale, "selectionCancelOption");
-  return `${selection.title}\n0. ${cancelLabel}\n${lines.join("\n")}\n\n${formatBotMessage(locale, "selectionTextHint")}`;
+  const cancelLine = selection.requiresToken && selection.token
+    ? `0. ${cancelLabel} → ${selection.token} 0`
+    : `0. ${cancelLabel}`;
+  const hint = selection.requiresToken
+    ? locale === "en-US" ? "Reply with the full code after the arrow; old codes expire." : "请回复箭头后的完整代码；旧计划的代码会失效。"
+    : formatBotMessage(locale, "selectionTextHint");
+  return `${selection.title}\n${cancelLine}\n${lines.join("\n")}\n\n${hint}`;
 }
 
 type BotPermissionOptionDisplayKind =
@@ -1898,6 +1905,13 @@ export function createBotsService(
       clearPendingSelection(actor);
       return null;
     }
+    if (selection.requiresToken) {
+      const resolved = resolveWeixinFileSelectionReply(selection, value);
+      if (resolved?.kind === "cancel") return { type: "selection.cancel" };
+      return resolved?.kind === "choice"
+        ? { type: "elicitation.respond", value: resolved.value }
+        : null;
+    }
     if (!isSelectionIndexValue(value)) {
       // Bugfix: /task 等列表命令会留下 pending selection。
       // 旧逻辑允许普通文本按 label 命中选项，用户输入与 task 标题同名的消息时会被误切 task。
@@ -2945,6 +2959,9 @@ export function createBotsService(
     event: Extract<ZCodeStreamEvent, { type: "elicitation_request" }>,
   ): BotPendingElicitation["renderContext"] {
     const schema = isRecord(event.schema) ? event.schema : null;
+    if (schema?.interaction === "file_selection" && schema.toolName === "zencode_present_plan") {
+      return { kind: "file_selection" };
+    }
     if (
       schema?.interaction !== "plan_approval" ||
       typeof schema.plan !== "string" ||
@@ -2958,8 +2975,11 @@ export function createBotsService(
   function createPendingElicitationSchema(
     pending: BotPendingElicitation,
   ): Record<string, unknown> | undefined {
-    return pending.renderContext?.kind === "plan_approval"
-      ? { interaction: "plan_approval", plan: pending.renderContext.plan }
+    if (pending.renderContext?.kind === "plan_approval") {
+      return { interaction: "plan_approval", plan: pending.renderContext.plan };
+    }
+    return pending.renderContext?.kind === "file_selection"
+      ? { interaction: "file_selection", toolName: "zencode_present_plan" }
       : undefined;
   }
 
@@ -3263,6 +3283,7 @@ export function createBotsService(
     return {
       id: `elicitation-${pending.requestId}-${pending.currentQuestionIndex}`,
       token: getPendingElicitationSelectionToken(pending),
+      ...(pending.renderContext?.kind === "file_selection" ? { requiresToken: true } : {}),
       title: formatBotElicitationTitle(pending, locale),
       action: "elicitation.respond",
       options,
@@ -3444,7 +3465,7 @@ export function createBotsService(
       return [createOutbound(actor, msg(auth.locale, "elicitationExpired"))];
     }
     const parsedValue = parseElicitationResponseValue(value);
-    if (actor.provider !== "weixin") {
+    if (actor.provider !== "weixin" || pending.renderContext?.kind === "file_selection") {
       const expectedToken = getPendingElicitationSelectionToken(pending);
       if (!parsedValue.token || parsedValue.token !== expectedToken) {
         // Bugfix: Telegram/飞书/Webhook 的旧按钮可能在新一轮 AskUserQuestion 后才送达。
@@ -3536,6 +3557,10 @@ export function createBotsService(
     }
     const value = text.trim();
     if (!value) {
+      return createElicitationReply(actor, pending, auth.locale);
+    }
+    if (actor.provider === "weixin" && pending.renderContext?.kind === "file_selection") {
+      // 原因：裸数字和旧计划的迟到消息不能作为本轮文件勾选；只接受带本轮 token 的选项。
       return createElicitationReply(actor, pending, auth.locale);
     }
     if (value === getPendingElicitationSkipOptionId(pending)) {
@@ -4314,12 +4339,23 @@ export function createBotsService(
         clearPendingSelection(message.actor);
         return [createOutbound(message.actor, msg(auth.locale, "elicitationExpired"))];
       }
+      if (pending.renderContext?.kind === "file_selection" && message.text.trim() === "0") {
+        // 原因：纯数字 0 可能来自旧文件计划，不能取消当前计划。
+        return createElicitationReply(message.actor, pending, auth.locale);
+      }
       clearPendingSelection(message.actor);
       return submitPendingElicitation(auth, message.actor, pending, "cancel");
     }
     if (!pendingSelectionsByContext.has(actorContextKey)) {
       const auth = await withAuthorizedContext(message, "message");
       if (auth.ok && auth.context.pendingElicitation) {
+        if (
+          auth.context.pendingElicitation.renderContext?.kind === "file_selection" &&
+          message.text.trim() === "0"
+        ) {
+          // 原因：进程恢复后内存选项表可能为空，旧的裸 0 仍不能取消当前文件计划。
+          return createElicitationReply(message.actor, auth.context.pendingElicitation, auth.locale);
+        }
         return submitPendingElicitation(
           auth,
           message.actor,
@@ -6415,6 +6451,10 @@ export function createBotsService(
             const pending = auth.context.pendingElicitation;
             if (!pending) {
               return [createOutbound(message.actor, msg(auth.locale, "elicitationExpired"))];
+            }
+            if (pending.renderContext?.kind === "file_selection") {
+              // 原因：无轮次 token 的提交命令可能来自旧微信消息，不得批准新文件清单。
+              return createElicitationReply(message.actor, pending, auth.locale);
             }
             if (message.actor.provider !== "weixin") {
               // Bugfix: 非微信通道的“完成”应从带 token 的按钮进入 elicitation.respond。

@@ -3,6 +3,7 @@ import { createDenyPermissionBroker } from "../../permission/broker.js";
 import type { ToolSchedule } from "../scheduler.js";
 import type { ExecutableToolCall, ToolBatchEvent, ToolExecutionResult } from "../types.js";
 import { BackgroundTaskTracker } from "./background-tasks.js";
+import { TurnFileSelectionGuard } from "../file-selection-guard.js";
 import { executeToolBatch, executeToolSchedule } from "./batch-runner.js";
 import { executeToolCall } from "./call-runner.js";
 import type {
@@ -18,7 +19,10 @@ export class ToolExecutorImpl implements ToolExecutor {
   private readonly backgroundTasks: BackgroundTaskTracker;
 
   constructor(options: ToolExecutorOptions) {
+    const getWorkspaceRoot = options.getWorkspaceRoot ??
+      (() => options.workspaceRoot ?? options.getWorkingDirectory?.() ?? options.workingDirectory ?? ".");
     this.deps = {
+      fileSelectionGuard: new TurnFileSelectionGuard(getWorkspaceRoot, options.fileSelectionCanActivate !== false),
       agentTelemetry: options.agentTelemetry,
       agentTelemetryActorKind: options.agentTelemetryActorKind,
       registry: options.registry,
@@ -66,13 +70,7 @@ export class ToolExecutorImpl implements ToolExecutor {
       getBashShellSelection: options.getBashShellSelection,
       getWorkingDirectory: options.getWorkingDirectory ?? (() => options.workingDirectory ?? "."),
       setWorkingDirectory: options.setWorkingDirectory,
-      getWorkspaceRoot:
-        options.getWorkspaceRoot ??
-        (() =>
-          options.workspaceRoot ??
-          options.getWorkingDirectory?.() ??
-          options.workingDirectory ??
-          "."),
+      getWorkspaceRoot,
       workspaceIdentity: options.workspaceIdentity,
       remoteSessionId: options.remoteSessionId,
       clientMode: options.clientMode,

@@ -173,6 +173,7 @@ import type { ConversationPromptTelemetrySeed } from "@/v4/telemetry/conversatio
 import type { ComposerSubmissionConfig } from "@/v4/composer/composerSubmissionConfig.js";
 import { buildV4ConversationPromptTelemetryExtraDetail } from "@/v4/telemetry/conversationPromptTelemetry.js";
 import { resolveAttachableShareContext } from "@/lib/conversationShareContext.js";
+import { readConversationViewContext } from "@/store/conversationViewContextStore.js";
 
 const MODEL_SELECTION_LOADING_STATE: ModelSelectionState = { status: "loading" };
 
@@ -1337,6 +1338,11 @@ function ConversationComposerImpl({
           conversationSelections: currentConversationSelections,
           webElements: currentWebElementContexts,
           pptxElements: currentPptxElementReferences,
+          // 根因：视窗可能在草稿停留期间切换；只在提交的最后一刻读取当前窗格事实。
+          // 本地斜杠命令由应用消费，不附加 IDE 环境块，避免改变其解析语义。
+          environment: trimmed.startsWith("/")
+            ? null
+            : readConversationViewContext(workspacePath, workspaceIdentity, remoteSessionId),
         });
         const contextAttachmentCount =
           countComposerPromptContexts({

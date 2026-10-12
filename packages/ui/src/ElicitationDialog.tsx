@@ -196,6 +196,15 @@ function isPlanApprovalElicitationRequest(request: ZCodeElicitationRequest): boo
   );
 }
 
+function isFileSelectionElicitationRequest(request: ZCodeElicitationRequest): boolean {
+  const schema = request.schema;
+  return (
+    isRecord(schema) &&
+    schema.interaction === "file_selection" &&
+    schema.toolName === "zencode_present_plan"
+  );
+}
+
 function createInitialElicitationDrafts(
   questions: readonly NormalizedElicitationQuestion[],
   request: ZCodeElicitationRequest,
@@ -226,11 +235,14 @@ function normalizeInitialQuestionIndex(
   return Math.max(0, Math.min(index, questions.length - 1));
 }
 
-function getQuestionOptionCount(question: NormalizedElicitationQuestion | undefined) {
+function getQuestionOptionCount(
+  question: NormalizedElicitationQuestion | undefined,
+  includeCustom = true,
+) {
   if (!question) {
     return 0;
   }
-  return question.options.length + 1;
+  return question.options.length + (includeCustom ? 1 : 0);
 }
 
 function getPreferredActiveOptionIndex(
@@ -399,9 +411,10 @@ function ElicitationDialogContent({
     ? (drafts[currentQuestion.key] ?? { selectedValues: [], customAnswer: "" })
     : undefined;
   const isPlanApproval = isPlanApprovalElicitationRequest(request);
+  const isFileSelection = isFileSelectionElicitationRequest(request);
 
   useEffect(() => {
-    if (getQuestionOptionCount(currentQuestion) === 0 || activeOptionIndex < 0) {
+    if (getQuestionOptionCount(currentQuestion, !isFileSelection) === 0 || activeOptionIndex < 0) {
       return;
     }
     const frameId = requestAnimationFrame(() => {
@@ -412,7 +425,7 @@ function ElicitationDialogContent({
       customInputRef.current?.focus();
     });
     return () => cancelAnimationFrame(frameId);
-  }, [activeOptionIndex, currentQuestion]);
+  }, [activeOptionIndex, currentQuestion, isFileSelection]);
 
   // 初始 activeOptionIndex=-1 时无按钮有焦点。卡片容器自动聚焦后
   // 可接收键盘事件，在容器层捕获 Tab/↓/↑/Enter 启动导航或推进。
@@ -553,6 +566,13 @@ function ElicitationDialogContent({
 
   const continueOrSubmit = useCallback(() => {
     if (
+      isFileSelection &&
+      currentQuestion &&
+      getQuestionAnswers(currentQuestion, drafts).length === 0
+    ) {
+      return;
+    }
+    if (
       isPlanApproval &&
       currentQuestion &&
       getQuestionAnswers(currentQuestion, drafts).length === 0
@@ -579,13 +599,14 @@ function ElicitationDialogContent({
     drafts,
     getDraftsWithAutoSelectedOption,
     isPlanApproval,
+    isFileSelection,
     reportFirstInteraction,
     selectOption,
   ]);
 
   const moveSelection = useCallback(
     (direction: 1 | -1) => {
-      const optionCount = getQuestionOptionCount(currentQuestion);
+      const optionCount = getQuestionOptionCount(currentQuestion, !isFileSelection);
       if (optionCount === 0) {
         return;
       }
@@ -595,7 +616,7 @@ function ElicitationDialogContent({
         return (index + direction + optionCount) % optionCount;
       });
     },
-    [currentQuestion, reportFirstInteraction],
+    [currentQuestion, isFileSelection, reportFirstInteraction],
   );
 
   const handleOptionKeyDown = useCallback(
@@ -1082,7 +1103,9 @@ function ElicitationDialogContent({
                   {currentQuestion.options.map((option, index) =>
                     renderOption(currentQuestion, option, index),
                   )}
-                  {renderCustomInput(currentQuestion, currentQuestion.options.length)}
+                  {!isFileSelection
+                    ? renderCustomInput(currentQuestion, currentQuestion.options.length)
+                    : null}
                 </div>
               </div>
             ) : (
@@ -1147,6 +1170,11 @@ function ElicitationDialogContent({
               <Button
                 type="button"
                 size="lg"
+                disabled={
+                  isFileSelection &&
+                  currentQuestion !== undefined &&
+                  getQuestionAnswers(currentQuestion, drafts).length === 0
+                }
                 onClick={questions.length === 0 ? submit : continueOrSubmit}
                 className="bg-brand text-foreground-inverse hover:bg-brand/80"
               >

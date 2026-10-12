@@ -22,6 +22,8 @@ import { ListWorkflowRunsToolCallBlock } from "@/ToolCallBlocks/renderers/list-w
 import { ResumeWorkflowRunToolCallBlock } from "@/ToolCallBlocks/renderers/resume-workflow-run.js";
 import { ResolveWorkflowQuestionToolCallBlock } from "@/ToolCallBlocks/renderers/resolve-workflow-question.js";
 import { SaveWorkflowToolCallBlock } from "@/ToolCallBlocks/renderers/save-workflow.js";
+import { ZencodeProgressToolCallBlock } from "@/ToolCallBlocks/renderers/zencode-progress.js";
+import { ZencodePresentPlanToolCallBlock } from "@/ToolCallBlocks/renderers/zencode-present-plan.js";
 import {
   isEscalateToolCall,
   isEvalWorkflowSnippetToolCall,
@@ -55,6 +57,12 @@ import { resolveToolCallIdentity } from "@/lib/toolIdentity.js";
 import type { ToolCallBlockRenderContext } from "@/ToolCallBlocks/shared.js";
 
 export function resolveToolCallRenderer(context: ToolCallBlockRenderContext) {
+  if (context.toolCallNode.toolCall.toolName === "zencode_mark_progress") {
+    return ZencodeProgressToolCallBlock;
+  }
+  if (context.toolCallNode.toolCall.toolName === "zencode_present_plan") {
+    return ZencodePresentPlanToolCallBlock;
+  }
   if (context.toolCallNode.toolCall.kind === "changesGroup") {
     return ChangesGroupToolCallBlock;
   }

@@ -60,6 +60,7 @@ import type {
   PersistedReadFileStateTool,
 } from "./read-file-state-metadata.js";
 import type { RuntimeTaskRegistry } from "../runtime-task/registry.js";
+import type { TurnFileSelectionGuard } from "./file-selection-guard.js";
 
 // -----------------------------------------------
 // Tool Metadata
@@ -130,6 +131,7 @@ export interface BackgroundTaskControlPort {
 
 export interface ToolExecutionContext {
   toolCallId: string;
+  fileSelectionGuard?: TurnFileSelectionGuard;
   /**
    * 当前 Tool 的实时观测写入器。Handler 只能通过窄接口写事实，不能接触原始 OTel Span。
    */

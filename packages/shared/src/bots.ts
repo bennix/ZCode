@@ -141,10 +141,7 @@ export interface BotPendingElicitation {
   currentQuestionIndex: number;
   questions: ZCodeElicitationQuestion[];
   answers: Record<string, string[]>;
-  renderContext?: {
-    kind: "plan_approval";
-    plan: string;
-  };
+  renderContext?: { kind: "plan_approval"; plan: string } | { kind: "file_selection" };
   expandedCustomAnswerQuestionIndexes?: number[];
   handledAt?: number;
 }
@@ -275,6 +272,7 @@ export type BotCommand =
 export interface SelectionPrompt {
   id: string;
   token?: string;
+  requiresToken?: boolean;
   title: string;
   currentId?: string;
   cancelLabel?: string;
@@ -450,11 +448,10 @@ const botPendingElicitationSchema = z
     questions: z.array(botElicitationQuestionSchema),
     answers: z.record(z.string(), z.array(z.string())),
     renderContext: z
-      .object({
-        kind: z.literal("plan_approval"),
-        plan: z.string().min(1),
-      })
-      .strict()
+      .discriminatedUnion("kind", [
+        z.object({ kind: z.literal("plan_approval"), plan: z.string().min(1) }).strict(),
+        z.object({ kind: z.literal("file_selection") }).strict(),
+      ])
       .optional(),
     expandedCustomAnswerQuestionIndexes: z.array(z.number().int().min(0)).optional(),
     handledAt: z.number().optional(),

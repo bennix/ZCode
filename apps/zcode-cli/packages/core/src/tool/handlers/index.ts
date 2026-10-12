@@ -52,6 +52,8 @@ import {
   exitPlanModeToolEntry,
 } from "./plan-mode.js";
 import { askUserQuestionToolEntry } from "./ask-user-question.js";
+import { zencodeMarkProgressToolEntry } from "./zencode-progress.js";
+import { zencodePresentPlanToolEntry } from "./zencode-present-plan.js";
 import { sendMessageToolEntry } from "./send-message.js";
 import { respondToCoordinatorToolEntry } from "./respond-to-coordinator.js";
 import { createSubmitResultToolEntry, submitResultToolEntry } from "./submit-result.js";
@@ -98,6 +100,8 @@ export const builtInTools: ToolEntry[] = [
   enterPlanModeToolEntry,
   exitPlanModeToolEntry,
   askUserQuestionToolEntry,
+  zencodeMarkProgressToolEntry,
+  zencodePresentPlanToolEntry,
   sendMessageToolEntry,
   respondToCoordinatorToolEntry,
   submitResultToolEntry,

@@ -230,6 +230,26 @@ async function executeToolCallImpl(
     executionInput = resolution.input;
   }
 
+  const rejectUnselectedWrite = async (input: unknown): Promise<ToolExecutionResult | null> => {
+    const violation = await deps.fileSelectionGuard?.violation({
+      turnId,
+      toolName: canonicalToolCall.name,
+      input,
+      workingDirectory: deps.getWorkingDirectory(),
+    });
+    if (!violation) return null;
+    // 文件选择是执行边界，必须先于 Hook、权限和 Handler 拦截。
+    const result = createErrorResult(
+      canonicalToolCall,
+      createCoreError(CoreErrorType.PermissionDenied, violation, { recoverable: true }),
+    );
+    await emitToolCallError(deps, canonicalToolCall.id, traceContext, turnId, result.error);
+    telemetry?.finishDenied("policy_denied");
+    return result;
+  };
+  const initialSelectionRejection = await rejectUnselectedWrite(executionInput);
+  if (initialSelectionRejection) return initialSelectionRejection;
+
   const preToolHookResult = await runPreToolUseHooks(
     deps,
     canonicalToolCall,
@@ -287,6 +307,9 @@ async function executeToolCallImpl(
     }
   }
 
+  const hookSelectionRejection = await rejectUnselectedWrite(executionInput);
+  if (hookSelectionRejection) return hookSelectionRejection;
+
   const permissionResult = await resolveToolPermission(
     deps,
     canonicalToolCall,
@@ -322,6 +345,8 @@ async function executeToolCallImpl(
     return result;
   }
   executionInput = permissionResult.executionInput;
+  const permissionSelectionRejection = await rejectUnselectedWrite(executionInput);
+  if (permissionSelectionRejection) return permissionSelectionRejection;
   const permissionWaitMs = permissionResult.permissionWaitMs;
 
   const startTime = Date.now();
@@ -417,6 +442,7 @@ async function executeToolCallImpl(
       dynamicWorkflowSnippetPort: deps.dynamicWorkflowSnippetPort,
       modelCatalogPort: deps.modelCatalogPort,
       runtimeTaskRegistry: deps.runtimeTaskRegistry,
+      fileSelectionGuard: deps.fileSelectionGuard,
       readFileState: deps.readFileState,
       recordReadFileStateMetadata: (metadata) => {
         readFileStateMetadata = metadata;

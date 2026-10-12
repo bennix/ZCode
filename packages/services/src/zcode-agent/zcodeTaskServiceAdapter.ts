@@ -211,6 +211,7 @@ const EMPTY_SLASH_COMMANDS: ZCodeSlashCommand[] = [];
 const logger = createServiceLogger("zcode-task-service");
 const ASK_USER_QUESTION_TOOL_NAME = "AskUserQuestion";
 const EXIT_PLAN_MODE_TOOL_NAME = "ExitPlanMode";
+const ZENCODE_PRESENT_PLAN_TOOL_NAME = "zencode_present_plan";
 const EXIT_PLAN_MODE_APPROVAL_QUESTION = "Review this implementation plan.";
 const EXIT_PLAN_MODE_APPROVAL_APPROVE = "approve";
 
@@ -1918,18 +1919,21 @@ export function createZCodeTaskServiceAdapter(
       };
     },
 
-    async guideTask(params):Promise<void> {
-      const target=getTaskTarget(params.taskId);
+    async guideTask(params): Promise<void> {
+      const target = getTaskTarget(params.taskId);
       // 引导复用 owner 路由和 CommandInbox，不清空当前轮的输出投影或 input id。
-      const ack=await options.zcodeAgentService.sendConversationCommandV4({
-        workspacePath:target.workspacePath,workspaceIdentity:target.workspaceIdentity,
-        ...(target.remoteSessionId?{remoteSessionId:target.remoteSessionId}:{}),
-        envelope:createHostCommandEnvelope({
-          commandId:params.traceId,sessionId:target.taskId,type:"sendText",
-          payload:{text:params.content,requestedDelivery:"guide"},
+      const ack = await options.zcodeAgentService.sendConversationCommandV4({
+        workspacePath: target.workspacePath,
+        workspaceIdentity: target.workspaceIdentity,
+        ...(target.remoteSessionId ? { remoteSessionId: target.remoteSessionId } : {}),
+        envelope: createHostCommandEnvelope({
+          commandId: params.traceId,
+          sessionId: target.taskId,
+          type: "sendText",
+          payload: { text: params.content, requestedDelivery: "guide" },
         }),
       });
-      assertV4CommandAckOk("sendText",ack,`guide session=${target.taskId}`);
+      assertV4CommandAckOk("sendText", ack, `guide session=${target.taskId}`);
     },
 
     async sendPrompt(params): Promise<void> {
@@ -5012,7 +5016,47 @@ function pendingUserInputBackedPermissionToElicitationEvent(
   if (isExitPlanModeToolName(permission.toolName)) {
     return pendingExitPlanModeToElicitationEvent(taskId, permission);
   }
+  if (permission.toolName === ZENCODE_PRESENT_PLAN_TOOL_NAME) {
+    return pendingPresentPlanToElicitationEvent(taskId, permission);
+  }
   return null;
+}
+
+export function pendingPresentPlanToElicitationEvent(
+  taskId: string,
+  permission: ZCodeSessionStateSnapshot["projection"]["pendingPermissions"][number],
+): Extract<ZCodeStreamEvent, { type: "elicitation_request" }> | null {
+  const input = asRecord(permission.input);
+  const title = stringValue(input.title);
+  const files = Array.isArray(input.files) ? input.files : [];
+  if (!title || files.length === 0) return null;
+  const options = files.flatMap((item) => {
+    const file = asRecord(item);
+    const path = stringValue(file.path);
+    if (!path) return [];
+    return [
+      {
+        value: path,
+        label: path,
+        description: `${stringValue(file.intent) ?? "edit"}: ${stringValue(file.reason) ?? ""}`,
+      },
+    ];
+  });
+  if (options.length === 0) return null;
+  const question = `Select the files to include in: ${title}`;
+  return {
+    type: "elicitation_request",
+    taskId,
+    traceId: generateTraceId(taskId),
+    requestId: permission.requestId,
+    message: question,
+    header: "Files",
+    options,
+    multiSelect: true,
+    questions: [{ question, header: "Files", options, multiSelect: true }],
+    ...(permission.origin ? { origin: permission.origin } : {}),
+    schema: { interaction: "file_selection", toolName: permission.toolName, title },
+  };
 }
 
 function pendingAskUserQuestionToElicitationEvent(
@@ -5732,7 +5776,11 @@ function isExitPlanModeToolName(value: string | undefined): boolean {
 }
 
 function isUserInputBackedPermissionToolName(value: string | undefined): boolean {
-  return isAskUserQuestionToolName(value) || isExitPlanModeToolName(value);
+  return (
+    isAskUserQuestionToolName(value) ||
+    isExitPlanModeToolName(value) ||
+    value === ZENCODE_PRESENT_PLAN_TOOL_NAME
+  );
 }
 
 function numberValue(value: unknown): number | undefined {

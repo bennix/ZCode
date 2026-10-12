@@ -89,6 +89,8 @@ import { inferMediaPreview, type CodeViewerSource } from "@/lib/codeViewer.js";
 import type { MessageFileLinkTarget } from "@/components/ai-elements/message.js";
 import { getVisibleSidePaneTabs } from "@/lib/workspaceSidePane.js";
 import { useZCodeIntl } from "@/i18n/IntlProvider.js";
+import { deriveVisibleContextSnapshot } from "@/app-shell/visibleContextSnapshot.js";
+import { conversationViewContextStore } from "@/store/conversationViewContextStore.js";
 import {
   BugIcon,
   FileDiffIcon,
@@ -446,6 +448,7 @@ export function AnimatedSidePanePanel({
   const isWindowResizeSettling = useWindowResizeSettling(hasRenderedSidePane);
   const widthUnlockTimerRef = useRef<number | null>(null);
   const previousIsVisibleRef = useRef(isVisible);
+  const conversationContextOwnerRef = useRef<object>({});
   const panelLayout = resolveAnimatedSidePanePanelLayout();
   const hasReviewTab = visibleTabs.some((tab) => tab.type === "git");
   const canOpenSelectionSideConversation = shouldOfferSelectionSideConversation({
@@ -458,6 +461,33 @@ export function AnimatedSidePanePanel({
       },
     }),
   );
+
+  useEffect(() => {
+    const workspaceKey = workspaceIdentity?.trim() || workspaceAbsPath;
+    const owner = conversationContextOwnerRef.current;
+    conversationViewContextStore.getState().publish(
+      workspaceKey,
+      owner,
+      deriveVisibleContextSnapshot({
+        workspacePath: workspaceAbsPath,
+        ...(workspaceIdentity ? { workspaceIdentity } : {}),
+        ...(workspaceRemoteSessionId ? { remoteSessionId: workspaceRemoteSessionId } : {}),
+        isVisible,
+        sidePaneState,
+        git: !gitState.loading && !gitState.error ? gitState.summary : undefined,
+      }),
+    );
+    return () => conversationViewContextStore.getState().clear(workspaceKey, owner);
+  }, [
+    gitState.error,
+    gitState.loading,
+    gitState.summary,
+    isVisible,
+    sidePaneState,
+    workspaceAbsPath,
+    workspaceIdentity,
+    workspaceRemoteSessionId,
+  ]);
 
   const handleTabDragStart = (event: DragStartEvent) => {
     setDraggingTabId(String(event.active.id));
