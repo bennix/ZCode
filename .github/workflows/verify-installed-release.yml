@@ -54,10 +54,10 @@ jobs:
         include:
           - runner: windows-latest
             arch: x64
-            sha256: ce22761af878f83d8917235cd34156b8182925113cb00bf5a534d48fa6659161
+            sha256: 8b8f329cc05afdeb2f70ee9f41a51df44bbe06c3a11d29f8ebfbe9c976fb34c5
           - runner: windows-11-arm
             arch: arm64
-            sha256: d31a47e20440101e6d1bca7c40ac58df9f9de46eccfff3271a772aa1983bc591
+            sha256: ead4f3d7022a1846a65c51820e0fac5b1798b7f93a9430460d76157a6999ac3f
     runs-on: ${{ matrix.runner }}
     timeout-minutes: 90
     steps:

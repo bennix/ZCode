@@ -13,14 +13,27 @@ ZenCode is an AI coding workspace with desktop, browser, and terminal interfaces
 
 Download the macOS DMG, Windows installer, or Linux packages from the [latest GitHub release](https://github.com/bennix/ZCode/releases/latest). The release page lists only platforms whose builds and checks have completed. Source development instructions follow below.
 
-The current stable release is **3.14.30**. Choose the package for your device:
+The current stable release is **3.14.32**. The macOS Apple Silicon DMG is notarized by Apple; Windows and Linux x64/ARM64 packages passed build and installation checks. Choose the package for your device:
 
 | Platform            | Package                                                                                                                                                                                                 |
 | ------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| macOS Apple Silicon | [DMG](https://github.com/bennix/ZCode/releases/download/v3.14.30/ZenCode-3.14.30-mac-arm64.dmg)                                                                                                         |
-| Windows x64 / ARM64 | [x64](https://github.com/bennix/ZCode/releases/download/v3.14.30/ZenCode-3.14.30-win-x64.exe) · [ARM64](https://github.com/bennix/ZCode/releases/download/v3.14.30/ZenCode-3.14.30-win-arm64.exe)       |
-| Linux x64           | [DEB](https://github.com/bennix/ZCode/releases/download/v3.14.30/ZenCode-3.14.30-linux-amd64.deb) · [RPM](https://github.com/bennix/ZCode/releases/download/v3.14.30/ZenCode-3.14.30-linux-x86_64.rpm)  |
-| Linux ARM64         | [DEB](https://github.com/bennix/ZCode/releases/download/v3.14.30/ZenCode-3.14.30-linux-arm64.deb) · [RPM](https://github.com/bennix/ZCode/releases/download/v3.14.30/ZenCode-3.14.30-linux-aarch64.rpm) |
+| macOS Apple Silicon | [Notarized DMG](https://github.com/bennix/ZCode/releases/latest/download/ZenCode-3.14.32-mac-arm64.dmg)                                                                                                   |
+| Windows x64 / ARM64 | [x64](https://github.com/bennix/ZCode/releases/latest/download/ZenCode-3.14.32-win-x64.exe) · [ARM64](https://github.com/bennix/ZCode/releases/latest/download/ZenCode-3.14.32-win-arm64.exe)             |
+| Linux x64           | [DEB](https://github.com/bennix/ZCode/releases/latest/download/ZenCode-3.14.32-linux-amd64.deb) · [RPM](https://github.com/bennix/ZCode/releases/latest/download/ZenCode-3.14.32-linux-x86_64.rpm)    |
+| Linux ARM64         | [DEB](https://github.com/bennix/ZCode/releases/latest/download/ZenCode-3.14.32-linux-arm64.deb) · [RPM](https://github.com/bennix/ZCode/releases/latest/download/ZenCode-3.14.32-linux-aarch64.rpm)   |
+
+## Product capabilities
+
+- **AI coding workspace**: Work on coding tasks from the desktop IDE, browser workspace, or terminal, with workspace context such as files, diffs, terminal output, and previews.
+- **Multi-agent workspace**: Organize and track multiple agent tasks and their progress. The current model dispatcher selects an execution model; it does not automatically split one task into child agents.
+- **Model routing and shared context**: Configure a separate dispatch model. New tasks can select an execution model; follow-up turns stay with the current model. A model switch uses the same committed conversation history and excludes unsent drafts. Cross-provider cache reuse and fixed token savings are not promised.
+- **Context and progress guidance**: The composer can include sourced context about the active file, visible diff, terminal, preview, and Git summary. Long tasks can report milestones in the conversation.
+- **File plans and write boundaries**: For multi-file work, present candidate files for user selection first. After confirmation, tool calls whose write scope cannot be verified are rejected, while existing permission checks remain in force.
+- **Native computer use**: Desktop control can be enabled as an optional capability. Packaged Windows and Linux builds passed native observation/click and installation checks. Available actions depend on OS permissions, graphical sessions, and desktop environments.
+- **WeChat mobile control**: Use the existing WeChat pairing entry to connect to the desktop Host. Messages continue through the same task and session, with account and workspace authorization checked by the runtime.
+- **Remote workspaces and CLI**: The desktop supports SSH/WSL workspaces. The CLI provides TUI, Web, and Agent entry points for local terminal use.
+
+Switch languages with the “简体中文 / English” control at the top of the product page. Platform availability and downloadable builds are listed on the [latest release](https://github.com/bennix/ZCode/releases/latest).
 
 ## Setup
 
