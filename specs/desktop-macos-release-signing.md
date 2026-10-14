@@ -43,3 +43,4 @@ afterPack 复制运行时 → 扫描三个资源目录 → 逐个签 Mach-O → 
 - 当前源码重新打 macOS arm64 包：Developer ID 签名、Apple 公证、DMG 装订、`stapler validate`、挂载后 App 的 `codesign --verify --deep --strict` 与 Gatekeeper `Notarized Developer ID` 全部通过后，才替换 `v3.14.32` 上的 Mac DMG、ZIP、blockmap 和 `latest-mac.yml`。装订会改写 DMG，摘要必须在装订后重算。
 - 任一环节失败时，公开 Mac 资产和本地上一份已公证 DMG 保持不变。
 - 成功后本地 `release-artifacts` 只保留 `ZenCode-3.14.32-mac-arm64.dmg`。Landing Page 的 macOS 下载入口继续指向这个 GitHub 文件，不改 Windows/Linux 链接。
+- 2026-10-14 正式版 `ZenCode.app`（`dev.zcode.app`）已用 Developer ID 签名。Office CLI `1.0.152` 的 `officecli-mac-arm64` 在装订后的 DMG 内通过严格签名，Team ID 为 `5N66S29EK2`。DMG 公证 `3c24e4f9-5411-4e8c-b100-0021ef6b55df` 与 ZIP 公证 `3f9b26be-4537-4077-ba8d-0330050157f1` 均为 Accepted；装订后 DMG SHA-256 为 `da9394411d0cb59ff337f6f70bb6d062281044d30e5f97620e8813226216d405`。挂载 App 的 Gatekeeper 结果为 `Notarized Developer ID`。

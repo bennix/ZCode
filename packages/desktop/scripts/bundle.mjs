@@ -468,6 +468,8 @@ function shouldRetryElectronBuilderFailure(output) {
     "socket hang up",
     "unexpected end of file",
     "err_electron_builder_cannot_execute",
+    // Apple 时间戳服务偶发不可用。签名参数保持 --timestamp；只把这次瞬时失败纳入有限次整包重试。
+    "the timestamp service is not available",
   ];
 
   return transientSignals.some((signal) => normalizedOutput.includes(signal));
