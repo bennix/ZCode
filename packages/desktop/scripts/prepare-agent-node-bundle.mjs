@@ -11,13 +11,14 @@
 //
 // 远端（SSH/WSL/Docker）没有 Electron，仍走 prepare:remote-assets 的原生二进制，互不影响。
 
-import { cpSync, existsSync, mkdirSync, rmSync } from "node:fs";
+import { cpSync, existsSync, mkdirSync, readFileSync, rmSync } from "node:fs";
 import { access, cp, mkdir } from "node:fs/promises";
 import { basename, dirname, relative, resolve, sep } from "node:path";
 import process from "node:process";
 import { fileURLToPath } from "node:url";
 import { runCommand } from "../../../scripts/spawn-command.mjs";
 import { ensureRuntime as ensureOfficeRuntime } from "../../../apps/zcode-cli/packages/bundled-skills/skills/officecli/scripts/officecli.mjs";
+import { assertOfficeRuntimeChecksum } from "./office-runtime-package-check.mjs";
 import { stageAgentBundle } from "./stage-agent-bundle.mjs";
 
 const scriptDir = dirname(fileURLToPath(import.meta.url));
@@ -158,6 +159,17 @@ const bundledSkillPack = {
   stagedPath: "packages/bundled-skills",
   topLevelPaths: ["skills"],
 };
+
+function assertStagedOfficeRuntime(binaryPath) {
+  const releasePath = resolve(
+    repoRoot,
+    bundledSkillPack.relativePath,
+    "skills/officecli/scripts/release.json",
+  );
+  const release = JSON.parse(readFileSync(releasePath, "utf8"));
+  const asset = basename(binaryPath);
+  assertOfficeRuntimeChecksum({ binaryPath, asset, release });
+}
 const includedOfficialPluginTopLevelPaths = new Set([
   ".mcp.json",
   ".zcode-plugin",
@@ -337,7 +349,9 @@ async function stageBundledSkillPack() {
     basename(dirname(officeBinary)),
   );
   await mkdir(officeRuntimeDir, { recursive: true });
+  assertStagedOfficeRuntime(officeBinary);
   await cp(officeBinary, resolve(officeRuntimeDir, basename(officeBinary)));
+  assertStagedOfficeRuntime(resolve(officeRuntimeDir, basename(officeBinary)));
   console.log(`[prepare:agent-bundle] staged bundled skill pack ${bundledSkillPack.stagedPath}`);
 }
 

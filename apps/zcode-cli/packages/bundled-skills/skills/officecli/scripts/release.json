@@ -1,5 +1,9 @@
 {
   "version": "1.0.152",
+  "packagedSignatureTeams": {
+    "officecli-mac-arm64": "5N66S29EK2",
+    "officecli-mac-x64": "5N66S29EK2"
+  },
   "assets": {
     "officecli-linux-alpine-arm64": "65c65e05100bac1376e23f6ca97086a046afdfcaf50f2bc215a8c139b3bc22ba",
     "officecli-linux-alpine-x64": "390e246303bf43b4739e3195e9b171a660223b4c11218b65894d5fadf9a52755",

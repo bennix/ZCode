@@ -1,7 +1,7 @@
 import { verifyWorkbenchBundle, stageWorkbenchBundle } from "./scripts/prepare-code-workbench.mjs";
 import { signBundledNativeFiles } from "./scripts/sign-bundled-native.mjs";
 /* eslint-disable max-lines -- Electron Builder config keeps related packaging hooks together so build order stays explicit. */
-import { cpSync, existsSync, mkdirSync, mkdtempSync, rmSync } from "node:fs";
+import { cpSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { readdir, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
@@ -19,6 +19,7 @@ import {
 import { cleanupPackagedSourcemaps } from "./scripts/packaged-sourcemap-cleanup.mjs";
 import { refreshMacAsarIntegrity } from "./scripts/macos-asar-integrity.mjs";
 import { getTargetPlatform } from "./scripts/target-platform.mjs";
+import { assertOfficeRuntimeChecksum } from "./scripts/office-runtime-package-check.mjs";
 import {
   resolveDesktopArtifactSuffix,
   resolveDesktopProductIdentity,
@@ -299,6 +300,37 @@ function resolvePackagedResourcesDir(context) {
   }
 
   return resolve(context.appOutDir, "resources");
+}
+
+function assertPackagedOfficeRuntime(context) {
+  const resources = resolvePackagedResourcesDir(context);
+  const releasePath = resolve(
+    import.meta.dirname,
+    "../../apps/zcode-cli/packages/bundled-skills/skills/officecli/scripts/release.json",
+  );
+  const release = JSON.parse(readFileSync(releasePath, "utf8"));
+  const platform = context.electronPlatformName === "darwin"
+    ? "mac"
+    : context.electronPlatformName === "win32"
+      ? "win"
+      : "linux";
+  const arch = ELECTRON_BUILDER_ARCH[context.arch] ?? process.arch;
+  const asset = `officecli-${platform}-${arch}${platform === "win" ? ".exe" : ""}`;
+  const binaryPath = resolve(
+    resources,
+    "glm/packages/bundled-skills/skills/officecli/scripts/runtime",
+    release.version,
+    asset,
+  );
+  if (!existsSync(binaryPath)) {
+    throw new Error(`[afterPack] missing pinned OfficeCLI asset: ${binaryPath}`);
+  }
+  assertOfficeRuntimeChecksum({
+    binaryPath,
+    asset,
+    release,
+    allowSignedMac: shouldEnableMacSigning && platform === "mac",
+  });
 }
 
 function normalizeAsarEntry(entry) {
@@ -602,6 +634,9 @@ export default {
     );
     runTimedSync("afterPack:assertPackagedNodePtyPrebuild", () =>
       assertPackagedNodePtyPrebuild(context),
+    );
+    runTimedSync("afterPack:assertPackagedOfficeRuntime", () =>
+      assertPackagedOfficeRuntime(context),
     );
     if (actualWindowsTarget) {
       await runTimedAsync("afterPack:writeWindowsInstallManifest", () =>

@@ -36,3 +36,10 @@ afterPack 复制运行时 → 扫描三个资源目录 → 逐个签 Mach-O → 
 - 新源码、Windows x64/ARM64 与 Linux x64/ARM64 构建必须来自同一提交；macOS arm64 包须通过 Developer ID 签名、公证、装订及 Gatekeeper 验收。
 - 发布前公开下载入口继续指向 3.14.31，本地唯一已公证 DMG 也保持 3.14.31。所有平台构建与安装验收、Mac 公证及正式下载复验通过后，才公开 3.14.32 并更新中英 README。
 - 候选 Release 必须是 draft，target commit 与 CI run 的 head SHA 完全一致。GitHub Release API 的 SHA-256 是公开资产核验依据；失败候选不替换 Latest 和本地已公证 DMG。
+
+## 3.14.32 macOS 公证包替换
+
+- 版本号保持 3.14.32。Windows 与 Linux 安装包、CI 版本钉扎和对应下载入口不改。
+- 当前源码重新打 macOS arm64 包：Developer ID 签名、Apple 公证、DMG 装订、`stapler validate`、挂载后 App 的 `codesign --verify --deep --strict` 与 Gatekeeper `Notarized Developer ID` 全部通过后，才替换 `v3.14.32` 上的 Mac DMG、ZIP、blockmap 和 `latest-mac.yml`。装订会改写 DMG，摘要必须在装订后重算。
+- 任一环节失败时，公开 Mac 资产和本地上一份已公证 DMG 保持不变。
+- 成功后本地 `release-artifacts` 只保留 `ZenCode-3.14.32-mac-arm64.dmg`。Landing Page 的 macOS 下载入口继续指向这个 GitHub 文件，不改 Windows/Linux 链接。
