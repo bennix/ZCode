@@ -50,3 +50,4 @@ afterPack 复制运行时 → 扫描三个资源目录 → 逐个签 Mach-O → 
 - 从发布仓库 `main` 的当前提交制作独立候选，仅带入图片分析每批上限由十张降为三张的 spec、实现和回归测试；当前工作区的 PDF 编辑改动不进入候选。Core runtime 是分批和进度文案的唯一所有者，批次顺序、已完成批次的内容指纹恢复与失败停止规则保持一致。
 - 根包版本、tag、安装包文件名、Windows/Linux 构建与候选验收工作流统一为 3.14.33。Windows x64/ARM64、Linux x64/ARM64 与 macOS arm64 使用同一最终源码提交。GitHub Release 草稿与构建 run 的提交 SHA 必须相同。
 - Mac 包按 Developer ID 签名、公证、装订并验证 Gatekeeper；Windows/Linux 安装包通过各自真实安装验收，随后核对远端资产摘要。全部完成后公开新版并更新 README 下载入口；任一失败时保留 3.14.32 为 Latest。
+- Windows 的 `latest.yml` 从同一成功构建 run 的 x64/ARM64 安装器计算 SHA-512 与大小；上传草稿后核对 GitHub 摘要，避免使用上一版更新清单。
