@@ -242,3 +242,12 @@ node dist/zcode/debug/zcode/bin/zcode.mjs --web \
 ## 项目声明
 
 功能与优惠范围、维护规则、执行与数据风险，以及许可和第三方版权说明，详见 [NOTICE.md](NOTICE.md)。
+
+## License
+
+### Dual Licensing
+
+- **Open Source**: Original code authored by Xu Zhiping (bennix) is licensed under **GNU General Public License v3.0 only (GPL-3.0-only)** for personal, academic, open-source, and commercial usage, subject to the applicable GPL terms. See [LICENSE](LICENSE) and [LICENSING.md](LICENSING.md).
+- **Commercial License**: For enterprise deployment, SaaS embedding, or proprietary integration where you seek permission beyond the GPL terms for code Xu Zhiping has the right to license, please contact [macdevsh@gmail.com](mailto:macdevsh@gmail.com) to discuss a separate commercial license agreement.
+
+The GPL permits commercial use; enterprise or SaaS use alone does not require a commercial license. A separate commercial agreement applies only when agreed in writing and only to rights the licensor controls. Upstream and third-party code, dependencies, assets, and separately licensed directories retain their own terms; this offer does not grant proprietary rights to them or waive their requirements.
