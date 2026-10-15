@@ -1,5 +1,10 @@
 # ZenCode
 
+> **License / 许可:** Original code authored by bennix: **GPL-3.0-only**.
+> Upstream and third-party material retain their original terms and notices.
+> See [LICENSE](LICENSE) and [LICENSING.md](LICENSING.md) for the current licensing scope.
+
+
 <div align="center">
   <img src="public/icon_512@2x.png" alt="ZenCode blue octopus icon" width="128" height="128" />
 </div>
