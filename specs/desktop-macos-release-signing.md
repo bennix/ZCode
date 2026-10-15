@@ -62,3 +62,9 @@ afterPack 复制运行时 → 扫描三个资源目录 → 逐个签 Mach-O → 
 
 - 从 3.14.33 已验收源码创建新候选，普通批次最多两张；两张截断时按顺序逐张分析。Core runtime 拥有调度，既有 session batch memory 按精确内容指纹保存成功摘要；截断内容不得缓存为成功。单张仍截断、取消或其他错误停止本轮。
 - 根包版本、tag、安装包文件名与安装验收工作流统一为 3.14.34；Mac、Windows x64/ARM64、Linux x64/ARM64 必须来自同一源码提交。草稿和构建 run 的 SHA 一致，安装验收、公证、装订、公开资产摘要复验完成后再发布；此前 3.14.33 保持 Latest 且本地唯一 DMG。
+
+## 3.14.34 发布验收
+
+- 产品源码和 tag 为 `9b8ae6198342569cd43434523404c15a2da37d4e`。Windows 构建 run `38710513616`、Linux 构建 run `38710513493` 均成功；Linux 候选安装验收 `38712781995` 与 Windows 候选安装验收 `38713183697` 均成功。草稿暂存 `38713183193` 与 Windows 更新清单暂存 `38713183443` 成功。
+- Mac DMG 公证 `73ebbf7d-30ab-417c-9373-d4dc3eb7119a`、ZIP 公证 `42d492b4-037e-4f89-9c5e-e6b43eae2da8` 均 Accepted。DMG 已装订，挂载 App 的严格签名和 Gatekeeper `Notarized Developer ID` 通过。装订后 DMG SHA-256 为 `84da6aacfa48aba96abe02a003622ab7193f3d2c888a15be6ac82b19918fac1e`。
+- 12 个正式资产已公开为 Latest。Mac 五个资产的本地 SHA-256 与 GitHub 摘要逐项相同；Windows/Linux 安装包在草稿暂存时已核对构建来源与远端摘要。本地 `release-artifacts` 仅保留最新版已公证 DMG。
