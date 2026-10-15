@@ -1,5 +1,5 @@
 import {rememberedImageBatch} from "../helpers/image-batch-memory.js";
-import {projectImageBatches} from "../helpers/image-batches.js";
+import {IMAGE_BATCH_SIZE,projectImageBatches} from "../helpers/image-batches.js";
 import {auxiliaryModelOptions} from "../../model/auxiliary-model-options.js";
 import {recordModelUsageFact} from "./usage-observability.js";
 import {createChildTraceContext,runWithModelInvocationContext,traceContextToLogContext} from "../deps.js";
@@ -16,7 +16,7 @@ export async function prepareImageBatchMessages(this:AgentRuntimeInternal,messag
   return await projectImageBatches(messages, async (content,batch,total) => {
     const run=async()=>{
     const progress=createModelStreamingEventQueue({events:options.events,runtime:this,traceContext:options.traceContext});
-    progress.enqueue({assistantMessageId:options.assistantMessageId,kind:"text_delta",delta:`正在分析图片：第 ${batch}/${total} 批（每批最多 10 张）。\n`,done:false});
+    progress.enqueue({assistantMessageId:options.assistantMessageId,kind:"text_delta",delta:`正在分析图片：第 ${batch}/${total} 批（每批最多 ${IMAGE_BATCH_SIZE} 张）。\n`,done:false});
     await progress.drain();
     const batchModel=model.bind(auxiliaryModelOptions(model));
     const traceContext=createChildTraceContext(options.traceContext,{attributes:{querySource:"image_batch",batch}});

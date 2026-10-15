@@ -2,7 +2,8 @@ import { parseTaskContinuation } from "@zcode/shared";
 import {findLatestRealUserMessageIndex} from "./conversation.js";
 import type {ModelInputMessage,ModelMessageContentBlock} from "../deps.js";
 import {officialCuaImageRefIndexesForUnavailableMedia,officialCuaRasterUnavailableBlock} from "./official-cua-media.js";
-export const IMAGE_BATCH_SIZE=10;
+// 修复：密集图片按十张分批容易耗尽分析输出预算，将单批上限降为三张。
+export const IMAGE_BATCH_SIZE=3;
 const BATCH_CONTEXT_CHARS=4000;
 type ImageRef={messageIndex:number;blockIndex:number;block:ModelMessageContentBlock};
 export async function projectImageBatches(
