@@ -56,7 +56,7 @@ afterPack 复制运行时 → 扫描三个资源目录 → 逐个签 Mach-O → 
 
 - 产品源码 `ad2d967e2aca9cd93944569fe87c451714fc4785`；Windows 构建 run `38702148262`、Linux 构建 run `38702147805` 均成功。候选安装验收 run `38705457263` 的 Windows x64/ARM64 与 Linux x64/ARM64 DEB/RPM 六项成功。
 - Mac DMG 公证 `60908e3d-99a1-41ff-b4ed-9d194dd2ef06`、ZIP 公证 `df8a1a77-8daf-4d0d-8eee-70feecd8bdff` 均 Accepted。DMG 已装订并验证；挂载 App 的严格签名与 Gatekeeper `Notarized Developer ID` 检查通过。最终 DMG SHA-256 为 `d2c7b81ceb11aff3ff83d658c5ab0b1b030958d12b80b5f3475c4e2d0b367c1a`。
-- 草稿中的六个 Windows/Linux 安装包由成功构建 run 暂存；Mac DMG/ZIP、两个 blockmap 与 `latest-mac.yml` 本地 SHA-256 均与 GitHub 资产摘要一致。Windows `latest.yml` 由同一 Windows 构建 run 生成并核对远端摘要。
+- 草稿中的六个 Windows/Linux 安装包由成功构建 run 暂存；Mac DMG/ZIP、两个 blockmap 与 `latest-mac.yml` 本地 SHA-256 均与 GitHub 资产摘要一致。Windows `latest.yml` 由同一 Windows 构建 run 生成并核对远端摘要。正式下载复验 run `38708083718` 六项全部成功。
 
 ## 3.14.34 双图分批与截断恢复候选
 
@@ -67,4 +67,4 @@ afterPack 复制运行时 → 扫描三个资源目录 → 逐个签 Mach-O → 
 
 - 产品源码和 tag 为 `9b8ae6198342569cd43434523404c15a2da37d4e`。Windows 构建 run `38710513616`、Linux 构建 run `38710513493` 均成功；Linux 候选安装验收 `38712781995` 与 Windows 候选安装验收 `38713183697` 均成功。草稿暂存 `38713183193` 与 Windows 更新清单暂存 `38713183443` 成功。
 - Mac DMG 公证 `73ebbf7d-30ab-417c-9373-d4dc3eb7119a`、ZIP 公证 `42d492b4-037e-4f89-9c5e-e6b43eae2da8` 均 Accepted。DMG 已装订，挂载 App 的严格签名和 Gatekeeper `Notarized Developer ID` 通过。装订后 DMG SHA-256 为 `84da6aacfa48aba96abe02a003622ab7193f3d2c888a15be6ac82b19918fac1e`。
-- 12 个正式资产已公开为 Latest。Mac 五个资产的本地 SHA-256 与 GitHub 摘要逐项相同；Windows/Linux 安装包在草稿暂存时已核对构建来源与远端摘要。本地 `release-artifacts` 仅保留最新版已公证 DMG。
+- 12 个正式资产已公开为 Latest。Mac 五个资产的本地 SHA-256 与 GitHub 摘要逐项相同；Windows/Linux 安装包在草稿暂存时已核对构建来源与远端摘要。本地 `release-artifacts` 仅保留最新版已公证 DMG。正式下载复验 run `38715589970` 的 Windows x64/ARM64 与 Linux x64/ARM64 六项全部成功。
