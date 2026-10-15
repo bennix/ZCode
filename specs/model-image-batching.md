@@ -1,21 +1,18 @@
-# Three-image batches
-When an Agent model request contains more than three visible image blocks, analyze all
-images sequentially in batches of at most three using the selected model. Preserve
-image order and labels (message/block index). Each batch receives nearby text and
-the current task text, has no tools, and produces factual observations with uncertainty.
-Replace image blocks only in the outgoing projection with labeled batch summaries.
-Keep original persisted messages and files unchanged. Final synthesis sees summaries,
-not a repeated full image collection. At three or fewer images leave the request intact.
-Core runtime owns this projection before the existing aggregate byte-budget pass.
-No new session state. Cancel/failure stops subsequent batches and final synthesis;
-do not silently skip images or automatically switch models. Progress is emitted through
-existing model-stream events. CUA image reference credentials must be invalidated with
-their summarized raster, so the model cannot click using a raster it no longer sees.
-Record batch model usage separately. Native PDF page counts are outside this image-block
-policy; explicit rendered PDF images are included.
-Acceptance: 3 images => unchanged; 4 images => 3/1; 8 images => 3/3/2; 51 images => seventeen batches of 3; source remains unchanged; text/tool metadata
-preserved; cancellation and batch failure stop dispatch; <=3 fast path.
+# Two-image batches with truncation recovery
 
-The batch-size constant is the single source for splitting and progress text.
-Changing the limit does not change persistence or recovery: summaries are reused only
-when the existing content fingerprint matches the newly formed batch.
+When a request contains more than two visible image blocks, core runtime analyzes them in source order, normally two per batch. At two or fewer images the request is unchanged. Each batch carries the current task and nearby text. Runtime projects factual summaries into the outgoing request without changing persisted messages or source files. CUA references to replaced rasters are invalidated.
+
+Core runtime owns dispatch and result projection. Existing session batch memory owns completed summary persistence, keyed by model, options, and exact content. A completed normal batch is reused on resume. If a two-image attempt ends at its output-token limit, discard incomplete text and analyze each image alone, in order. Cache each successful single-image result under its own content fingerprint; cache the combined result under the original pair fingerprint. Never mark a truncated attempt completed. If a single image still truncates, fail explicitly. Cancellation or any other error stops subsequent work.
+
+```text
+messages -> core batch projector -> batch memory -> model (2 images)
+                                              success -> persist pair
+                                              truncation -> image 1 -> persist
+                                                         -> image 2 -> persist
+                                                         -> combine -> persist pair
+                                              cancel/error -> stop
+```
+
+The fingerprint, rather than batch number, determines replay identity. No second queue or state owner is introduced. Desktop continuous and mobile replayable delivery both use existing model events; this change does not alter Host ownership or stream delivery.
+
+Acceptance: 2 images unchanged; 3 split 2/1; 8 split 2/2/2/2; a truncated pair retries as 1/1; successful singles are reused after interruption; single-image truncation and cancellation stop the turn; source stays intact.

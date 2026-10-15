@@ -2,18 +2,18 @@ import assert from "node:assert/strict";
 import {test} from "node:test";
 import {projectImageBatches} from "../src/runtime/helpers/image-batches.js";
 const input=(n:number):any[]=>[{role:"user",content:[{type:"text",text:"比较全部图片"},...Array.from({length:n},(_,i)=>({type:"image",source:{type:"url",url:`https://example.com/${i}.png`}}))]}];
-test("51 images are analyzed once each in sequential batches of three, history intact",async()=>{
+test("51 images are analyzed once each in sequential batches of two, history intact",async()=>{
  const source=input(51),before=JSON.stringify(source),sizes:number[]=[];
  const result=await projectImageBatches(source,async(content,batch,total)=>{
-  assert.equal(batch,sizes.length+1);assert.equal(total,17);
+  assert.equal(batch,sizes.length+1);assert.equal(total,26);
   sizes.push(content.filter(b=>b.type==="image").length);return "facts";
  });
- assert.deepEqual(sizes,Array(17).fill(3));
+ assert.deepEqual(sizes,[...Array(25).fill(2),1]);
  assert.equal(JSON.stringify(source),before);
  assert.equal((result[0]!.content as any[]).filter(b=>b.type==="image").length,0);
 });
 test("small requests are unchanged; failure and cancellation stop further work",async()=>{
- const small=input(3);assert.equal(await projectImageBatches(small,async()=>{throw Error("must not run");}),small);
+ const small=input(2);assert.equal(await projectImageBatches(small,async()=>{throw Error("must not run");}),small);
  let calls=0;await assert.rejects(projectImageBatches(input(21),async()=>{calls++;throw Error("fixture");}),/fixture/);assert.equal(calls,1);
  const controller=new AbortController();controller.abort();
  await assert.rejects(projectImageBatches(input(21),async()=>{calls++;return "x";},controller.signal));
@@ -40,13 +40,13 @@ test("continuation with guidance retains original images and task while preservi
  const messages=input(21);messages.push({role:"user",content:"继续执行，先处理剩余图片，最后输出 PDF"});
  const sizes:number[]=[];
  const result=await projectImageBatches(messages,async(content)=>{sizes.push(content.filter(b=>b.type==="image").length);return "facts";});
- assert.deepEqual(sizes,[3,3,3,3,3,3,3]);
+ assert.deepEqual(sizes,[2,2,2,2,2,2,2,2,2,2,1]);
  assert.equal(resolveImageBatchTaskText(messages),"比较全部图片");
  assert.equal(result.at(-1)?.content,"继续执行，先处理剩余图片，最后输出 PDF");
 });
 
-test("four images split into 3/1 and eight into 3/3/2",async()=>{
- for(const [count,expected] of [[4,[3,1]],[8,[3,3,2]]] as const){
+test("three images split into 2/1 and eight into four pairs",async()=>{
+ for(const [count,expected] of [[3,[2,1]],[8,[2,2,2,2]]] as const){
   const sizes:number[]=[];
   await projectImageBatches(input(count),async(content,batch,total)=>{
    assert.equal(batch,sizes.length+1);assert.equal(total,expected.length);

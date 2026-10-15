@@ -36,5 +36,5 @@ test("interrupt in batch two, restart and continue reuse batch one",async()=>{
  messages.push({role:"user",content:"继续"});
  interrupt=false;
  await run();
- assert.deepEqual(calls,[1,2,2,3,4,5,6,7]);
+ assert.deepEqual(calls,[1,2,2,3,4,5,6,7,8,9,10,11]);
 });
