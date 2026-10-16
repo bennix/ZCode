@@ -87,6 +87,14 @@ test("fresh desktop exposes Computer Use settings and shares the plugin toggle",
     for (let step = 0; step < 3; step++) {
       await page.getByText(/^(?:跳过|Skip)$/).click();
     }
+    await page.locator('[data-testid="login-trigger"]').click();
+    await page.getByRole("menuitem", { name: /^(?:使用统计|Usage statistics)$/ }).waitFor();
+    assert.equal(
+      await page.getByRole("menuitem", { name: /(?:升级|upgrade|renew)/i }).count(),
+      0,
+      "profile menu must not expose a generic plan upgrade or renewal row",
+    );
+    await page.keyboard.press("Escape");
     await page
       .getByRole("button", { name: /^(?:设置|Settings)$/ })
       .first()

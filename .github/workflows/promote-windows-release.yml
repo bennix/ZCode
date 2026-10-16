@@ -38,7 +38,7 @@ jobs:
           test "$(jq -r '.conclusion' <<< "$run_json")" = 'success'
           test "$(jq -r '.head_repository.full_name' <<< "$run_json")" = "$GITHUB_REPOSITORY"
           test "$(jq -r '.head_sha' <<< "$run_json")" = "$EXPECTED_SHA"
-          test "$(gh release view v3.14.34 --repo "$GITHUB_REPOSITORY" --json isDraft --jq .isDraft)" = 'false'
+          test "$(gh release view v3.14.35 --repo "$GITHUB_REPOSITORY" --json isDraft --jq .isDraft)" = 'false'
 
       - name: Download verified installer
         uses: actions/download-artifact@v4
@@ -52,6 +52,6 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          installer='release-windows-${{ matrix.arch }}/ZenCode-3.14.34-win-${{ matrix.arch }}.exe'
+          installer='release-windows-${{ matrix.arch }}/ZenCode-3.14.35-win-${{ matrix.arch }}.exe'
           test -f "$installer"
-          node .github/scripts/promote-release-assets.mjs v3.14.34 "$GITHUB_REPOSITORY" "$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT" "$installer"
+          node .github/scripts/promote-release-assets.mjs v3.14.35 "$GITHUB_REPOSITORY" "$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT" "$installer"
