@@ -2,7 +2,8 @@
 
 ## Product rules
 
-- Keep the current bilingual 3.14.32 Landing Page as the source of truth; do not replace it with the stale 3.14.26 page in older checkouts.
+- Keep the current bilingual 3.14.35 Landing Page as the source of truth; do not replace it with the stale 3.14.26 page in older checkouts.
+- The public page is https://bennix.github.io/ZenMuxDev/, published from `bennix/ZenMuxDev` branch `cursor/zenmux-zencode-provider`. Version labels and installer links use GitHub release `v3.14.35`: the notarized macOS Apple Silicon DMG, Windows x64/ARM64 installers, and Linux x64/ARM64 DEB and RPM. Keep the published page's macOS featured download treatment and the existing ZenMux referral disclosure.
 - The first viewport must show a real, information-rich ZenCode product screen. Use the supplied automation workflow screenshot as the hero because its useful UI is legible in a narrow viewport; constrain the hero image height on phones so it does not dominate the first screen. Keep the IDE + AI composer, command palette, and automation screenshots in the gallery with full-size accessible previews. Do not fabricate or edit screenshot contents.
 - Keep all three supplied screenshots in the feature gallery, use specific captions, and let visitors open the full image in an accessible dialog. The dialog is transient UI state owned by `index.html`; it closes with its close control, Escape, or a backdrop click, and browser focus returns to the invoking image button.
 - The feature heading and lead paragraph must retain normal document flow with no overlap at desktop and mobile widths. Reveal/scroll effects must not leave section content hidden when animation is skipped or unsupported.
@@ -23,7 +24,8 @@ The desktop Scheduler is hosted by the running Electron app. It polls due automa
 
 ## Acceptance
 
-- In the 3.14.32 Chinese/English page, the hero shows the supplied automation workflow image and its caption describes the pictured automation controls accurately; at a 390px viewport its image height is constrained and does not create a long full-screen hero.
+- In the 3.14.35 Chinese/English page, the hero shows the supplied automation workflow image and its caption describes the pictured automation controls accurately; at a 390px viewport its image height is constrained and does not create a long full-screen hero.
+- Every visible version label and installer link on the published page resolves to a `v3.14.35` asset, including the hero macOS download and the Windows and Linux package links.
 - Clicking each of the three gallery screenshots opens a legible full-size image; closing by button, Escape, and backdrop works, keyboard focus is restored, and mobile viewport does not overflow horizontally.
 - The product capabilities heading and its description remain readable after scrolling into view at desktop and phone widths; reduced-motion or skipped animation cannot hide content.
 - The workflow comparison includes scheduled/background automation, and the desktop-running, awake-computer, missed-window, and keep-awake limitations are stated clearly in Chinese and English.
