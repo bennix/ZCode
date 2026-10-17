@@ -26,7 +26,7 @@ index; detailed behavior belongs to each feature spec.
 | Weixin B Settings pairing + ping/pong | User confirmed pong; PR #1 ready | Done for B scope |
 | Weixin C allowlist, typing, configured AI text replies | Source and settings browser tests passed; draft PR #2 | Packaged app and live authorized AI/typing response |
 | Weixin D images/files and inbound voice transcription | Inbound CDN/AES/PDF metadata and voice transcription tested; default-model image generation/editing and outbound image upload implemented with protocol/browser tests | Outbound files; live generated-image and multimodal acceptance; separate PR |
-| Configurable cloud Jev typesafe/jev-1.13 | Shared constants and Studio references | Settings and decision-routing audit |
+| Configurable cloud Jev typesafe/jev-1.14 | Shared constants and Studio references | Settings and decision-routing audit |
 | Local Laya: agent-jev or CLM active backend | Reference research only | Runtime contracts, platform support and integration |
 | Separate optional weights for both local backends | Scope clarified, no downloads | Version/progress/size/delete; coexist on disk, no default dual loading |
 | Ponytail necessity/complexity check | Reference recorded | Inspect/license and integrate with existing coding workflow |

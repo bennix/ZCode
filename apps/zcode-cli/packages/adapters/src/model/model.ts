@@ -13,6 +13,7 @@ import {
   type ModelRequest,
   type ModelResult,
 } from "@zcode/contracts";
+import { isZenMuxSystemOneModel } from "@zcode/shared";
 
 export interface ModelExecutionRequest extends Omit<ModelRequest, "options"> {
   options: Required<ModelOptions>;
@@ -80,6 +81,19 @@ class ExecutableModel implements Model {
 
   private prepareRequest(request: ModelRequest): ModelExecutionRequest {
     validateRequestProperties(this.properties, request);
+    if (isZenMuxSystemOneModel(this.modelId)) {
+      // System One 没有对话档位。连接探测不绑定 options；占位值不会发给供应商。
+      return {
+        messages: request.messages,
+        tools: request.tools,
+        responseJsonSchema: request.responseJsonSchema,
+        abortSignal: request.abortSignal,
+        options: {
+          maxOutputTokens: 16,
+          reasoningLevel: "system-one",
+        },
+      };
+    }
     const requestOptions = request.options ?? {};
     return {
       messages: request.messages,

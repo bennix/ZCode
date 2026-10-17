@@ -9,14 +9,30 @@ export const ZENMUX_BUILTIN_MODEL_IDS = [
   "openai/gpt-6-sol",
   "anthropic/claude-opus-5.5",
   "x-ai/grok-4.7",
-  "typesafe/jev-1.13",
+  "typesafe/jev-1.14",
 ] as const;
 
-/** System One 决策模型。不能走 chat completions。 */
-export const ZENMUX_SYSTEM_ONE_MODEL_ID = "typesafe/jev-1.13";
+/** 当前默认的 System One 决策模型。不能走 chat completions。用户可在设置里改成其他模型和调用方式。 */
+export const ZENMUX_SYSTEM_ONE_MODEL_ID = "typesafe/jev-1.14";
 
 export function isZenMuxSystemOneModel(modelId: string | null | undefined): boolean {
   return modelId?.trim() === ZENMUX_SYSTEM_ONE_MODEL_ID;
+}
+
+/** 设置页连接探测的固定正文。System One 模型用它识别探测，不能改成普通对话。 */
+export const ZENMUX_CONNECTIVITY_PROBE_SYSTEM = "You are ZCode connectivity probe.";
+export const ZENMUX_CONNECTIVITY_PROBE_USER = "hi";
+
+export function isZenMuxConnectivityProbe(
+  messages: readonly { role: string; content: unknown }[],
+): boolean {
+  return (
+    messages.length === 2 &&
+    messages[0]?.role === "system" &&
+    messages[0]?.content === ZENMUX_CONNECTIVITY_PROBE_SYSTEM &&
+    messages[1]?.role === "user" &&
+    messages[1]?.content === ZENMUX_CONNECTIVITY_PROBE_USER
+  );
 }
 
 export type ZenMuxSystemOneQuestionType = "noul" | "choice" | "score";

@@ -5189,7 +5189,10 @@ const enUS: Record<string, string> = {
   "chat.studio.duration": "Duration (sec)",
   "settings.studioMedia.evaluatorModel": "PPT layout evaluator (JEV)",
   "settings.studioMedia.evaluatorHelp":
-    "Defaults to typesafe/jev-1.13 via System One. Advice is sent to the repair model above. Leave blank to disable. Local checks continue if evaluation fails.",
+    "Defaults to typesafe/jev-1.14. You can change the model later. System One uses its decision endpoint; Chat uses chat completion. Leave blank to disable. Local checks continue if evaluation fails.",
+  "settings.studioMedia.evaluatorApi": "Invocation",
+  "settings.studioMedia.evaluatorApi.systemOne": "System One",
+  "settings.studioMedia.evaluatorApi.chat": "Chat completion",
   "settings.studioMedia.repairModel": "PPT repair model",
   "settings.studioMedia.followWriter": "Use the drafting model",
   "settings.studioMedia.repairHelp":

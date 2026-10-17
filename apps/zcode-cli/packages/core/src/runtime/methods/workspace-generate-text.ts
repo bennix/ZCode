@@ -5,6 +5,7 @@ import {
   traceContextToLogContext,
 } from "../deps.js";
 import type {
+  Model,
   ModelInputMessage,
   ModelSelection,
   ModelRequest,
@@ -20,12 +21,19 @@ import { recordModelUsageFact } from "./usage-observability.js";
 import { createRuntimeModel } from "./runtime-model.js";
 import { normalizeStreamError } from "../helpers/index.js";
 import { auxiliaryModelOptions } from "../../model/auxiliary-model-options.js";
+import {
+  isZenMuxSystemOneModel,
+  ZENMUX_CONNECTIVITY_PROBE_SYSTEM,
+  ZENMUX_CONNECTIVITY_PROBE_USER,
+} from "@zcode/shared";
 
 const WORKSPACE_GENERATE_TEXT_TIMEOUT_MS = 60_000;
-const CONNECTIVITY_PROBE_MAX_OUTPUT_TOKENS = 1;
+// gpt-6-astra 等模型拒绝 max_output_tokens < 16。探测若仍传 1，请求已经到达供应商也会被 400，
+// 设置页会把它显示成连接失败。16 是当前供应商公开的下限，仍然远小于辅助生成的 5000。
+const CONNECTIVITY_PROBE_MAX_OUTPUT_TOKENS = 16;
 // 探测请求使用固定最小 prompt，避免多余推理开销；不可改写角色、文本或混入会话历史。
-const CONNECTIVITY_PROBE_SYSTEM = "You are ZCode connectivity probe.";
-const CONNECTIVITY_PROBE_USER = "hi";
+const CONNECTIVITY_PROBE_SYSTEM = ZENMUX_CONNECTIVITY_PROBE_SYSTEM;
+const CONNECTIVITY_PROBE_USER = ZENMUX_CONNECTIVITY_PROBE_USER;
 const GIT_COMMIT_MESSAGE_QUERY_SOURCE = "git_commit_message";
 const WEIXIN_INTENT_QUERY_SOURCE = "weixin-intent";
 
@@ -56,12 +64,29 @@ export async function testModelConnectivity(
   options?: { abortSignal?: AbortSignal; traceContext?: TraceContext },
 ): Promise<void> {
   const baseModel = createRuntimeModel(this, { selection: input.selection });
+  // typesafe/jev-1.14 没有对话档位，也不能走 /chat/completions。探测保持未绑定，
+  // 由适配器识别固定探测正文后改发 System One。
+  if (isZenMuxSystemOneModel(String(baseModel.modelId))) {
+    await runConnectivityProbe.call(this, baseModel, options);
+    return;
+  }
   // 连接探测不需要生成正文；复用辅助生成的 5,000 预算会等待多余推理和输出。
-  // 独立限制为 1 Token，仍使用最低公开档位，不改变其他辅助调用的预算。
+  // 预算取供应商下限与模型声明上限中的较小值，仍使用最低公开档位，不改变其他辅助调用。
   const model = baseModel.bind({
     reasoningLevel: baseModel.optionSpecs.reasoningLevel.values[0]!,
-    maxOutputTokens: CONNECTIVITY_PROBE_MAX_OUTPUT_TOKENS,
+    maxOutputTokens: Math.min(
+      CONNECTIVITY_PROBE_MAX_OUTPUT_TOKENS,
+      baseModel.optionSpecs.maxOutputTokens.max,
+    ),
   });
+  await runConnectivityProbe.call(this, model, options);
+}
+
+async function runConnectivityProbe(
+  this: AgentRuntimeInternal,
+  model: Model,
+  options?: { abortSignal?: AbortSignal; traceContext?: TraceContext },
+): Promise<void> {
   const traceContext = createChildTraceContext(options?.traceContext ?? this.rootTraceContext, {
     attributes: {
       providerId: String(model.providerId),

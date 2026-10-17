@@ -113,12 +113,12 @@ wiki generation are separately tracked deliverables, not implied by text indexin
   pairing and ping/pong. See `weixin-ilink-echo.md`; other work retains its current
   incomplete state until this milestone's live gate.
 - `/goal` auxiliary reference: `qybaihe/mu`; inspect its API and license first.
-- ZenMux Jev: user-provided model identifier `typesafe/jev-1.13`, configurable in
+- ZenMux Jev: user-provided model identifier `typesafe/jev-1.14`, configurable in
   Settings. Laya reference `malevrigns/agent-jev`; inspect actual runtime and weight
   licensing before adding download/progress/removal UI. No weight download yet.
 
 User clarification: `agent-jev` is the local Laya backend and may cooperate with
-ZenMux `typesafe/jev-1.13`. Preserve two configurable backends and inspect their
+ZenMux `typesafe/jev-1.14`. Preserve two configurable backends and inspect their
 actual typed decision protocols before choosing delegation or fallback behavior.
 
 - Ponytail (`DietrichGebert/ponytail`): inspect its pre-implementation necessity

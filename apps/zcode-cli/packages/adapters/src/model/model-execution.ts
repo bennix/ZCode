@@ -324,6 +324,10 @@ export class AiSdkModelExecution {
     return providerConfig.apiKey;
   }
 
+  providerFetch(providerId: string): ProviderFetch {
+    return this.resolveProviderTransport(providerId);
+  }
+
   private resolveProviderTransport(providerId: string): ProviderFetch {
     const current = this.providerTransports.get(providerId);
     if (current) {

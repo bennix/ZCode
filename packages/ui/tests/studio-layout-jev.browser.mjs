@@ -76,7 +76,7 @@ try {
     };
   });
   assert.equal(result.firstCalls.length, 2);
-  assert.equal(result.firstCalls[0].body.model, "typesafe/jev-1.13");
+  assert.equal(result.firstCalls[0].body.model, "typesafe/jev-1.14");
   assert.ok(result.firstCalls[0].url.endsWith("/systemone"));
   assert.equal(result.firstCalls[1].body.model, "repair-test");
   assert.deepEqual(JSON.parse(result.firstCalls[1].body.messages[1].content).evaluation, {

@@ -1,3 +1,22 @@
+import type { ModelId } from "./config/index.js";
+
+/** 内置目录更换默认模型时，只迁移这个旧 ID。用户后来自填的其他 ID 保持原样。 */
+const RETIRED_BUILTIN_MODEL_IDS = new Map<ModelId, ModelId>([
+  ["typesafe/jev-1.13", "typesafe/jev-1.14"],
+]);
+
+export function renameRetiredBuiltinModelIds(
+  builtinModelIds: readonly ModelId[],
+  requested: readonly ModelId[],
+): ModelId[] {
+  const builtin = new Set(builtinModelIds);
+  return requested.map((modelId) => {
+    const next = RETIRED_BUILTIN_MODEL_IDS.get(modelId);
+    // 新 ID 还没进入当前目录时保持旧值，避免顺序指向不存在的模型。
+    return next && builtin.has(next as ModelId) ? next : modelId;
+  });
+}
+
 /**
  * 规范化 Built-in/Personal 共同拥有的可排序成员。
  *

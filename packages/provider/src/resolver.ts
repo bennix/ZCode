@@ -19,7 +19,7 @@ import {
   type ProviderTemplateMap,
   type ProviderId,
 } from "./config/index.js";
-import { resolveOwnedOrder } from "./owned-order.js";
+import { renameRetiredBuiltinModelIds, resolveOwnedOrder } from "./owned-order.js";
 import type { AccountProviderStates } from "./account-provider-state.js";
 
 export type RegistryZhipuAccountAccessConfig = ZhipuAccountAccessConfig &
@@ -247,7 +247,7 @@ export class ProviderConfigResolver {
       const orderedModelIds = resolveOwnedOrder(
         builtinIdsInOrder,
         personalIdsInOrder,
-        config.modelOrder ?? [],
+        renameRetiredBuiltinModelIds(builtinIdsInOrder, config.modelOrder ?? []),
       );
       const accessEntitled =
         config.access?.type !== "zhipu-account" || config.access.entitled === true;

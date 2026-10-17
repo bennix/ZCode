@@ -10,7 +10,9 @@ export function StudioMediaSettings() {
   const { intl } = useZCodeIntl();
   const repairModel = useStudioRepairModelStore((state) => state.modelId);
   const evaluatorModel = useStudioRepairModelStore((state) => state.evaluatorModelId);
+  const evaluatorApi = useStudioRepairModelStore((state) => state.evaluatorApi);
   const setEvaluatorModel = useStudioRepairModelStore((state) => state.setEvaluatorModelId);
+  const setEvaluatorApi = useStudioRepairModelStore((state) => state.setEvaluatorApi);
   const setRepairModel = useStudioRepairModelStore((state) => state.setModelId);
   const { library, save, loading, error } = useStudioMediaLibrary();
   const [saving, setSaving] = useState(false);
@@ -55,9 +57,28 @@ export function StudioMediaSettings() {
           id="studio-layout-evaluator"
           value={evaluatorModel}
           onChange={(event) => setEvaluatorModel(event.target.value)}
+          placeholder="typesafe/jev-1.14"
           aria-describedby="studio-layout-evaluator-help"
           className="h-8 w-full rounded-lg border border-border bg-background px-2 font-mono text-ui-caption"
         />
+        <label htmlFor="studio-layout-evaluator-api" className="mb-2 mt-3 block text-ui-caption">
+          {intl.formatMessage({ id: "settings.studioMedia.evaluatorApi" })}
+        </label>
+        <select
+          id="studio-layout-evaluator-api"
+          value={evaluatorApi}
+          onChange={(event) =>
+            setEvaluatorApi(event.target.value === "chat" ? "chat" : "system-one")
+          }
+          className="h-8 w-full rounded-lg border border-border bg-background px-2 text-ui-caption"
+        >
+          <option value="system-one">
+            {intl.formatMessage({ id: "settings.studioMedia.evaluatorApi.systemOne" })}
+          </option>
+          <option value="chat">
+            {intl.formatMessage({ id: "settings.studioMedia.evaluatorApi.chat" })}
+          </option>
+        </select>
         <p id="studio-layout-evaluator-help" className="mt-2 text-ui-caption text-muted-foreground">
           {intl.formatMessage({ id: "settings.studioMedia.evaluatorHelp" })}
         </p>

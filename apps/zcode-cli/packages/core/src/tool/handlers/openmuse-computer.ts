@@ -217,13 +217,13 @@ const handler: ToolHandler = async (input) => {
 };
 
 export const computerUseToolEntry: ToolEntry = {
-  capability: "Drive a local browser and ask typesafe/jev-1.13 which action to take",
+  capability: "Drive a local browser and ask typesafe/jev-1.14 which action to take",
   metadata: {
     name: TOOL_NAME,
     description: [
       "OpenMuse-style computer use on a local Chromium session.",
       "navigate/read/click/type/key/scroll/screenshot/close control the browser.",
-      "decide sends the page text and goal to typesafe/jev-1.13 via POST /api/v1/systemone.",
+      "decide sends the page text and goal to typesafe/jev-1.14 via POST /api/v1/systemone.",
       "Jev is not a chat model: it returns a typed next_action and goal_done probability.",
       "Only public http(s) pages. Do not use it for login, payment, or private networks.",
       `next_action is one of: ${COMPUTER_ACTIONS.join(", ")}.`,

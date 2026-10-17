@@ -1,5 +1,8 @@
-import { callZenMuxSystemOne } from "@zcode/shared";
-import { useStudioRepairModelStore } from "@/store/studioRepairModelStore.js";
+import { callZenMuxSystemOne, completeZenMuxChat } from "@zcode/shared";
+import {
+  useStudioRepairModelStore,
+  type StudioEvaluatorApi,
+} from "@/store/studioRepairModelStore.js";
 import { streamStudioChat, type StudioRetry } from "./studioChatRetry.js";
 import { applyDeckTheme, type DeckTheme } from "./deckTheme.js";
 import { prepareDeckHtml, measureDeckPages } from "./htmlToEditablePptx.js";
@@ -241,6 +244,71 @@ export async function ensureSlideLayout(input: {
   }
 }
 
+async function requestSlideEvaluation(input: {
+  api: StudioEvaluatorApi;
+  apiKey: string;
+  model: string;
+  html: string;
+  issues: SlideLayoutIssue[];
+  contentContext?: string;
+  signal: AbortSignal;
+}): Promise<unknown> {
+  if (input.api === "chat") {
+    const result = await completeZenMuxChat({
+      apiKey: input.apiKey,
+      model: input.model,
+      messages: [
+        {
+          role: "system",
+          content: "Return one JSON object evaluating this slide. Do not use markdown.",
+        },
+        {
+          role: "user",
+          content: JSON.stringify({
+            html: input.html,
+            issues: input.issues,
+            contentContext: input.contentContext,
+          }),
+        },
+      ],
+      maxTokens: 800,
+      signal: input.signal,
+    });
+    try {
+      return JSON.parse(result.content) as unknown;
+    } catch {
+      return { advice: result.content };
+    }
+  }
+  return callZenMuxSystemOne(
+    input.apiKey,
+    {
+      model: input.model,
+      state: { html: input.html, issues: input.issues, contentContext: input.contentContext },
+      questions: {
+        repair_priority: {
+          type: "choice",
+          instructions:
+            "选择此页最优先的版面修复策略。保留完整内容，不能通过隐藏、删除或缩小正文回避问题。",
+          criteria: {
+            reflow: "重新分配内容区域，修复重叠或越界",
+            hierarchy: "改善标题、正文与重点的视觉层级",
+            resources: "修复图片或导出资源",
+            preserve: "保持现有版面，仅修复本地检查报告的问题",
+          },
+        },
+        layout_quality: {
+          type: "score",
+          instructions:
+            "评估单页 PPT 的可读性、层级、空间布局与内容完整性；结合报告的问题，不得建议隐藏或删除内容。",
+        },
+      },
+    },
+    undefined,
+    (url, options) => fetch(url, { ...options, signal: input.signal }),
+  );
+}
+
 export async function repairStudioSlide(input: {
   html: string;
   apiKey: string;
@@ -256,7 +324,9 @@ export async function repairStudioSlide(input: {
   onLayoutProgress?: (progress: SlideLayoutProgress) => void;
   onRetry?: (retry: StudioRetry) => void;
 }): Promise<string> {
-  const evaluator = useStudioRepairModelStore.getState().evaluatorModelId.trim();
+  const settings = useStudioRepairModelStore.getState();
+  const evaluator = settings.evaluatorModelId.trim();
+  const evaluatorApi = settings.evaluatorApi;
   return ensureSlideLayout({
     ...input,
     evaluate: evaluator
@@ -265,33 +335,15 @@ export async function repairStudioSlide(input: {
           try {
             // 独立信号限制评估等待，用户取消必须透传，不能继续修复旧任务。
             const signal = AbortSignal.any([input.signal, AbortSignal.timeout(120_000)]);
-            return await callZenMuxSystemOne(
-              input.apiKey,
-              {
-                model: evaluator,
-                state: { html, issues, contentContext: input.contentContext },
-                questions: {
-                  repair_priority: {
-                    type: "choice",
-                    instructions:
-                      "选择此页最优先的版面修复策略。保留完整内容，不能通过隐藏、删除或缩小正文回避问题。",
-                    criteria: {
-                      reflow: "重新分配内容区域，修复重叠或越界",
-                      hierarchy: "改善标题、正文与重点的视觉层级",
-                      resources: "修复图片或导出资源",
-                      preserve: "保持现有版面，仅修复本地检查报告的问题",
-                    },
-                  },
-                  layout_quality: {
-                    type: "score",
-                    instructions:
-                      "评估单页 PPT 的可读性、层级、空间布局与内容完整性；结合报告的问题，不得建议隐藏或删除内容。",
-                  },
-                },
-              },
-              undefined,
-              (url, options) => fetch(url, { ...options, signal }),
-            );
+            return await requestSlideEvaluation({
+              api: evaluatorApi,
+              apiKey: input.apiKey,
+              model: evaluator,
+              html,
+              issues,
+              contentContext: input.contentContext,
+              signal,
+            });
           } catch {
             input.signal.throwIfAborted();
             input.onOutput("版面评估暂不可用，继续本地检查和修复。");

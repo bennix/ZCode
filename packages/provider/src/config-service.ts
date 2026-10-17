@@ -17,7 +17,7 @@ import {
   resolveProviderTemplateName,
 } from "./config/index.js";
 import { isApiKeyAccess } from "./config/provider-config.js";
-import { resolveOwnedOrder } from "./owned-order.js";
+import { renameRetiredBuiltinModelIds, resolveOwnedOrder } from "./owned-order.js";
 import type { ModelSelection } from "@zcode/shared/model-selection";
 import type { ProviderConfigSnapshot, ProviderSource } from "./sources.js";
 
@@ -707,7 +707,13 @@ function normalizeModelOrder(
   personalModelIds: readonly ModelId[],
   requested: readonly ModelId[],
 ): ModelId[] {
-  return [...resolveOwnedOrder(builtinModelIds, personalModelIds, requested)];
+  return [
+    ...resolveOwnedOrder(
+      builtinModelIds,
+      personalModelIds,
+      renameRetiredBuiltinModelIds(builtinModelIds, requested),
+    ),
+  ];
 }
 
 function nextPersonalProviderId(

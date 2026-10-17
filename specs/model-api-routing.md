@@ -6,6 +6,9 @@ per entry. Unspecified models use the provider type. ZenMux's built-in Grok 4.7 
 Responses because its file input is rejected on Chat Completions. Other models are unchanged.
 Settings exposes the map next to the existing connection protocol selector and uses the same
 serialized draft/save command. No credentials or second persistence store are introduced.
+The built-in model `typesafe/jev-1.14` is System One. Its settings connectivity probe uses
+`POST /api/v1/systemone` and does not call `/chat/completions`. Other models keep their
+existing probe. This is an exact model-id route, not a retry after a chat error.
 
 ```mermaid
 sequenceDiagram

@@ -247,7 +247,7 @@ function resolveProviderApiFormat(providerOptions?: Record<string, unknown>): st
 function assertNotSystemOneChat(modelId: string): void {
   if (!isZenMuxSystemOneModel(modelId)) return;
   throw new Error(
-    "typesafe/jev-1.13 使用 POST /api/v1/systemone（state + questions），不能作为聊天模型调用。请用 ComputerUse 的 decide 动作。",
+    "typesafe/jev-1.14 使用 POST /api/v1/systemone（state + questions），不能作为聊天模型调用。请用 ComputerUse 的 decide 动作。",
   );
 }
 

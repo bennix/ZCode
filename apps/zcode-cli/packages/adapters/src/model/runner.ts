@@ -20,6 +20,11 @@ import type {
 } from "@zcode/contracts";
 import type { RegistryModelConfig, RegistryProviderConfig } from "@zcode/provider";
 import {
+  callZenMuxSystemOne,
+  isZenMuxConnectivityProbe,
+  isZenMuxSystemOneModel,
+} from "@zcode/shared";
+import {
   AiSdkModelExecution,
   type AiSdkResolvedModel,
   type AiSdkNetworkConfig,
@@ -152,6 +157,7 @@ export class AiSdkModelAdapter {
         : {}),
     };
     const optionSpecs = options.modelConfig.optionSpecs;
+    const execution = this.execution;
     const toLegacyRequest = (request: ModelExecutionRequest): AiSdkModelTextRequest => {
       const context = getCurrentModelInvocationContext();
       const {
@@ -275,6 +281,18 @@ export class AiSdkModelAdapter {
           );
         },
         streamText: (request) => {
+          if (
+            isZenMuxSystemOneModel(resolved.modelId) &&
+            isZenMuxConnectivityProbe(request.messages)
+          ) {
+            return probeZenMuxSystemOneConnectivity({
+              apiKey: readProviderApiKey(options.providerConfig),
+              baseUrl: options.providerConfig.api.baseUrl,
+              fetchImpl: execution.providerFetch(options.providerId),
+              modelId: resolved.modelId,
+              signal: request.abortSignal,
+            });
+          }
           const legacyRequest = toLegacyRequest(request);
           return this.streamTextWithResolved(
             legacyRequest,
@@ -326,6 +344,37 @@ export class AiSdkModelAdapter {
       modelIoFullRetentionEnabled: this.modelIoFullRetentionEnabled,
     });
   }
+}
+
+async function* probeZenMuxSystemOneConnectivity(input: {
+  apiKey: string;
+  baseUrl: string;
+  fetchImpl: typeof fetch;
+  modelId: string;
+  signal?: AbortSignal;
+}): AsyncGenerator<ModelStreamEvent> {
+  const apiKey = input.apiKey.trim();
+  if (!apiKey) throw new Error("ZenMux API Key 为空");
+  await callZenMuxSystemOne(
+    apiKey,
+    {
+      model: input.modelId,
+      state: "connectivity",
+      questions: {
+        ready: {
+          type: "noul",
+          instructions: "Reply with a short acknowledgement.",
+        },
+      },
+    },
+    input.baseUrl,
+    (url, init) => input.fetchImpl(url, { ...init, signal: input.signal }),
+  );
+  yield { type: "finish", finishReason: "stop", usage: {} };
+}
+
+function readProviderApiKey(config: RegistryProviderConfig): string {
+  return config.access.type === "zhipu-account" ? "" : (config.access.apiKey ?? "");
 }
 
 function requireMaxOutputTokens(options: ModelOptions): number {
