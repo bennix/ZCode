@@ -38,6 +38,7 @@ async function generateVertexImage(
   prompt: string,
   images: readonly Blob[],
   ratio: string | undefined,
+  signal?: AbortSignal,
 ): Promise<string> {
   const encoded = await Promise.all(
     images.map(async (image) => ({
@@ -54,6 +55,7 @@ async function generateVertexImage(
       "Content-Type": "application/json",
     },
     body: JSON.stringify(request.body),
+    signal,
   });
   const payload = await response.text();
   if (!response.ok) throw new Error(imageError(response.status, payload));
@@ -71,9 +73,11 @@ export async function generateStudioImage(
   model = readStudioImageModel(),
   image: Blob | readonly Blob[] | null = null,
   ratio?: string,
+  signal?: AbortSignal,
 ): Promise<string> {
+  signal?.throwIfAborted();
   const images = image == null ? [] : Array.isArray(image) ? image : [image];
-  return generateVertexImage(apiKey, model, prompt, images, ratio);
+  return generateVertexImage(apiKey, model, prompt, images, ratio, signal);
 }
 
 export function editStudioImage(
