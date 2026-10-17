@@ -88,7 +88,8 @@ test("fresh desktop exposes Computer Use settings and shares the plugin toggle",
       await page.getByText(/^(?:跳过|Skip)$/).click();
     }
     await page.locator('[data-testid="login-trigger"]').click();
-    await page.getByRole("menuitem", { name: /^(?:使用统计|Usage statistics)$/ }).waitFor();
+    // 英文文案来自 sidebar.usage.plan.openStats，是 Usage stats，不是 Usage statistics。
+    await page.getByRole("menuitem", { name: /^(?:使用统计|Usage stats)$/ }).waitFor();
     assert.equal(
       await page.getByRole("menuitem", { name: /(?:升级|upgrade|renew)/i }).count(),
       0,

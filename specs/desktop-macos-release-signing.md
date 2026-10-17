@@ -68,10 +68,12 @@ afterPack 复制运行时 → 扫描三个资源目录 → 逐个签 Mach-O → 
 - 账户头像菜单移除独立的套餐升级/续费行，保留使用统计、账户操作、套餐卡片和上下文配额提示中的套餐入口。
 - 根包版本、tag、安装包名称和安装验收工作流统一为 3.14.35。Windows x64/ARM64、Linux x64/ARM64 与 macOS arm64 安装包必须来自同一源码提交；Windows/Linux 安装验收和 macOS Developer ID 签名、公证、DMG 装订及 Gatekeeper 验收全部通过后才能发布。
 - 候选构建 run 的 `head_sha`、草稿 Release target 和 Mac 包源码必须一致。任一构建或公证验收失败时，v3.14.34 继续作为 Latest，本地唯一已公证 DMG 保持不变。
-- 账户菜单 E2E 验收要求能打开使用统计菜单项，且没有升级或续费菜单项；其他套餐与配额入口仍可用。
+- 账户菜单 E2E 验收要求能打开使用统计菜单项，且没有升级或续费菜单项；其他套餐与配额入口仍可用。英文可见文案是 `Usage stats`，中文是 `使用统计`。
 
 ### 2026-10-17 公证构建尝试记录
 
 - 3.14.35 Mac ARM64 使用 Developer ID 身份构建；内层 31 个原生文件预签名成功。electron-builder 主 App 签名三次都因 Apple TSA 返回 `The timestamp service is not available` 失败，尚未提交新的 Apple 公证。禁止关闭安全时间戳、跳过签名或将失败候选设为下载资产。
 - TLS 证据：`timestamp.apple.com:80` TCP 可连，443 建连后在 ClientHello 阶段被对端断开（curl `SSL_ERROR_SYSCALL`、OpenSSL `unexpected eof while reading`）。NTP 查询估计本机时钟偏差约 49 毫秒；未执行系统时钟调整。
 - 本地保留 `release-artifacts/ZenCode-3.14.34-mac-arm64.dmg`，SHA-256 `84da6aacfa48aba96abe02a003622ab7193f3d2c888a15be6ac82b19918fac1e`。其 `stapler validate`、挂载后 App 的深度签名验证和 Gatekeeper `Notarized Developer ID` 验收均通过。
+- 2026-10-17 重试后，正式版 `ZenCode.app`（`dev.zcode.app`）签名成功。Office CLI `1.0.152` 的 `officecli-mac-arm64` Team ID 为 `5N66S29EK2`。DMG 公证 `e5a16250-83b5-4348-96fd-a2b6cccb2669` 与 ZIP 公证 `61637c34-aeeb-48c6-942a-eda2a70cad14` 均为 Accepted，DMG 已装订。通过 Gatekeeper 后，本地 `release-artifacts` 只保留 `ZenCode-3.14.35-mac-arm64.dmg`，SHA-256 `df7e63710637a784fdcbe23e7af0322554c71d057579c2007312bd51b9f29a99`。`v3.14.35` 已发布这份 macOS 资产，但在 Windows/Linux 安装验收通过前，`v3.14.34` 继续作为 GitHub Latest。
+- Windows package run `38979330423` 与 Linux packages run `38979330760` 在同一源码 `6c7ba6509943d0e84146ee84a4ebe02bb293a7f9` 上失败。四个作业都已产出安装包，随后在账户菜单验收超时：打包应用的英文菜单项是 `Usage stats`，测试却等待 `Usage statistics`。后续只修正该定位和本说明；产品界面与已公证 Mac 包一致。Windows/Linux 从该修正提交重建，安装验收通过后再把安装包上传到 `v3.14.35` 并切换 Latest。
