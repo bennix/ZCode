@@ -4857,7 +4857,7 @@ const zhCN: Record<string, string> = {
   "chat.studio.nextPage": "下一页",
   "chat.studio.page": "第 {page} / {total} 页",
   "chat.studio.copyImage": "拷贝",
-  "chat.studio.saveImage": "保存",
+  "chat.studio.saveImage": "下载",
   "chat.studio.generating": "正在生成",
   "chat.studio.painting": "正在生成图片",
   "chat.studio.finalPrompt": "最终提示词",

@@ -5178,7 +5178,7 @@ const enUS: Record<string, string> = {
   "chat.studio.nextPage": "Next",
   "chat.studio.page": "{page} / {total}",
   "chat.studio.copyImage": "Copy",
-  "chat.studio.saveImage": "Save",
+  "chat.studio.saveImage": "Download",
   "chat.studio.generating": "Generating",
   "chat.studio.painting": "Generating image",
   "chat.studio.finalPrompt": "Final prompt",

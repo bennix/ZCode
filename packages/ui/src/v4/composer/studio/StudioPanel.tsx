@@ -1108,6 +1108,37 @@ export function StudioPanel({
     }
   };
 
+  const copyImage = () => {
+    if (!outputUrl || typeof navigator === "undefined" || !navigator.clipboard?.write) {
+      setError("无法拷贝图片");
+      return;
+    }
+    const url = outputUrl;
+    const item = new ClipboardItem({
+      "image/png": blobFromUrl(url).then((blob) => imagePngBlob(blob)),
+    });
+    void navigator.clipboard.write([item]).catch((copyError: unknown) => {
+      setError(copyError instanceof Error ? copyError.message : "无法拷贝图片");
+    });
+  };
+
+  const saveImage = async () => {
+    if (!outputUrl || !platform.saveFile) {
+      setError("无法下载图片");
+      return;
+    }
+    try {
+      const blob = await blobFromUrl(outputUrl);
+      const result = await platform.saveFile({
+        data: await blob.arrayBuffer(),
+        suggestedName: `zencode-image.${imageExtension(blob.type)}`,
+      });
+      if (!result.success && result.error) setError(result.error);
+    } catch (saveError) {
+      setError(saveError instanceof Error ? saveError.message : "无法下载图片");
+    }
+  };
+
   const addDeckFiles = async (files: Iterable<File>) => {
     const next: DeckFile[] = [];
     for (const file of files) {
@@ -1898,7 +1929,29 @@ export function StudioPanel({
             <p className="mt-1 whitespace-pre-wrap text-ui-base">{shownFinal}</p>
           </div>
         ) : null}
-        {outputUrl && mode === "image" ? <ZoomPanImage src={outputUrl} /> : null}
+        {outputUrl && mode === "image" ? (
+          <div>
+            <ZoomPanImage src={outputUrl} />
+            <div className="mt-2 flex gap-2">
+              <Button
+                type="button"
+                variant="ghost"
+                className="h-8 px-3 text-ui-caption"
+                onClick={copyImage}
+              >
+                {intl.formatMessage({ id: "chat.studio.copyImage" })}
+              </Button>
+              <Button
+                type="button"
+                variant="ghost"
+                className="h-8 px-3 text-ui-caption"
+                onClick={() => void saveImage()}
+              >
+                {intl.formatMessage({ id: "chat.studio.saveImage" })}
+              </Button>
+            </div>
+          </div>
+        ) : null}
         {videoUrl && mode === "video" ? (
           <video src={videoUrl} controls className="mt-2 max-h-80 w-full rounded-xl" />
         ) : null}
@@ -2088,6 +2141,30 @@ function GeneratingMark({ label }: { label: string }) {
       <span className="text-ui-caption text-muted-foreground">{label}</span>
     </div>
   );
+}
+
+function imageExtension(mimeType: string): string {
+  if (mimeType === "image/jpeg") return "jpg";
+  if (mimeType === "image/webp") return "webp";
+  if (mimeType === "image/gif") return "gif";
+  return "png";
+}
+
+async function imagePngBlob(blob: Blob): Promise<Blob> {
+  if (blob.type === "image/png") return blob;
+  const bitmap = await createImageBitmap(blob);
+  const canvas = document.createElement("canvas");
+  canvas.width = bitmap.width;
+  canvas.height = bitmap.height;
+  const context = canvas.getContext("2d");
+  if (!context) throw new Error("无法拷贝图片");
+  context.drawImage(bitmap, 0, 0);
+  bitmap.close();
+  const png = await new Promise<Blob | null>((resolve) =>
+    canvas.toBlob((value) => resolve(value), "image/png"),
+  );
+  if (!png) throw new Error("无法拷贝图片");
+  return png;
 }
 
 async function blobToDataUrl(blob: Blob): Promise<string> {
