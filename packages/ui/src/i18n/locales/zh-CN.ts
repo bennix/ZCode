@@ -2097,21 +2097,29 @@ const zhCN: Record<string, string> = {
   "settings.memory.viewer.fileTooLarge": "该记忆文件超过 5 MiB 预览上限。",
   "settings.memory.viewer.fileChanged": "该记忆文件在读取期间已更新，请重新打开或刷新文件列表。",
   "settings.memory.viewer.noSelection": "选择一个记忆文件以查看内容。",
-  "settings.httpProxy": "HTTP 代理",
+  "settings.httpProxy": "网络代理",
+  "settings.httpProxyMode": "代理方式",
+  "settings.httpProxyMode.auto": "自动",
+  "settings.httpProxyMode.manual": "手动",
+  "settings.httpProxyMode.direct": "直连",
   "settings.httpProxyDescription":
-    "模型、MCP、命令工具与应用渲染层的出口流量将经此代理，不读取系统环境变量。留空时这些流量直连，内置浏览器则跟随系统代理设置。修改后需重启应用生效。",
-  "settings.httpProxyPlaceholder": "留空则内置浏览器跟随系统代理，例如 http://127.0.0.1:7890",
-  // 中文词条曾在批量文案调整中被误改为英文，导致中文设置页混入未翻译标签。
-  // 文案原因：「代理例外」含义模糊，沿用 Windows 系统代理的标准表述「不使用代理的地址」。
+    "自动会按当前系统发现代理。macOS 读系统网络代理，Windows 读 Internet 代理，Linux 先读 GNOME，再读 KDE，然后才读环境变量。也可以检测并填写，或自己输入 http、https、socks5、socks4 地址。选直连则切回不走代理。ss:// 这类服务器链接不能直接当出口。渲染层和本机接口会立即切换，已经启动的代理进程在下次启动时生效。",
+  "settings.httpProxyAddressDescription":
+    "检测并填写会读取这台电脑的系统代理并保存为手动地址，macOS、Windows、Linux 各读自己的系统设置。也可以直接修改下面的地址后保存。",
+  "settings.httpProxyDetect": "检测并填写",
+  "settings.httpProxyDetectEmpty":
+    "没有检测到系统代理。请先在系统里打开代理，或直接填写本地地址。",
+  "settings.httpProxyDetected": "已填入 {proxy}",
+  "settings.httpProxyPlaceholder": "例如 http://127.0.0.1:7897 或 socks5://127.0.0.1:1080",
   "settings.httpProxyNoProxy": "不使用代理的地址",
   "settings.httpProxyNoProxyDescription":
-    "匹配这些主机的请求将直连，不经过 HTTP 代理。多个规则用英文逗号分隔。修改后需重启应用生效。",
+    "匹配这些主机的请求直连。多个规则用英文逗号分隔。自动模式下留空则沿用系统代理自己的例外列表。",
   "settings.httpProxyNoProxyPlaceholder": "例如 localhost,127.0.0.1,::1,.example.com,*.corp.com",
   "settings.httpProxyCaCertPath": "自定义证书",
   "settings.httpProxyCaCertPathDescription":
     "可选。填写 PEM 根证书路径后，会作为 NODE_EXTRA_CA_CERTS 注入模型、MCP 与命令工具，并用于渲染层证书校验。修改后需重启应用生效。",
   "settings.httpProxyCaCertPathPlaceholder": "例如 /Users/name/certs/root-ca.pem",
-  "settings.httpProxySavedHint": "网络代理设置已保存，重启应用后生效",
+  "settings.httpProxySavedHint": "网络代理已切换",
   "settings.desktopChromiumHardwareAcceleration": "Chrome 硬件加速",
   "settings.desktopChromiumHardwareAccelerationDescription":
     "关闭后可规避部分显卡或驱动导致的白屏、闪退、渲染异常。修改后需重启应用生效。",

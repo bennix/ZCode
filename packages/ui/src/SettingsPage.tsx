@@ -680,6 +680,8 @@ export function SettingsPage({
     IntegratedTerminalShellOption[]
   >([]);
   const [httpProxy, setHttpProxy] = useState("");
+  const [httpProxyMode, setHttpProxyMode] = useState<"auto" | "manual" | "direct">("auto");
+  const [httpProxyDetecting, setHttpProxyDetecting] = useState(false);
   const [httpProxyNoProxy, setHttpProxyNoProxy] = useState("");
   const [httpProxyCaCertPath, setHttpProxyCaCertPath] = useState("");
   const [embeddedBrowserAllowInsecureCertificates, setEmbeddedBrowserAllowInsecureCertificates] =
@@ -764,6 +766,9 @@ export function SettingsPage({
         setTerminalFontFamily(settings.terminalFontFamily ?? "");
         setIntegratedTerminalShell(settings.integratedTerminalShell ?? { mode: "auto" });
         setHttpProxy(settings.httpProxy ?? "");
+        setHttpProxyMode(
+          settings.httpProxyMode ?? (settings.httpProxy?.trim() ? "manual" : "auto"),
+        );
         setHttpProxyNoProxy(settings.httpProxyNoProxy ?? "");
         setHttpProxyCaCertPath(settings.httpProxyCaCertPath ?? "");
         setEmbeddedBrowserAllowInsecureCertificates(
@@ -944,7 +949,9 @@ export function SettingsPage({
         operation: () =>
           services.settingService.update({
             // Bugfix: RPC 会丢弃 undefined；清空代理必须传空串，由服务层删除旧字段。
+            // 手填地址必须同时改成手动，否则自动模式会忽略这个地址，继续读系统代理。
             httpProxy: normalizedProxy,
+            httpProxyMode: "manual",
           }),
         completed: {
           resultSource: "setting_service",
@@ -953,9 +960,52 @@ export function SettingsPage({
         },
       });
       setHttpProxy(normalizedProxy);
+      setHttpProxyMode("manual");
+      platform.syncAppSettings?.({ httpProxy: normalizedProxy, httpProxyMode: "manual" });
       toast(intl.formatMessage({ id: "settings.httpProxySavedHint" }));
     },
-    [services.settingService, intl],
+    [services.settingService, intl, platform],
+  );
+  const handleDetectHttpProxy = useCallback(async () => {
+    setHttpProxyDetecting(true);
+    try {
+      const found = await services.settingService.detectSystemHttpProxy();
+      if (!found.proxyUrl) {
+        toast(intl.formatMessage({ id: "settings.httpProxyDetectEmpty" }));
+        return;
+      }
+      await services.settingService.update({
+        httpProxy: found.proxyUrl,
+        httpProxyMode: "manual",
+        ...(found.noProxy ? { httpProxyNoProxy: found.noProxy } : {}),
+      });
+      setHttpProxy(found.proxyUrl);
+      setHttpProxyMode("manual");
+      if (found.noProxy) setHttpProxyNoProxy(found.noProxy);
+      platform.syncAppSettings?.({
+        httpProxy: found.proxyUrl,
+        httpProxyMode: "manual",
+        ...(found.noProxy ? { httpProxyNoProxy: found.noProxy } : {}),
+      });
+      toast(intl.formatMessage({ id: "settings.httpProxyDetected" }, { proxy: found.proxyUrl }));
+    } finally {
+      setHttpProxyDetecting(false);
+    }
+  }, [services.settingService, intl, platform]);
+  const handleHttpProxyModeChange = useCallback(
+    async (mode: "auto" | "manual" | "direct") => {
+      await runSettingsActionAsync({
+        featureId: "settings.network",
+        action: "save_http_proxy_mode",
+        trigger: "select",
+        operation: () => services.settingService.update({ httpProxyMode: mode }),
+        completed: { resultSource: "setting_service", configured: mode !== "direct" },
+      });
+      setHttpProxyMode(mode);
+      platform.syncAppSettings?.({ httpProxyMode: mode });
+      toast(intl.formatMessage({ id: "settings.httpProxySavedHint" }));
+    },
+    [services.settingService, intl, platform],
   );
   const handleHttpProxyNoProxyChange = useCallback(
     async (noProxy: string) => {
@@ -976,9 +1026,10 @@ export function SettingsPage({
         completed: { resultSource: "setting_service", configured: normalizedNoProxy.length > 0 },
       });
       setHttpProxyNoProxy(normalizedNoProxy);
+      platform.syncAppSettings?.({ httpProxyNoProxy: normalizedNoProxy });
       toast(intl.formatMessage({ id: "settings.httpProxySavedHint" }));
     },
-    [services.settingService, intl],
+    [services.settingService, intl, platform],
   );
   const handleHttpProxyCaCertPathChange = useCallback(
     async (caCertPath: string) => {
@@ -1668,6 +1719,8 @@ export function SettingsPage({
                             integratedTerminalShellOptions={integratedTerminalShellOptions}
                             nativeSearchEnhancementsEnabled={nativeSearchEnhancementsEnabled}
                             httpProxy={httpProxy}
+                            httpProxyMode={httpProxyMode}
+                            onHttpProxyModeChange={handleHttpProxyModeChange}
                             httpProxyNoProxy={httpProxyNoProxy}
                             httpProxyCaCertPath={httpProxyCaCertPath}
                             defaultHomeDir={defaultHomeDir}
@@ -1729,6 +1782,8 @@ export function SettingsPage({
                               handleModelIoFullRetentionEnabledChange
                             }
                             onHttpProxyChange={handleHttpProxyChange}
+                            onDetectHttpProxy={handleDetectHttpProxy}
+                            httpProxyDetecting={httpProxyDetecting}
                             onHttpProxyNoProxyChange={handleHttpProxyNoProxyChange}
                             onHttpProxyCaCertPathChange={handleHttpProxyCaCertPathChange}
                             onTaskAutoArchiveEnabledChange={handleTaskAutoArchiveEnabledChange}

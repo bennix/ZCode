@@ -2244,20 +2244,29 @@ const enUS: Record<string, string> = {
   "settings.memory.viewer.fileChanged":
     "This memory file was updated while being read. Reopen it or refresh the file list.",
   "settings.memory.viewer.noSelection": "Select a memory file to preview it.",
-  "settings.httpProxy": "HTTP Proxy",
+  "settings.httpProxy": "Network proxy",
+  "settings.httpProxyMode": "Proxy mode",
+  "settings.httpProxyMode.auto": "Automatic",
+  "settings.httpProxyMode.manual": "Manual",
+  "settings.httpProxyMode.direct": "Direct",
   "settings.httpProxyDescription":
-    "Route model, MCP, command-tool, and app renderer egress traffic through this proxy; system environment variables are not read. Leave blank and that traffic connects directly, while the embedded browser follows your system proxy settings. Restart the app to take effect.",
-  "settings.httpProxyPlaceholder":
-    "Blank means the embedded browser follows the system proxy, e.g. http://127.0.0.1:7890",
+    "Automatic reads the proxy from this computer: macOS system proxy, Windows Internet settings, or Linux GNOME, then KDE, then environment variables. You can detect and fill that address, or type an http, https, socks5, or socks4 address. Direct switches traffic back off the proxy. Server links such as ss:// are not a local endpoint. The renderer and local API switch immediately; an already running agent uses the new route the next time it starts.",
+  "settings.httpProxyAddressDescription":
+    "Detect and fill reads this computer's system proxy and saves it as the manual address. macOS, Windows, and Linux each use their own settings. You can also edit the address and save it.",
+  "settings.httpProxyDetect": "Detect and fill",
+  "settings.httpProxyDetectEmpty":
+    "No system proxy was found. Turn on the system proxy, or type a local address.",
+  "settings.httpProxyDetected": "Filled in {proxy}",
+  "settings.httpProxyPlaceholder": "e.g. http://127.0.0.1:7897 or socks5://127.0.0.1:1080",
   "settings.httpProxyNoProxy": "No proxy",
   "settings.httpProxyNoProxyDescription":
-    "Requests matching these hosts connect directly instead of using the HTTP proxy. Separate rules with commas. Restart the app to take effect.",
+    "Requests matching these hosts connect directly. Separate rules with commas. In automatic mode, a blank list keeps the system proxy bypass rules.",
   "settings.httpProxyNoProxyPlaceholder": "e.g. localhost,127.0.0.1,::1,.example.com,*.corp.com",
   "settings.httpProxyCaCertPath": "Custom certificate",
   "settings.httpProxyCaCertPathDescription":
     "Optional. Set a PEM root certificate path to inject it as NODE_EXTRA_CA_CERTS for models, MCP, and command tools, and to trust it in renderer certificate verification. Restart the app to take effect.",
   "settings.httpProxyCaCertPathPlaceholder": "e.g. /Users/name/certs/root-ca.pem",
-  "settings.httpProxySavedHint": "Network proxy settings saved. Restart the app to take effect.",
+  "settings.httpProxySavedHint": "Network proxy updated",
   "settings.desktopChromiumHardwareAcceleration": "Chrome hardware acceleration",
   "settings.desktopChromiumHardwareAccelerationDescription":
     "Turn this off to work around blank windows, crashes, or rendering issues caused by some GPUs or drivers. Restart the app to take effect.",

@@ -258,7 +258,12 @@ export interface AppSettings {
   terminalFontFamily?: string;
   /** Windows 下 Bash 工具使用的本机 shell；未配置时自动选择。 */
   integratedTerminalShell?: IntegratedTerminalShellSelection;
-  /** HTTP/HTTPS 出口代理，例如 http://127.0.0.1:7890；为空时直连。下次启动 app/agent 生效。 */
+  /**
+   * auto 跟随系统代理，manual 使用 httpProxy，direct 强制直连。
+   * 未设置时：已有 httpProxy 视为 manual，否则视为 auto。
+   */
+  httpProxyMode?: "auto" | "manual" | "direct";
+  /** 手动代理地址。支持 http、https、socks5、socks5h、socks4。ss:// 等服务器链接不是本地出口。 */
   httpProxy?: string;
   /** 代理绕过规则，例如 localhost,127.0.0.1,.example.com；只在 httpProxy 存在时影响 renderer，agent/tool 仍按显式环境使用。 */
   httpProxyNoProxy?: string;

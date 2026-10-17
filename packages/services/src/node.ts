@@ -233,6 +233,7 @@ export {
   createHostApiNetworkTransport,
   type HostApiNetworkTransport,
 } from "./providers/api/nodeApiNetwork.js";
+export { resolveEffectiveAppProxy } from "./network/appProxy.js";
 export {
   buildRuntimeProcessEnvPatch,
   captureLoginShellEnvSnapshot,
@@ -419,6 +420,7 @@ import {
 } from "./feedback/feedbackService.js";
 import { createLocalPromptAttachmentTransferService } from "./prompt-attachment-transfer/promptAttachmentTransferService.js";
 import { createNodeApiClient } from "./providers/api/nodeApiClient.js";
+import { resolveEffectiveAppProxy } from "./network/appProxy.js";
 import {
   createHostApiNetworkTransport,
   type HostApiNetworkTransport,
@@ -1421,6 +1423,7 @@ export function createLocalServices(options: {
       const settings = await settingService.get();
       return {
         httpProxy: settings.httpProxy,
+        httpProxyMode: settings.httpProxyMode,
         noProxy: settings.httpProxyNoProxy,
         caCertPath: settings.httpProxyCaCertPath,
       };
@@ -2019,10 +2022,11 @@ export function createLocalServices(options: {
       const agentNetwork =
         isDesktopAttachedRemote && options?.remoteAgentNetwork
           ? options.remoteAgentNetwork
-          : {
+          : await resolveEffectiveAppProxy({
+              mode: settings.httpProxyMode,
               httpProxy: settings.httpProxy,
               noProxy: settings.httpProxyNoProxy,
-            };
+            });
       // 与 helper 创建同一个门控（isCuaEnabledForContext：dev/internal 特性 OR 官方插件 enablement），
       // 避免 dev mode 下 helper 建了但 resolveSpawnEnv 漏注入 broker env 的割裂。
       const cuaPluginEnabled = isCuaEnabledForContext(context);

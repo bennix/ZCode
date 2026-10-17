@@ -1,9 +1,13 @@
 import { readFile } from "node:fs/promises";
 import { rootCertificates } from "node:tls";
 import { Agent, ProxyAgent, fetch as undiciFetch, type Dispatcher } from "undici";
+import { classifyProxyUrl } from "@zcode/shared";
+import { resolveEffectiveAppProxy } from "../../network/appProxy.js";
+import { fetchThroughSocksProxy, isSocksProxyUrl } from "../../network/socksFetch.js";
 
 export interface HostApiNetworkOptions {
   httpProxy?: string;
+  httpProxyMode?: string;
   noProxy?: string;
   caCertPath?: string;
 }
@@ -26,19 +30,6 @@ function mergeHostApiCaCertificates(
   // Node 的 tls.ca 会替换而不是追加默认根证书。只传企业代理 CA 会让未被
   // 中间人重签的公网证书失去信任链，因此必须同时保留 Node 默认根证书。
   return [...defaultCa, customCa];
-}
-
-function normalizeProxyUrl(value: string): string | undefined {
-  const candidate = /^\w[\w+.-]*:\/\//.test(value) ? value : `http://${value}`;
-  try {
-    const url = new URL(candidate);
-    if (!url.hostname || !["http:", "https:"].includes(url.protocol)) {
-      return undefined;
-    }
-    return url.href;
-  } catch {
-    return undefined;
-  }
 }
 
 function matchesNoProxy(url: URL, value: string | undefined): boolean {
@@ -78,7 +69,15 @@ export function resolveHostProxyForUrl(
   if (!configuredProxy) {
     return { kind: "direct" };
   }
-  const proxyUrl = normalizeProxyUrl(configuredProxy);
+  const classified = classifyProxyUrl(configuredProxy);
+  if (classified.kind === "server-link") {
+    return {
+      kind: "invalid",
+      reason:
+        "Shadowsocks and Clash server links are not a local proxy. Enable system proxy in that app, or enter its local http/socks address.",
+    };
+  }
+  const proxyUrl = classified.kind === "http" || classified.kind === "socks" ? classified.url : undefined;
   return proxyUrl
     ? { kind: "proxy", proxyUrl }
     : { kind: "invalid", reason: "Configured Host proxy URL is invalid" };
@@ -98,7 +97,7 @@ export function createHostApiNetworkTransport(
 ): HostApiNetworkTransport {
   // Host 是独立 Node 进程，Electron Session.setProxy 不会影响它的 globalThis.fetch；
   // 在 NodeApiClient 出口按请求注入 dispatcher，避免把 telemetry 等其它裸 fetch 全局改道。
-  let optionsPromise: Promise<HostApiNetworkOptions> | undefined;
+  // 每次请求重读设置，自动/手动/直连切换不必重启 Host。
   const dispatcherPromises = new Map<string, Promise<Dispatcher>>();
   let disposed = false;
   let generation = 0;
@@ -118,22 +117,28 @@ export function createHostApiNetworkTransport(
       throw new Error("Host API network transport has been disposed");
     }
     const requestGeneration = generation;
-    if (!optionsPromise) {
-      // 设置读取失败只影响当前请求；清掉 rejected promise，避免一次瞬时 IPC/启动竞态
-      // 把 Host API 永久锁死，同时仍保持失败请求不回退到直连。
-      optionsPromise = resolveOptions().catch((error: unknown) => {
-        optionsPromise = undefined;
-        throw error;
-      });
-    }
-    const options = await optionsPromise;
+    const raw = await resolveOptions();
     if (disposed || generation !== requestGeneration) {
       throw new Error("Host API network transport has been disposed");
     }
+    const effective = await resolveEffectiveAppProxy({
+      mode: raw.httpProxyMode,
+      httpProxy: raw.httpProxy,
+      noProxy: raw.noProxy,
+    });
+    const options: HostApiNetworkOptions = {
+      ...raw,
+      httpProxy: effective.httpProxy,
+      noProxy: effective.noProxy,
+    };
     const requestUrl = input instanceof Request ? input.url : String(input);
     const route = resolveHostProxyForUrl(requestUrl, options);
     if (route.kind === "invalid") {
       throw new Error(route.reason);
+    }
+    if (route.kind === "proxy" && isSocksProxyUrl(route.proxyUrl)) {
+      const ca = options.caCertPath ? await readFile(options.caCertPath, "utf8") : undefined;
+      return fetchThroughSocksProxy(input, init, route.proxyUrl, ca);
     }
     if (route.kind === "direct" && !options.caCertPath) {
       return globalThis.fetch(input as Parameters<typeof fetch>[0], init);

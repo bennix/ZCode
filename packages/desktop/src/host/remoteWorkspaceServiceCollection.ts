@@ -106,6 +106,7 @@ export function createRemoteWorkspaceServiceCollection(params: {
     const settings = await localSettingService.get();
     return {
       httpProxy: settings.httpProxy,
+      httpProxyMode: settings.httpProxyMode,
       noProxy: settings.httpProxyNoProxy,
       caCertPath: settings.httpProxyCaCertPath,
     };

@@ -13,6 +13,7 @@ import {
   formatZodError,
   normalizeStudioVideoSelection,
 } from "@zcode/shared";
+import { readSystemProxy } from "../network/systemProxy.js";
 import type { ISettingService } from "./setting.js";
 import { normalizeSettingsPatch } from "#src/setting/normalizeSettingsPatch.js";
 import { copyDataDirectory, getDataBaseDir, validateDataBaseDirTarget } from "../paths.js";
@@ -374,6 +375,12 @@ export function createSettingServiceWithMigrations(): {
       }
 
       await this.update({ dataBaseDir: newDir });
+    },
+
+    async detectSystemHttpProxy() {
+      // 发现失败保持空字符串，设置页不把空白当成一次成功填写。
+      const found = await readSystemProxy().catch(() => undefined);
+      return { proxyUrl: found?.proxyUrl ?? "", noProxy: found?.noProxy ?? "" };
     },
 
     async ensureDefaultProject(userHomeDir: string): Promise<{ path: string; created: boolean }> {

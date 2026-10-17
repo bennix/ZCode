@@ -63,6 +63,7 @@ export function GeneralSectionContent({
   integratedTerminalShellOptions = [],
   nativeSearchEnhancementsEnabled,
   httpProxy = "",
+  httpProxyMode = "auto",
   httpProxyNoProxy = "",
   httpProxyCaCertPath = "",
   defaultHomeDir,
@@ -89,6 +90,9 @@ export function GeneralSectionContent({
   onIntegratedTerminalShellChange = async () => {},
   onNativeSearchEnhancementsEnabledChange,
   onHttpProxyChange = async () => {},
+  onHttpProxyModeChange = async () => {},
+  onDetectHttpProxy = async () => {},
+  httpProxyDetecting = false,
   onHttpProxyNoProxyChange = async () => {},
   onHttpProxyCaCertPathChange = async () => {},
   onTaskAutoArchiveEnabledChange,
@@ -125,6 +129,7 @@ export function GeneralSectionContent({
   integratedTerminalShellOptions?: IntegratedTerminalShellOption[];
   nativeSearchEnhancementsEnabled: boolean;
   httpProxy?: string;
+  httpProxyMode?: "auto" | "manual" | "direct";
   httpProxyNoProxy?: string;
   httpProxyCaCertPath?: string;
   defaultHomeDir: string;
@@ -152,6 +157,9 @@ export function GeneralSectionContent({
   onIntegratedTerminalShellChange?: (selection: IntegratedTerminalShellSelection) => Promise<void>;
   onNativeSearchEnhancementsEnabledChange: (enabled: boolean) => Promise<void>;
   onHttpProxyChange?: (httpProxy: string) => Promise<void>;
+  onHttpProxyModeChange?: (mode: "auto" | "manual" | "direct") => Promise<void>;
+  onDetectHttpProxy?: () => Promise<void>;
+  httpProxyDetecting?: boolean;
   onHttpProxyNoProxyChange?: (noProxy: string) => Promise<void>;
   onHttpProxyCaCertPathChange?: (caCertPath: string) => Promise<void>;
   onTaskAutoArchiveEnabledChange: (enabled: boolean) => Promise<void>;
@@ -449,17 +457,57 @@ export function GeneralSectionContent({
 
       <SettingsGroupCard>
         <SettingsRow
-          label={intl.formatMessage({ id: "settings.httpProxy" })}
+          label={intl.formatMessage({ id: "settings.httpProxyMode" })}
           description={intl.formatMessage({ id: "settings.httpProxyDescription" })}
           control={
-            <Button
-              type="button"
-              size="lg"
-              disabled={!isHttpProxyDirty}
-              onClick={() => void handleHttpProxySave()}
+            <Select
+              value={httpProxyMode ?? "auto"}
+              onValueChange={(value) => {
+                if (value === "auto" || value === "manual" || value === "direct") {
+                  void onHttpProxyModeChange(value);
+                }
+              }}
             >
-              {intl.formatMessage({ id: "settings.dataBaseDirSave" })}
-            </Button>
+              <SelectTrigger
+                size="lg"
+                className="w-[260px] min-w-0 justify-between"
+                aria-label={intl.formatMessage({ id: "settings.httpProxyMode" })}
+              >
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {(["auto", "manual", "direct"] as const).map((mode) => (
+                  <SelectItem key={mode} value={mode}>
+                    {intl.formatMessage({ id: `settings.httpProxyMode.${mode}` })}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          }
+        />
+        {httpProxyMode !== "direct" ? (
+        <SettingsRow
+          label={intl.formatMessage({ id: "settings.httpProxy" })}
+          description={intl.formatMessage({ id: "settings.httpProxyAddressDescription" })}
+          control={
+            <div className="flex gap-2">
+              <Button
+                type="button"
+                size="lg"
+                disabled={httpProxyDetecting}
+                onClick={() => void onDetectHttpProxy()}
+              >
+                {intl.formatMessage({ id: "settings.httpProxyDetect" })}
+              </Button>
+              <Button
+                type="button"
+                size="lg"
+                disabled={!isHttpProxyDirty || httpProxyDetecting}
+                onClick={() => void handleHttpProxySave()}
+              >
+                {intl.formatMessage({ id: "settings.dataBaseDirSave" })}
+              </Button>
+            </div>
           }
           detail={
             <Input
@@ -480,7 +528,8 @@ export function GeneralSectionContent({
             />
           }
         />
-        {/* No Proxy 与 HTTP 代理共同决定同一出口策略，必须贴在代理地址下面。*/}
+        ) : null}
+        {/* No Proxy 与代理方式共同决定同一出口策略，必须贴在代理地址下面。*/}
         <SettingsRow
           label={intl.formatMessage({ id: "settings.httpProxyNoProxy" })}
           description={intl.formatMessage({

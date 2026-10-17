@@ -973,6 +973,24 @@ function syncImmediateAppSettings(patch: Partial<AppSettings>) {
       }
     }
   }
+
+  if (
+    "httpProxy" in patch ||
+    "httpProxyMode" in patch ||
+    "httpProxyNoProxy" in patch
+  ) {
+    // 代理模式保存后立刻改 Chromium 出口，不必等重启。Host 每次请求自己重读设置。
+    void reapplyDesktopNetworkProxy();
+  }
+}
+
+async function reapplyDesktopNetworkProxy() {
+  try {
+    const settings = await mainSettingService.get();
+    await applyDesktopChromiumNetworkPolicies(session, settings, logger);
+  } catch (error) {
+    logger.warn("[desktop-network] reapply failed", error);
+  }
 }
 
 async function getAutoUpdatePreferences() {

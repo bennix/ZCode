@@ -1,29 +1,20 @@
 import { X509Certificate } from "node:crypto";
 import { readFileSync } from "node:fs";
 import type { ProxyConfig, Session } from "electron";
+import { classifyProxyUrl, resolveHttpProxyMode } from "@zcode/shared";
 import { EMBEDDED_BROWSER_PARTITION } from "./browserDataManager.js";
 
 interface DesktopNetworkPolicySettings {
   httpProxy?: string;
+  httpProxyMode?: string;
   httpProxyNoProxy?: string;
   httpProxyCaCertPath?: string;
   embeddedBrowserAllowInsecureCertificates?: boolean;
 }
 
-/**
- * 设置页代理留空时的兜底模式。
- *
- * `direct` 是 Electron 的「永不使用代理」，会连本机系统代理一起屏蔽；
- * `system` 读取的是 OS 网络设置（macOS 网络偏好 / Windows Internet 选项），
- * 与 shell 里的 `HTTP_PROXY` 等环境变量无关，因此不违反「不继承 shell 环境变量」的边界。
- */
-type ProxyFallbackMode = "direct" | "system";
-
 interface DesktopSessionNetworkPolicyOptions {
   /** 是否放行该 Session 的全部证书错误。仅内置浏览器出口可以打开。 */
   allowInsecureCertificates?: boolean;
-  /** 设置页代理留空时使用的兜底模式，默认 `direct`。 */
-  fallbackProxyMode?: ProxyFallbackMode;
 }
 
 interface DesktopNetworkPolicyLogger {
@@ -58,8 +49,6 @@ export async function applyDesktopChromiumNetworkPolicies(
       name: "default-session",
       session: sessionProvider.defaultSession,
       allowInsecure: false,
-      // ZCode 自身对后端与模型 API 的出口，收敛到设置页的显式配置，不被本机系统代理左右。
-      fallbackProxyMode: "direct" as const,
     },
     {
       name: "embedded-browser",
@@ -67,9 +56,6 @@ export async function applyDesktopChromiumNetworkPolicies(
       // 自签名放行只开在内置浏览器出口：defaultSession 承载 renderer 对 ZCode 后端与模型 API
       // 的流量，在那里放行等于整个应用失去 TLS 保护，与「访问内网测试站点」的诉求不成比例。
       allowInsecure: settings.embeddedBrowserAllowInsecureCertificates === true,
-      // 内置浏览器是用户自己的浏览出口，留空时跟随系统代理，与本机浏览器保持一致；
-      // 否则需要代理才能访问的站点只会拿到 ERR_CONNECTION_TIMED_OUT，用户无从下手。
-      fallbackProxyMode: "system" as const,
     },
   ] as const;
 
@@ -78,7 +64,6 @@ export async function applyDesktopChromiumNetworkPolicies(
       try {
         await applyDesktopSessionNetworkPolicy(target.session, settings, logger, {
           allowInsecureCertificates: target.allowInsecure,
-          fallbackProxyMode: target.fallbackProxyMode,
         });
       } catch (error) {
         // 内置 Browser 使用独立 partition，过去只配置 defaultSession；同时
@@ -95,11 +80,7 @@ async function applyDesktopSessionNetworkPolicy(
   logger: DesktopNetworkPolicyLogger,
   options: DesktopSessionNetworkPolicyOptions = {},
 ): Promise<void> {
-  const proxyConfig = buildElectronProxyConfig(
-    settings.httpProxy,
-    settings.httpProxyNoProxy,
-    options.fallbackProxyMode,
-  );
+  const proxyConfig = buildElectronProxyConfig(settings);
   await targetSession.setProxy(proxyConfig);
   await targetSession.closeAllConnections();
 
@@ -128,22 +109,17 @@ function createInsecureCertificateVerifyProc(): CertificateVerifyProc {
   };
 }
 
-function buildElectronProxyConfig(
-  httpProxy: string | undefined,
-  noProxy?: string | undefined,
-  fallbackMode: ProxyFallbackMode = "direct",
-): ProxyConfig {
-  const proxyRules = normalizeProxyRules(httpProxy);
-  if (!proxyRules) {
-    // 留空不带 proxyBypassRules：bypass 规则只对 fixed_servers 有意义，
-    // `system` 模式下的例外列表由 OS 自己维护（如 macOS 的「忽略这些主机」）。
-    return { mode: fallbackMode };
-  }
+function buildElectronProxyConfig(settings: DesktopNetworkPolicySettings): ProxyConfig {
+  const mode = resolveHttpProxyMode(settings.httpProxyMode, settings.httpProxy);
+  if (mode === "direct") return { mode: "direct" };
+  if (mode === "auto") return { mode: "system" };
+  const proxyRules = normalizeProxyRules(settings.httpProxy);
+  if (!proxyRules) return { mode: "direct" };
   const proxyConfig: ProxyConfig = {
     mode: "fixed_servers",
     proxyRules,
   };
-  const proxyBypassRules = normalizeProxyBypassRules(noProxy);
+  const proxyBypassRules = normalizeProxyBypassRules(settings.httpProxyNoProxy);
   if (proxyBypassRules) {
     proxyConfig.proxyBypassRules = proxyBypassRules;
   }
@@ -234,19 +210,14 @@ function certificateChainMatchesCustomCa(
 }
 
 function normalizeProxyRules(value: string | undefined): string | undefined {
-  const trimmed = value?.trim();
-  if (!trimmed) {
-    return undefined;
-  }
-
-  const candidate = /^[a-z][a-z0-9+.-]*:\/\//i.test(trimmed) ? trimmed : `http://${trimmed}`;
-  try {
-    const url = new URL(candidate);
+  const classified = classifyProxyUrl(value);
+  if (classified.kind === "http") {
+    const url = new URL(classified.url);
     const auth = url.username ? `${url.username}${url.password ? `:${url.password}` : ""}@` : "";
     return `${url.protocol}//${auth}${url.host}`;
-  } catch {
-    return undefined;
   }
+  if (classified.kind === "socks") return classified.chromium;
+  return undefined;
 }
 
 function normalizeProxyBypassRules(value: string | undefined): string | undefined {

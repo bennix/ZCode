@@ -40,8 +40,7 @@ export function normalizeSettingsPatch(patch: Partial<AppSettings>): Partial<App
   }
 
   if ("httpProxy" in normalizedPatch && typeof normalizedPatch.httpProxy === "string") {
-    // 清空代理现在表示显式直连，不再回退用户 shell 环境变量。
-    // RPC 会吞掉 undefined，这里把空串归一成 undefined，避免旧代理继续留在 setting.json。
+    // 清空只删除手填地址。是否走代理由 httpProxyMode 决定，空地址不再代表直连。
     const trimmedHttpProxy = normalizedPatch.httpProxy.trim();
     normalizedPatch.httpProxy = trimmedHttpProxy.length > 0 ? trimmedHttpProxy : undefined;
   }

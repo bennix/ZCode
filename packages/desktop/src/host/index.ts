@@ -61,6 +61,7 @@ import {
   createServiceLogger,
   buildTaskChangeSummary,
   createHostApiNetworkTransport,
+  resolveEffectiveAppProxy,
   createSettingServiceWithMigrations,
   OffPeakModelUnavailableError,
   OffPeakPermanentDispatchError,
@@ -1621,10 +1622,15 @@ async function resolveDesktopRemoteRuntimeNetwork(
   }
   try {
     const settings = await settingService.get();
-    return {
-      authoritative: true,
+    const effective = await resolveEffectiveAppProxy({
+      mode: settings.httpProxyMode,
       httpProxy: settings.httpProxy,
       noProxy: settings.httpProxyNoProxy,
+    });
+    return {
+      authoritative: true,
+      httpProxy: effective.httpProxy,
+      noProxy: effective.noProxy,
     };
   } catch {
     // 设置读取失败时保留原有远程连接行为，不让网络增强把 WSL 工作区直接阻断。
@@ -2842,6 +2848,7 @@ parentPort.on("message", async (e: Electron.MessageEvent) => {
           const settings = await settingService.get();
           return {
             httpProxy: settings.httpProxy,
+            httpProxyMode: settings.httpProxyMode,
             noProxy: settings.httpProxyNoProxy,
             caCertPath: settings.httpProxyCaCertPath,
           };
