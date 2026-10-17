@@ -7,7 +7,9 @@ import {
 } from "./StudioReferenceGuide.js";
 import {
   BODY_REFERENCE_RULE,
+  discussionReferenceCaptions,
   runReferenceStages,
+  SCENE_PROMPT_RULE,
   type StudioReferenceKind,
 } from "./studioReferenceStages.js";
 import { assertStudioPromptAllowed, studioPromptSafetyRules } from "./studioPromptSafety.js";
@@ -439,6 +441,7 @@ export function StudioPanel({
     namePrefix = "",
     images: readonly string[] = [],
     excludeModel?: string,
+    imageCaptions?: readonly string[],
   ) => {
     const intent = listedModel(modelSelectionView, intentModelId, INTENT_MODEL_KEY);
     const roster = councilModels(modelSelectionView, [excludeModel ?? "", intent]);
@@ -492,7 +495,13 @@ export function StudioPanel({
                 ? promptText
                 : [
                     { type: "text", text: `${promptText}\n参考图已附在本条消息中。` },
-                    ...images.map((url) => ({ type: "image_url" as const, image_url: { url } })),
+                    ...images.flatMap((url, index) => {
+                      const caption = imageCaptions?.[index];
+                      const image = { type: "image_url" as const, image_url: { url } };
+                      return caption
+                        ? [{ type: "text" as const, text: caption }, image]
+                        : [image];
+                    }),
                   ],
           },
         ],
@@ -558,18 +567,26 @@ export function StudioPanel({
         capturedPose,
       );
       const imageUrls = await Promise.all(images.map((blob) => blobToDataUrl(blob)));
+      const sceneReferences =
+        mode === "image" ? activeReferences.filter((item) => item.kind === "scene") : [];
+      const sceneUrls = await Promise.all(
+        sceneReferences.map(async (item) => blobToDataUrl(await blobFromUrl(item.url))),
+      );
+      const discussionUrls = [...imageUrls, ...sceneUrls];
       const sketchOnly = capturedPose
         ? false
         : (!imageUrl && activeReferences.length === 0) ||
           (fromSketch && activeReferences.length === 0);
       const spoken = await discuss(
-        images.length > 0
-          ? `${prompt.trim()}\n除了这段文字，还附有参考图。${marked ? strokeInstruction(keepStrokeColor, sketchOnly) : "参考图里的主体必须保留。"}`
+        discussionUrls.length > 0
+          ? `${prompt.trim()}\n除了这段文字，还附有参考图。${marked ? strokeInstruction(keepStrokeColor, sketchOnly) : "参考图里的主体必须保留。"}${sceneUrls.length > 0 ? `\n${SCENE_PROMPT_RULE}` : ""}`
           : prompt.trim(),
         controller.signal,
         [],
         "",
-        imageUrls,
+        discussionUrls,
+        undefined,
+        discussionReferenceCaptions(imageUrls.length, sceneUrls.length),
       );
       const optimized = finalPrompt(spoken, prompt.trim());
       const instruction = marked
@@ -610,7 +627,9 @@ export function StudioPanel({
           generate: async (working, reference, stagePrompt) =>
             generateStudioImage(
               apiKey,
-              `${stagePrompt}\nUser requirements (apply only those relevant to this edit): ${prompt.trim()}`,
+              reference.kind === "scene"
+                ? `${stagePrompt}\nImage 2 is the background and overrides any studio, grey, or empty backdrop named below.\n${optimized}`
+                : `${stagePrompt}\nUser requirements (apply only those relevant to this edit): ${prompt.trim()}`,
               mediaLibrary.defaultImageId,
               await Promise.all([blobFromUrl(working), blobFromUrl(reference.url)]),
               activeImageRatio,
@@ -1089,37 +1108,6 @@ export function StudioPanel({
     }
   };
 
-  const copyImage = () => {
-    if (!imageUrl || typeof navigator === "undefined" || !navigator.clipboard?.write) {
-      setError("无法拷贝图片");
-      return;
-    }
-    const url = imageUrl;
-    const item = new ClipboardItem({
-      "image/png": blobFromUrl(url).then((blob) => imagePngBlob(blob)),
-    });
-    void navigator.clipboard.write([item]).catch((copyError: unknown) => {
-      setError(copyError instanceof Error ? copyError.message : "无法拷贝图片");
-    });
-  };
-
-  const saveImage = async () => {
-    if (!imageUrl || !platform.saveFile) {
-      setError("无法保存图片");
-      return;
-    }
-    try {
-      const blob = await blobFromUrl(imageUrl);
-      const result = await platform.saveFile({
-        data: await blob.arrayBuffer(),
-        suggestedName: `zencode-image.${imageExtension(blob.type)}`,
-      });
-      if (!result.success && result.error) setError(result.error);
-    } catch (saveError) {
-      setError(saveError instanceof Error ? saveError.message : "无法保存图片");
-    }
-  };
-
   const addDeckFiles = async (files: Iterable<File>) => {
     const next: DeckFile[] = [];
     for (const file of files) {
@@ -1540,22 +1528,7 @@ export function StudioPanel({
                   </select>
                 </label>
               </>
-            ) : (
-              <label className="flex items-center gap-1">
-                {intl.formatMessage({ id: "chat.studio.ratio" })}
-                <select
-                  value={activeImageRatio}
-                  onChange={(event) => setImageRatio(event.target.value)}
-                  className="h-7 rounded-lg border border-border bg-background px-2"
-                >
-                  {imageChoices.map((ratio) => (
-                    <option key={ratio} value={ratio}>
-                      {ratio}
-                    </option>
-                  ))}
-                </select>
-              </label>
-            )}
+            ) : null}
           </div>
         </StudioSettingsDisclosure>
         {mode === "ppt" ? (
@@ -1669,7 +1642,25 @@ export function StudioPanel({
             className="mb-2 min-h-14 w-full rounded-lg border border-border bg-background p-2 text-ui-base"
           />
         ) : null}
-        <div className="mb-2 flex gap-2">
+        <div className="mb-2 flex flex-wrap items-center gap-2">
+          {mode === "image" ? (
+            <label className="flex items-center gap-1 text-ui-caption">
+              {intl.formatMessage({ id: "chat.studio.ratio" })}
+              <select
+                aria-label={intl.formatMessage({ id: "chat.studio.ratio" })}
+                value={activeImageRatio ?? ""}
+                disabled={busy}
+                onChange={(event) => setImageRatio(event.target.value)}
+                className="h-8 rounded-lg border border-border bg-background px-2"
+              >
+                {imageChoices.map((ratio) => (
+                  <option key={ratio} value={ratio}>
+                    {ratio}
+                  </option>
+                ))}
+              </select>
+            </label>
+          ) : null}
           {busy ? (
             <Button
               type="button"
@@ -1833,22 +1824,6 @@ export function StudioPanel({
                   onClick={() => void reviseMarked()}
                 >
                   {intl.formatMessage({ id: "chat.studio.edit" })}
-                </Button>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  className="h-8 px-3 text-ui-caption"
-                  onClick={copyImage}
-                >
-                  {intl.formatMessage({ id: "chat.studio.copyImage" })}
-                </Button>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  className="h-8 px-3 text-ui-caption"
-                  onClick={() => void saveImage()}
-                >
-                  {intl.formatMessage({ id: "chat.studio.saveImage" })}
                 </Button>
               </div>
             ) : null}
@@ -2118,30 +2093,6 @@ function GeneratingMark({ label }: { label: string }) {
 async function blobToDataUrl(blob: Blob): Promise<string> {
   const inline = await blobToInline(blob);
   return `data:${inline.mimeType};base64,${inline.base64}`;
-}
-
-function imageExtension(mimeType: string): string {
-  if (mimeType === "image/jpeg") return "jpg";
-  if (mimeType === "image/webp") return "webp";
-  if (mimeType === "image/gif") return "gif";
-  return "png";
-}
-
-async function imagePngBlob(blob: Blob): Promise<Blob> {
-  if (blob.type === "image/png") return blob;
-  const bitmap = await createImageBitmap(blob);
-  const canvas = document.createElement("canvas");
-  canvas.width = bitmap.width;
-  canvas.height = bitmap.height;
-  const context = canvas.getContext("2d");
-  if (!context) throw new Error("无法拷贝图片");
-  context.drawImage(bitmap, 0, 0);
-  bitmap.close();
-  const png = await new Promise<Blob | null>((resolve) =>
-    canvas.toBlob((value) => resolve(value), "image/png"),
-  );
-  if (!png) throw new Error("无法拷贝图片");
-  return png;
 }
 
 async function blobToInline(blob: Blob): Promise<{ base64: string; mimeType: string }> {

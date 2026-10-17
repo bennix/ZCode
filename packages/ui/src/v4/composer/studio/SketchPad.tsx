@@ -135,6 +135,7 @@ export const SketchPad = forwardRef<
       ref={frameRef}
       className="relative aspect-video w-full overflow-hidden rounded-xl border border-border bg-background"
       style={{ cursor }}
+      onContextMenu={(event) => event.preventDefault()}
       onPointerEnter={() => {
         hover.current = true;
       }}
@@ -229,7 +230,9 @@ export function ZoomPanImage({ src }: { src: string }) {
   return (
     <div
       ref={frameRef}
-      className="relative mt-2 h-80 w-full cursor-grab overflow-hidden rounded-xl border border-border bg-background active:cursor-grabbing"
+      className="relative mt-2 h-80 w-full cursor-grab select-none overflow-hidden rounded-xl border border-border bg-background active:cursor-grabbing"
+      onContextMenu={(event) => event.preventDefault()}
+      onDragStart={(event) => event.preventDefault()}
       onPointerDown={(event) => {
         if (event.button !== 0 && event.button !== 1) return;
         pan.current = { x: event.clientX, y: event.clientY, ox: viewRef.current.x, oy: viewRef.current.y };

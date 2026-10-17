@@ -24,6 +24,23 @@ export function buildReferenceStages(references: readonly StudioReference[]) {
       }),
   );
 }
+export const SCENE_PROMPT_RULE =
+  "The attached scene image is the background. The FINAL prompt must describe its location, ground, lighting and atmosphere. Do not replace that environment with a plain grey or empty studio backdrop. Do not copy people from the scene image.";
+
+/** 讨论成稿时按附件顺序标注角色。场景图排在形体图之后，避免被当成姿态。 */
+export function discussionReferenceCaptions(bodyCount: number, sceneCount: number): string[] {
+  const captions: string[] = [];
+  for (let index = 0; index < bodyCount; index += 1) {
+    captions.push(
+      `Image ${index + 1}: body or pose reference. It controls pose, proportions and the number of people only.`,
+    );
+  }
+  for (let index = 0; index < sceneCount; index += 1) {
+    captions.push(`Image ${bodyCount + index + 1}: background reference. ${SCENE_PROMPT_RULE}`);
+  }
+  return captions;
+}
+
 export const BODY_REFERENCE_RULE =
   "Body/pose references control only pose, proportions and relative positions. Convert mannequins into natural fully clothed real people with realistic skin, hair and anatomy. Preserve the intended number of people. One continuous scene, no turnarounds, duplicated limbs or multiple views. Face, clothing and scene references are applied in later isolated steps.";
 

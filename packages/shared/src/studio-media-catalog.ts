@@ -1,5 +1,5 @@
 /* eslint-disable max-lines -- Static provider model catalog; entries share one public schema. */
-/** ZenMux 图片与视频目录，图片元数据来自 2026-09-26，视频协议/比例/时长来自 2026-10-02 的模型 api_info。 */
+/** ZenMux 图片与视频目录。图片幅面于 2026-10-17 按模型页 api_protocols 与 Vertex/Images 文档核对；视频协议/比例/时长来自 2026-10-02 的模型 api_info。 */
 
 export interface ImageCatalogEntry {
   id: string;
@@ -7,6 +7,8 @@ export interface ImageCatalogEntry {
   protocol: "gemini" | "vertex";
   reference: "none" | "optional" | "required";
   ratioKind: "aspect" | "size";
+  /** 缺省时 aspect 发 aspectRatio，size 发 imageSize。none 表示模型拒绝显式幅面。 */
+  ratioParameter?: "aspectRatio" | "imageSize" | "size" | "none";
   ratios: readonly string[];
 }
 
@@ -28,10 +30,13 @@ export const IMAGE_CATALOG: readonly ImageCatalogEntry[] = [
     "ratioKind": "aspect",
     "ratios": [
       "1:1",
-      "16:9",
-      "9:16",
+      "2:3",
+      "3:2",
+      "3:4",
       "4:3",
-      "3:4"
+      "9:16",
+      "16:9",
+      "21:9"
     ]
   },
   {
@@ -53,11 +58,10 @@ export const IMAGE_CATALOG: readonly ImageCatalogEntry[] = [
     "name": "GLM-Image",
     "protocol": "vertex",
     "reference": "none",
-    "ratioKind": "size",
+    "ratioKind": "aspect",
+    "ratioParameter": "aspectRatio",
     "ratios": [
-      "1024x1024",
-      "2048x2048",
-      "1280x1280"
+      "1:1"
     ]
   },
   {
@@ -117,6 +121,7 @@ export const IMAGE_CATALOG: readonly ImageCatalogEntry[] = [
     "protocol": "vertex",
     "reference": "optional",
     "ratioKind": "size",
+    "ratioParameter": "size",
     "ratios": [
       "1024x1024",
       "1024x1536",
@@ -134,6 +139,7 @@ export const IMAGE_CATALOG: readonly ImageCatalogEntry[] = [
     "protocol": "vertex",
     "reference": "optional",
     "ratioKind": "size",
+    "ratioParameter": "size",
     "ratios": [
       "1024x1024",
       "1024x1536",
@@ -170,12 +176,15 @@ export const IMAGE_CATALOG: readonly ImageCatalogEntry[] = [
       "1024x1024",
       "1536x1024",
       "1024x1536",
-      "2048x2048",
+      "1920x1080",
+      "1080x1920",
       "2048x1152",
-      "3840x2160",
-      "2160x3840",
+      "2048x2048",
       "1536x2048",
-      "2048x1536"
+      "2048x1536",
+      "2560x1440",
+      "3840x2160",
+      "2160x3840"
     ]
   },
   {
@@ -183,13 +192,14 @@ export const IMAGE_CATALOG: readonly ImageCatalogEntry[] = [
     "name": "HY-Image-V3.0",
     "protocol": "vertex",
     "reference": "optional",
-    "ratioKind": "size",
+    "ratioKind": "aspect",
+    "ratioParameter": "aspectRatio",
     "ratios": [
-      "1024x1024",
-      "1024x768",
-      "768x1024",
-      "1024x576",
-      "576x1024"
+      "1:1",
+      "4:3",
+      "3:4",
+      "16:9",
+      "9:16"
     ]
   },
   {
@@ -200,17 +210,19 @@ export const IMAGE_CATALOG: readonly ImageCatalogEntry[] = [
     "ratioKind": "aspect",
     "ratios": [
       "1:1",
+      "4:5",
+      "5:4",
+      "2:3",
+      "3:2",
+      "3:4",
+      "4:3",
+      "9:16",
+      "16:9",
+      "21:9",
       "1:4",
       "4:1",
       "1:8",
-      "8:1",
-      "2:3",
-      "3:2",
-      "4:3",
-      "3:4",
-      "9:16",
-      "16:9",
-      "21:9"
+      "8:1"
     ]
   },
   {
@@ -221,17 +233,19 @@ export const IMAGE_CATALOG: readonly ImageCatalogEntry[] = [
     "ratioKind": "aspect",
     "ratios": [
       "1:1",
+      "4:5",
+      "5:4",
+      "2:3",
+      "3:2",
+      "3:4",
+      "4:3",
+      "9:16",
+      "16:9",
+      "21:9",
       "1:4",
       "4:1",
       "1:8",
-      "8:1",
-      "2:3",
-      "3:2",
-      "4:3",
-      "3:4",
-      "9:16",
-      "16:9",
-      "21:9"
+      "8:1"
     ]
   },
   {
@@ -241,8 +255,20 @@ export const IMAGE_CATALOG: readonly ImageCatalogEntry[] = [
     "reference": "optional",
     "ratioKind": "aspect",
     "ratios": [
+      "1:1",
+      "4:5",
+      "5:4",
+      "2:3",
+      "3:2",
+      "3:4",
+      "4:3",
+      "9:16",
       "16:9",
-      "9:16"
+      "21:9",
+      "1:4",
+      "4:1",
+      "1:8",
+      "8:1"
     ]
   },
   {
@@ -267,13 +293,13 @@ export const IMAGE_CATALOG: readonly ImageCatalogEntry[] = [
     "name": "GPT-Image-1.5",
     "protocol": "vertex",
     "reference": "optional",
-    "ratioKind": "aspect",
+    "ratioKind": "size",
+    "ratioParameter": "imageSize",
     "ratios": [
-      "1:1",
-      "16:9",
-      "9:16",
-      "4:3",
-      "3:4"
+      "auto",
+      "1024x1024",
+      "1536x1024",
+      "1024x1536"
     ]
   },
   {
@@ -282,6 +308,7 @@ export const IMAGE_CATALOG: readonly ImageCatalogEntry[] = [
     "protocol": "vertex",
     "reference": "optional",
     "ratioKind": "size",
+    "ratioParameter": "size",
     "ratios": [
       "1024x1024",
       "1024x1536",
@@ -299,6 +326,7 @@ export const IMAGE_CATALOG: readonly ImageCatalogEntry[] = [
     "protocol": "vertex",
     "reference": "optional",
     "ratioKind": "size",
+    "ratioParameter": "size",
     "ratios": [
       "1024x1024",
       "1024x1536",
@@ -315,40 +343,17 @@ export const IMAGE_CATALOG: readonly ImageCatalogEntry[] = [
     "name": "Agnes Image 2.1 Flash",
     "protocol": "vertex",
     "reference": "optional",
-    "ratioKind": "size",
+    "ratioKind": "aspect",
+    "ratioParameter": "aspectRatio",
     "ratios": [
-      "1024x1024",
-      "2048x2048",
-      "3072x3072",
-      "4096x4096",
-      "864x1152",
-      "1728x2304",
-      "2592x3456",
-      "3456x4608",
-      "1152x864",
-      "2304x1728",
-      "3456x2592",
-      "4608x3456",
-      "1312x736",
-      "2624x1472",
-      "3936x2208",
-      "5248x2944",
-      "736x1312",
-      "1472x2624",
-      "2208x3936",
-      "2944x5248",
-      "832x1248",
-      "1664x2496",
-      "2496x3744",
-      "3328x4992",
-      "1248x832",
-      "2496x1664",
-      "3744x2496",
-      "4992x3328",
-      "1568x672",
-      "3136x1344",
-      "4704x2016",
-      "6272x2688"
+      "1:1",
+      "3:4",
+      "4:3",
+      "16:9",
+      "9:16",
+      "2:3",
+      "3:2",
+      "21:9"
     ]
   },
   {
@@ -371,15 +376,12 @@ export const IMAGE_CATALOG: readonly ImageCatalogEntry[] = [
     "protocol": "vertex",
     "reference": "optional",
     "ratioKind": "size",
+    "ratioParameter": "imageSize",
     "ratios": [
       "auto",
       "1024x1024",
       "1536x1024",
-      "1024x1536",
-      "2048x2048",
-      "2048x1152",
-      "3840x2160",
-      "2160x3840"
+      "1024x1536"
     ]
   },
   {
@@ -388,9 +390,12 @@ export const IMAGE_CATALOG: readonly ImageCatalogEntry[] = [
     "protocol": "vertex",
     "reference": "optional",
     "ratioKind": "size",
+    "ratioParameter": "imageSize",
     "ratios": [
-      "1k",
-      "2k"
+      "auto",
+      "1024x1024",
+      "1536x1024",
+      "1024x1536"
     ]
   },
   {
@@ -403,13 +408,7 @@ export const IMAGE_CATALOG: readonly ImageCatalogEntry[] = [
       "auto",
       "1024x1024",
       "1536x1024",
-      "1024x1536",
-      "2048x2048",
-      "2048x1152",
-      "3840x2160",
-      "2160x3840",
-      "1536x2048",
-      "2048x1536"
+      "1024x1536"
     ]
   },
   {
@@ -422,13 +421,7 @@ export const IMAGE_CATALOG: readonly ImageCatalogEntry[] = [
       "auto",
       "1024x1024",
       "1536x1024",
-      "1024x1536",
-      "2048x2048",
-      "2048x1152",
-      "3840x2160",
-      "2160x3840",
-      "1536x2048",
-      "2048x1536"
+      "1024x1536"
     ]
   },
   {
@@ -437,6 +430,7 @@ export const IMAGE_CATALOG: readonly ImageCatalogEntry[] = [
     "protocol": "vertex",
     "reference": "optional",
     "ratioKind": "size",
+    "ratioParameter": "size",
     "ratios": [
       "auto",
       "512x512",
@@ -449,14 +443,9 @@ export const IMAGE_CATALOG: readonly ImageCatalogEntry[] = [
     "protocol": "gemini",
     "reference": "none",
     "ratioKind": "size",
+    "ratioParameter": "none",
     "ratios": [
-      "1024x1024",
-      "1536x1024",
-      "1024x1536",
-      "2048x2048",
-      "2048x1152",
-      "3840x2160",
-      "2160x3840"
+      "auto"
     ]
   },
   {
@@ -465,14 +454,9 @@ export const IMAGE_CATALOG: readonly ImageCatalogEntry[] = [
     "protocol": "gemini",
     "reference": "required",
     "ratioKind": "size",
+    "ratioParameter": "none",
     "ratios": [
-      "1024x1024",
-      "1536x1024",
-      "1024x1536",
-      "2048x2048",
-      "2048x1152",
-      "3840x2160",
-      "2160x3840"
+      "auto"
     ]
   }
 ];

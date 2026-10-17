@@ -14,7 +14,8 @@ export function buildStudioImageRequest(
     id: model,
     protocol: "vertex",
     reference: "optional",
-    ratioKind: "aspect",
+    ratioKind: "aspect" as const,
+    ratioParameter: "aspectRatio" as const,
     ratios: CUSTOM_IMAGE_RATIOS,
   };
   if (!prompt.trim()) throw new Error("请提供生图要求");
@@ -26,6 +27,10 @@ export function buildStudioImageRequest(
     ratio && (selected.ratios as readonly string[]).includes(ratio)
       ? ratio
       : (selected.ratios[0] ?? "1:1");
+  const frameField =
+    selected.ratioParameter === "none"
+      ? null
+      : (selected.ratioParameter ?? (selected.ratioKind === "size" ? "imageSize" : "aspectRatio"));
   const slash = model.indexOf("/");
   const provider = slash > 0 ? model.slice(0, slash) : "google";
   const name = slash > 0 ? model.slice(slash + 1) : model;
@@ -42,7 +47,7 @@ export function buildStudioImageRequest(
           ],
           generationConfig: {
             responseModalities: ["TEXT", "IMAGE"],
-            imageConfig: { aspectRatio: chosen },
+            ...(frameField === "aspectRatio" ? { imageConfig: { aspectRatio: chosen } } : {}),
           },
         },
       }
@@ -64,7 +69,7 @@ export function buildStudioImageRequest(
           ],
           parameters: {
             sampleCount: 1,
-            ...(selected.ratioKind === "size" ? { imageSize: chosen } : { aspectRatio: chosen }),
+            ...(frameField ? { [frameField]: chosen } : {}),
           },
         },
       };

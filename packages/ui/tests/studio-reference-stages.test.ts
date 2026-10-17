@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import {
   buildReferenceStages,
+  discussionReferenceCaptions,
   runReferenceStages,
 } from "../src/v4/composer/studio/studioReferenceStages.js";
 const references = [
@@ -10,6 +11,14 @@ const references = [
   { id: "s", url: "scene", kind: "scene" as const },
   { id: "c", url: "clothes", kind: "clothing" as const },
 ];
+test("prompt discussion labels the background image after the pose images", () => {
+  const captions = discussionReferenceCaptions(1, 2);
+  assert.equal(captions.length, 3);
+  assert.match(captions[0]!, /body or pose/);
+  assert.match(captions[1]!, /background reference/);
+  assert.match(captions[2]!, /Image 3/);
+  assert.match(captions[1]!, /FINAL prompt must describe/);
+});
 test("references isolate roles and apply clothing, background, identity in order", () => {
   const stages = buildReferenceStages(references);
   assert.deepEqual(
