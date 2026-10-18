@@ -1,0 +1,44 @@
+{
+  "fps": 60,
+  "width": 1920,
+  "height": 1080,
+  "durationFrames": 1320,
+  "durationSeconds": 22,
+  "bpm": 90,
+  "beatFrames": 40,
+  "sampleRate": 48000,
+  "beats": [0, 40, 80, 120, 160, 200, 240, 280, 320, 360, 400, 440, 480, 520, 560, 600, 640, 680, 720, 760, 800, 840, 880, 920, 960, 1000, 1040, 1080, 1120, 1160, 1200, 1240, 1280],
+  "scenes": [
+    { "id": "hook", "in": 0, "out": 200 },
+    { "id": "workspace", "in": 200, "out": 400 },
+    { "id": "carry", "in": 400, "out": 600 },
+    { "id": "send", "in": 600, "out": 800 },
+    { "id": "reply", "in": 800, "out": 1000 },
+    { "id": "filehold", "in": 1000, "out": 1160 },
+    { "id": "end", "in": 1160, "out": 1320 }
+  ],
+  "cues": [
+    { "frame": 240, "id": "progress", "beat": 6, "text": "查看进度" },
+    { "frame": 640, "id": "message", "beat": 16, "text": "续接工作" },
+    { "frame": 760, "id": "file", "beat": 19, "text": "收取文件" },
+    { "frame": 1200, "id": "wordmark", "beat": 30, "text": "ZenCode" },
+    { "frame": 1220, "id": "version", "offsetFrames": 20, "text": "3.14.35" },
+    { "frame": 1240, "id": "url", "beat": 31, "text": "github.com/bennix/ZCode" }
+  ],
+  "sfx": [
+    { "frame": 200, "id": "whoosh-workspace" },
+    { "frame": 240, "id": "impact-page" },
+    { "frame": 400, "id": "whoosh-carry" },
+    { "frame": 520, "id": "whoosh-phone" },
+    { "frame": 640, "id": "click-message" },
+    { "frame": 760, "id": "impact-file" },
+    { "frame": 1000, "id": "whoosh-filehold" },
+    { "frame": 1160, "id": "whoosh-end" },
+    { "frame": 1200, "id": "impact-word" },
+    { "frame": 1240, "id": "tick-url" }
+  ],
+  "icon": {
+    "hold": { "x": 960, "y": 392 },
+    "end": { "frame": 1160, "arrive": 1220, "x": 620, "y": 468, "size": 148 }
+  }
+}

@@ -11,6 +11,7 @@
 - Keep all new copy and image labels complete in Chinese and English.
 - Include the supplied Huashu Art Motion screen recording as an opt-in inline video demo after the product screenshot gallery. Use a representative frame as the poster, keep controls available, do not autoplay, and encode for web delivery with no silent audio track. Caption the clip accurately as a real workflow that prompts a 10-second Van Gogh-inspired animated cat; preserve the original clip content.
 - Include a curated excerpt of the supplied WeChat recording that shows the user sending an `/image` request and receiving generated images. Exclude the earlier quota failure and request ID from the public clip; use a poster from the successful result, retain the near-square aspect ratio, and provide localized accessible labels. Do not autoplay.
+- The hero stage directly under the automation screenshot is the code-built product introduction `media/zencode-product-intro.mp4` (1920×1080, 60 fps, 22.000 seconds). It is an illustration reconstructed from documented product behavior, not a screen recording. Playback is opt-in: `controls`, `playsinline`, `preload="none"`, no autoplay. The poster is `media/zencode-product-intro-poster.jpg`, the finished first frame. Caption and note stay bilingual and say that on-screen words are limited to documented behavior, and that this cut does not demonstrate native Computer Use or model dispatch. Do not replace the hero still with this video. Keep `ZenCode-Promo.mp4` in the repo, but do not present it as the current introduction.
 
 ## State ownership and interaction order
 
@@ -32,3 +33,4 @@ The desktop Scheduler is hosted by the running Electron app. It polls due automa
 - Language switching updates the new text, image alternatives, accessible labels, and any open dialog caption.
 - The Huashu Art Motion demo plays from an inline player at desktop and mobile widths, remains within the content column, and does not load video data beyond metadata before the visitor starts playback.
 - The WeChat demo shows the real message and returned image without exposing the quota error/request ID; its near-square player preserves the original aspect ratio and remains within the content column at desktop and mobile widths.
+- The hero product introduction plays only after the visitor starts it, shows the reconstructed 22-second film with its poster, and its Chinese and English caption and note describe it as an illustration rather than a screen recording.

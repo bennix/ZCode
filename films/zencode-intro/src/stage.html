@@ -1,0 +1,259 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <title>ZenCode</title>
+    <style>
+      @font-face {
+        font-family: "Film Sans";
+        src: url("../assets/fonts/sans-700.woff2") format("woff2");
+        font-weight: 700;
+        font-style: normal;
+        font-display: block;
+      }
+      @font-face {
+        font-family: "Film Serif";
+        src: url("../assets/fonts/serif-700.woff2") format("woff2");
+        font-weight: 700;
+        font-style: normal;
+        font-display: block;
+      }
+      :root {
+        --ink: #0c0b09;
+        --ivory: #f4efe6;
+        --brass: #c6a56a;
+        --panel: #f4f4f5;
+        --ink2: #1c1915;
+      }
+      * { box-sizing: border-box; }
+      html, body { margin: 0; background: var(--ink); }
+      #stage {
+        position: relative;
+        width: 1920px;
+        height: 1080px;
+        overflow: hidden;
+        background: var(--ink);
+        color: var(--ivory);
+        font-family: "Film Sans", sans-serif;
+        font-weight: 700;
+      }
+      #glow {
+        position: absolute;
+        inset: 0;
+        pointer-events: none;
+        background: radial-gradient(880px 480px at var(--gx) var(--gy), rgba(198, 165, 106, 0.16), transparent 62%);
+      }
+      #kicker, #headline, #word, #version, #url {
+        position: absolute;
+        margin: 0;
+        white-space: nowrap;
+      }
+      #kicker {
+        left: 50%;
+        top: 188px;
+        color: var(--brass);
+        font-size: 20px;
+        letter-spacing: 0.32em;
+      }
+      #headline, #word { font-family: "Film Serif", serif; }
+      #headline {
+        left: 50%;
+        top: 540px;
+        font-size: 84px;
+        letter-spacing: -0.04em;
+        line-height: 1.18;
+        text-align: center;
+      }
+      #panel {
+        position: absolute;
+        left: 410px;
+        top: 150px;
+        width: 1180px;
+        height: 780px;
+        border-radius: 22px;
+        background: var(--panel);
+        color: var(--ink2);
+        box-shadow: 0 40px 100px rgba(0, 0, 0, 0.45);
+        overflow: hidden;
+        transform-origin: 550px 242px;
+      }
+      .titlebar {
+        height: 56px;
+        display: flex;
+        align-items: center;
+        padding: 0 24px 0 78px;
+        border-bottom: 1px solid rgba(28, 25, 21, 0.1);
+        font-size: 16px;
+        letter-spacing: 0.12em;
+      }
+      .titlebar .dots { display: flex; gap: 8px; margin-right: 14px; }
+      .titlebar .dots i {
+        width: 10px;
+        height: 10px;
+        border-radius: 50%;
+        background: rgba(28, 25, 21, 0.22);
+      }
+      .titlebar .dots i:first-child { background: var(--brass); }
+      #phone {
+        position: absolute;
+        left: 710px;
+        top: 160px;
+        width: 500px;
+        height: 740px;
+        border-radius: 54px;
+        background: var(--ink);
+        box-shadow: 0 36px 90px rgba(0, 0, 0, 0.45);
+        transform-origin: 250px 180px;
+        z-index: 3;
+      }
+      #phone .screen {
+        position: absolute;
+        inset: 16px;
+        border-radius: 40px;
+        background: var(--panel);
+      }
+      #phone .ear {
+        position: absolute;
+        z-index: 2;
+        top: 28px;
+        left: 50%;
+        width: 84px;
+        height: 8px;
+        margin-left: -42px;
+        border-radius: 4px;
+        background: rgba(244, 239, 230, 0.45);
+      }
+      #phone .wx {
+        position: absolute;
+        z-index: 2;
+        left: 0;
+        right: 0;
+        top: 132px;
+        color: var(--ink2);
+        font-size: 22px;
+        letter-spacing: 0.04em;
+        text-align: center;
+      }
+      #task, #filecard, #bubble {
+        position: absolute;
+        color: var(--ink2);
+        overflow: hidden;
+      }
+      #task, #filecard {
+        background: var(--ivory);
+        box-shadow: 0 18px 44px rgba(0, 0, 0, 0.2);
+        border-radius: 2px 22px 2px 2px;
+      }
+      #task { z-index: 4; }
+      #filecard { z-index: 5; }
+      #bubble {
+        z-index: 5;
+        background: var(--ivory);
+        border-radius: 16px;
+        font-size: 22px;
+        display: flex;
+        align-items: center;
+        padding: 0 22px;
+        box-shadow: 0 14px 32px rgba(0, 0, 0, 0.18);
+      }
+      #task .fold, #filecard .fold {
+        position: absolute;
+        top: 0;
+        right: 0;
+        width: 0;
+        height: 0;
+        border-style: solid;
+        border-width: 0 36px 36px 0;
+        border-color: transparent var(--ink) transparent transparent;
+      }
+      #task strong, #task em, #filecard strong {
+        position: absolute;
+        left: 28px;
+        right: 28px;
+        font-style: normal;
+        line-height: 1.25;
+      }
+      #task strong { top: 28px; font-size: 28px; }
+      #task em { top: 78px; font-size: 18px; }
+      #prog {
+        position: absolute;
+        left: 28px;
+        top: 118px;
+        width: 68%;
+        height: 8px;
+        border-radius: 4px;
+        background: rgba(28, 25, 21, 0.12);
+        overflow: hidden;
+      }
+      #prog b {
+        display: block;
+        height: 100%;
+        width: 100%;
+        background: var(--brass);
+        transform-origin: left center;
+      }
+      #task .ln {
+        position: absolute;
+        left: 28px;
+        height: 8px;
+        border-radius: 4px;
+        background: rgba(28, 25, 21, 0.14);
+      }
+      #task .ln.a { top: 160px; width: 74%; }
+      #task .ln.b { top: 188px; width: 58%; }
+      #task .ln.c { top: 216px; width: 42%; }
+      #filecard strong { top: 36px; font-size: 26px; }
+      #word {
+        left: 860px;
+        top: 392px;
+        font-size: 120px;
+        letter-spacing: -0.04em;
+        line-height: 1;
+      }
+      #version, #url { left: 860px; }
+      #version { top: 540px; color: var(--brass); font-size: 28px; letter-spacing: 0.18em; }
+      #url { top: 608px; font-size: 32px; }
+      #mark {
+        position: absolute;
+        z-index: 6;
+        transform-origin: center center;
+      }
+      #kicker, #headline { z-index: 7; }
+    </style>
+  </head>
+  <body>
+    <div id="stage">
+      <div id="glow"></div>
+      <p id="kicker">3.14.35</p>
+      <h1 id="headline">从微信继续<br>桌面上的同一任务</h1>
+      <div id="panel">
+        <div class="titlebar"><span class="dots"><i></i><i></i><i></i></span>ZenCode</div>
+      </div>
+      <div id="phone">
+        <div class="screen"></div>
+        <i class="ear"></i>
+        <div class="wx">微信</div>
+      </div>
+      <div id="task">
+        <i class="fold"></i>
+        <strong>同一任务和会话</strong>
+        <em>查看进度</em>
+        <i id="prog"><b></b></i>
+        <i class="ln a"></i>
+        <i class="ln b"></i>
+        <i class="ln c"></i>
+      </div>
+      <div id="bubble">续接工作</div>
+      <div id="filecard">
+        <i class="fold"></i>
+        <strong>收取文件</strong>
+      </div>
+      <h2 id="word">ZenCode</h2>
+      <p id="version">3.14.35</p>
+      <p id="url">github.com/bennix/ZCode</p>
+      <img id="mark" alt="" src="../assets/icon.png" />
+    </div>
+    <script src="./timing-data.js"></script>
+    <script src="./motion.js"></script>
+  </body>
+</html>

@@ -1,0 +1,58 @@
+{
+  "product": "ZenCode",
+  "version": "3.14.35",
+  "source": "index.html i18n copy on the GitHub landing page",
+  "claims": [
+    {
+      "onScreen": "3.14.35",
+      "quote": "下载 ZenCode 3.14.35",
+      "where": "index.html hero.download"
+    },
+    {
+      "onScreen": "从微信继续桌面上的同一任务",
+      "quote": "从微信继续桌面上的同一任务；由独立调度模型为新任务选择执行模型。",
+      "where": "index.html hero.lede"
+    },
+    {
+      "onScreen": "ZenCode",
+      "quote": "下载 ZenCode 3.14.35",
+      "where": "index.html hero.download"
+    },
+    {
+      "onScreen": "查看进度",
+      "quote": "通过现有微信配对入口连接桌面 Host，在同一任务和会话中查看进度、续接工作并收取文件。",
+      "where": "index.html feature.wechat.text"
+    },
+    {
+      "onScreen": "微信",
+      "quote": "通过现有微信配对入口连接桌面 Host，在同一任务和会话中查看进度、续接工作并收取文件。",
+      "where": "index.html feature.wechat.text"
+    },
+    {
+      "onScreen": "续接工作",
+      "quote": "通过现有微信配对入口连接桌面 Host，在同一任务和会话中查看进度、续接工作并收取文件。",
+      "where": "index.html feature.wechat.text"
+    },
+    {
+      "onScreen": "同一任务和会话",
+      "quote": "通过现有微信配对入口连接桌面 Host，在同一任务和会话中查看进度、续接工作并收取文件。",
+      "where": "index.html feature.wechat.text"
+    },
+    {
+      "onScreen": "收取文件",
+      "quote": "通过现有微信配对入口连接桌面 Host，在同一任务和会话中查看进度、续接工作并收取文件。",
+      "where": "index.html feature.wechat.text"
+    },
+    {
+      "onScreen": "github.com/bennix/ZCode",
+      "quote": "https://github.com/bennix/ZCode",
+      "where": "index.html nav source link"
+    }
+  ],
+  "notShown": [
+    "原生 Computer Use 的操作过程，以及它适用的系统",
+    "模型调度的操作过程",
+    "价格、评分、用户评价、节省比例",
+    "截图里的私人项目名和任务标题"
+  ]
+}
