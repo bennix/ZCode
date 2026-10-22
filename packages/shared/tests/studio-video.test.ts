@@ -137,3 +137,65 @@ test("selection cleanup is idempotent and preserves custom choices", () => {
     VIDEO_CATALOG.every((m) => m.durations.length > 0 && m.ratios.length > 0 && m.protocol),
   );
 });
+
+test("official ZenMux error types distinguish subscription entitlement from account credit", () => {
+  for (const [type, expected] of [
+    ["model_not_available", "订阅套餐未包含"],
+    ["invalid_model", "模型标识不存在"],
+    ["model_not_supported", "不支持当前接口"],
+    ["quote_exceeded", "订阅配额已用尽"],
+    ["insufficient_credit", "账户欠费"],
+    ["reject_no_credit", "账户余额不足"],
+    ["safety_check_failed", "内容安全规范"],
+  ]) {
+    const text = studioVideoHttpError(
+      404,
+      { error: { type, message: "provider detail" } },
+      "test/model",
+    );
+    assert.ok(text.includes(expected!), `${type}: ${text}`);
+    assert.ok(text.includes("provider detail"));
+  }
+  assert.doesNotMatch(
+    studioVideoHttpError(402, { error: { type: "quote_exceeded" } }, "test/model"),
+    /充值|余额不足/,
+  );
+  assert.doesNotMatch(
+    studioVideoHttpError(404, { error: { type: "model_not_available" } }, "test/model"),
+    /模型标识不存在/,
+  );
+});
+
+test("verified MiniMax H3 Fast exposes its own native duration range", () => {
+  const fast = VIDEO_CATALOG.find((m) => m.id === "minimax/minimax-h3-fast");
+  assert.ok(fast);
+  assert.deepEqual(
+    fast.durations,
+    Array.from({ length: 12 }, (_, i) => i + 4),
+  );
+  const request = buildStudioVideoRequest(fast.id, "rotating cube", null, {
+    seconds: 4,
+    ratio: "16:9",
+  });
+  assert.equal(request.protocol, "native");
+  assert.equal(request.body.duration, 4);
+  assert.equal(request.body.resolution, "480p");
+  assert.throws(() => buildStudioVideoRequest(fast.id, "cube", null, { seconds: 3 }), /时长/);
+});
+
+test("Kling models that passed this subscription audit use native video requests", () => {
+  for (const id of ["klingai/kling-3.0", "klingai/kling-3.0-omni", "klingai/kling-3.0-turbo"]) {
+    const model = VIDEO_CATALOG.find((m) => m.id === id);
+    assert.ok(model);
+    assert.deepEqual(
+      model.durations,
+      Array.from({ length: 13 }, (_, i) => i + 3),
+    );
+    const request = buildStudioVideoRequest(id, "cube", null, { seconds: 3, ratio: "16:9" });
+    assert.equal(request.protocol, "native");
+    assert.equal(request.body.resolution, "720p");
+    assert.ok(
+      normalizeStudioVideoSelection({ videoIds: [id], defaultVideoId: id }).videoIds.includes(id),
+    );
+  }
+});

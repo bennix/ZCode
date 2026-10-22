@@ -202,6 +202,17 @@ export function parseStudioVideoResult(
   return { kind: "failed", message: "视频生成没有返回视频文件" };
 }
 
+// 修复依据：ZenMux 同一 HTTP 状态对应不同计费/套餐/协议错误，不能统一引导充值。
+const VIDEO_ERROR_GUIDANCE: Readonly<Record<string, string>> = {
+  model_not_available: "当前订阅套餐未包含此模型，请核对套餐模型清单",
+  invalid_model: "模型标识不存在，请核对官网当前模型 ID",
+  model_not_supported: "此模型不支持当前接口，请核对模型协议",
+  quote_exceeded: "订阅配额已用尽，请等待滚动窗口恢复或检查套餐配额",
+  insufficient_credit: "账户欠费，请检查账户账单",
+  reject_no_credit: "账户余额不足，请检查当前 Key 的计费类型",
+  safety_check_failed: "请求被安全策略拒绝，请按供应商内容安全规范调整内容；不会自动绕过审核重试",
+};
+
 export function studioVideoHttpError(
   status: number,
   payload: unknown,
@@ -213,5 +224,6 @@ export function studioVideoHttpError(
   const type = safeText(error.type ?? error.code);
   const message = safeText(error.message ?? root.message);
   const id = requestId ?? root.request_id;
-  return `视频请求失败（HTTP ${status}）；模型：${model}${type ? `；错误类型：${type}` : ""}${message ? `；原因：${message}` : ""}${typeof id === "string" && /^[a-zA-Z0-9_-]{1,128}$/u.test(id) ? `；请求编号：${id}` : ""}`;
+  const guidance = VIDEO_ERROR_GUIDANCE[type];
+  return `视频请求失败（HTTP ${status}）；模型：${model}${type ? `；错误类型：${type}` : ""}${message ? `；原因：${message}` : ""}${guidance ? `；建议：${guidance}` : ""}${typeof id === "string" && /^[a-zA-Z0-9_-]{1,128}$/u.test(id) ? `；请求编号：${id}` : ""}`;
 }

@@ -1,5 +1,5 @@
 /* eslint-disable max-lines -- Static provider model catalog; entries share one public schema. */
-/** ZenMux 图片与视频目录。图片幅面于 2026-10-17 按模型页 api_protocols 与 Vertex/Images 文档核对；视频协议/比例/时长来自 2026-10-02 的模型 api_info。 */
+/** ZenMux 图片与视频目录。图片幅面于 2026-10-17 按模型页 api_protocols 与 Vertex/Images 文档核对；视频协议/比例/时长于 2026-10-23 按官网 api_info 与订阅实测复核。 */
 
 export interface ImageCatalogEntry {
   id: string;
@@ -463,16 +463,102 @@ export const IMAGE_CATALOG: readonly ImageCatalogEntry[] = [
 
 export const DEFAULT_STUDIO_VIDEO_MODEL = "google/veo-3.1-fast-generate-001";
 
-/** 2026-10-02 实测未通过的历史内置项；失败不代表供应商永久不可用。 */
+/** 2026-10-23 实测未通过的历史内置项；失败不代表供应商永久不可用。 */
 export const RETIRED_STUDIO_VIDEO_MODEL_IDS: readonly string[] = [
   "bytedance/doubao-seedance-1.5-pro",
-  "klingai/kling-3.0",
-  "klingai/kling-3.0-omni",
-  "klingai/kling-3.0-turbo",
   "sapiens-ai/agnes-video-v2.0"
 ];
 
 export const VIDEO_CATALOG: readonly VideoCatalogEntry[] = [
+  {
+    "id": "klingai/kling-3.0",
+    "name": "Kling-3.0",
+    "protocol": "native",
+    "ratios": [
+      "16:9",
+      "1:1",
+      "9:16",
+      "smart"
+    ],
+    "durations": [
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12,
+      13,
+      14,
+      15
+    ],
+    "defaultResolution": "720p"
+  },
+  {
+    "id": "klingai/kling-3.0-omni",
+    "name": "Kling-3.0-Omni",
+    "protocol": "native",
+    "ratios": [
+      "16:9",
+      "1:1",
+      "9:16",
+      "smart"
+    ],
+    "durations": [
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12,
+      13,
+      14,
+      15
+    ],
+    "defaultResolution": "720p"
+  },
+  {
+    "id": "klingai/kling-3.0-turbo",
+    "name": "Kling-3.0-Turbo",
+    "protocol": "native",
+    "ratios": [
+      "16:9",
+      "1:1",
+      "9:16",
+      "smart"
+    ],
+    "durations": [
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12,
+      13,
+      14,
+      15
+    ],
+    "defaultResolution": "720p"
+  },
+  {
+    id: "minimax/minimax-h3-fast",
+    name: "MiniMax H3 Fast",
+    protocol: "native",
+    ratios: ["21:9", "16:9", "4:3", "1:1", "3:4", "9:16"],
+    durations: [4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15],
+    defaultResolution: "480p",
+  },
   {
     "id": "google/veo-3.1-fast-generate-001",
     "name": "Veo 3.1 Fast",

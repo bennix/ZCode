@@ -7,7 +7,8 @@ const server = await createServer({
   configFile: false,
   esbuild: { jsx: "automatic" },
   root: process.cwd(),
-  server: { port: 0 },
+  server: { port: 0, watch: null },
+  optimizeDeps: { entries: [] },
   resolve: { alias: { "@": `${process.cwd()}/packages/ui/src` } },
   plugins: [
     {
@@ -174,6 +175,15 @@ try {
   await page.evaluate(() => window.setVideoModel("alibaba/wan3.0-video"));
   await page.waitForFunction(() => document.querySelector('option[value="30"]'));
   assert.equal(await duration.locator("option").count(), 29);
+  await duration.selectOption("2");
+  await page.evaluate(() => window.setVideoModel("minimax/minimax-h3-fast"));
+  await page.waitForFunction(() => !document.querySelector('option[value="2"]'));
+  assert.equal(await duration.inputValue(), "4");
+  assert.equal(await duration.locator("option").count(), 12);
+  await page.evaluate(() => window.setVideoModel("klingai/kling-3.0"));
+  await page.waitForFunction(() => document.querySelector('option[value="3"]'));
+  assert.equal(await duration.locator("option").count(), 13);
+  assert.equal(await duration.inputValue(), "3");
   await page.setViewportSize({ width: 390, height: 844 });
   assert.equal(await duration.isVisible(), true);
   console.log(

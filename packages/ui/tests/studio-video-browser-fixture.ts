@@ -6,6 +6,8 @@ const initial = {
     "google/veo-3.1-generate-001",
     "google/gemini-omni-1.1-flash-preview",
     "alibaba/wan3.0-video",
+    "minimax/minimax-h3-fast",
+    "klingai/kling-3.0",
   ],
   defaultVideoId: "google/veo-3.1-generate-001",
 };

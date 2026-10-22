@@ -43,3 +43,13 @@ sequenceDiagram
 - 浏览器验证设置模型切换及合法时长在不同模型之间变化，以及所有协议模拟生成成功和取消。
 
 实测汇总与保留项见 [2026-10-02 审计](studio-video-audit-2026-10-02.md)。
+
+## 2026-10-23 官网复核与订阅实测规则
+
+- 官网模型页通过公开的 `listByFilter` 与 `provider/bySlug` 提供当前模型目录、`api_protocols` 和 `api_info.video`。公开 `/api/v1/models` 仅返回其中一部分；不能把未列出的模型直接当作不存在。
+- 以当前订阅 Key 的完整生成结果更新本轮内置模型；失败保留原始结构化类型，区分套餐权限、订阅滚动配额、模型标识、协议及上游生成失败。官网声明的时长/比例是能力信息，最短文生视频成功不证明所有时长或图生视频都成功。
+- HTTP 404 `model_not_available` 提示套餐未包含，`invalid_model` 提示模型标识不存在，`model_not_supported` 提示协议不支持；HTTP 402 `quote_exceeded` 提示订阅配额，`insufficient_credit` / `reject_no_credit` 才提示账户余额。错误引导由 Shared 纯 formatter 所有，不改变重试或鉴权流程。
+- `safety_check_failed` 应提示用户按供应商规范调整内容，不自动改写敏感内容后重试或切换模型以绕开审核。已有英文优先的媒体提示词生成规则继续保持，不改写用户指定语言或画面文字。
+- 证据报告只含模型、协议、参数、HTTP/结构化错误和成功状态；不包含 Key、完整任务响应、签名 URL、账号用量或账户信息。
+
+本轮结果见 [2026-10-23 审计](studio-video-audit-2026-10-23.md)：20 个完整成功模型进入目录，Agnes 上游限流、旧 Seedance 1.5 无效标识仍不保留。
