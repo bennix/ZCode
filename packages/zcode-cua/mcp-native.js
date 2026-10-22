@@ -26,6 +26,33 @@ const ACTION_TOOLS = new Set([
   "resize_window",
 ]);
 const MAX_LINE_BYTES = 24 * 1024 * 1024;
+const OBSERVATION_LEASE_MS = 120_000;
+const COORDINATE_TOOLS = new Set(["click", "scroll", "drag"]);
+const COORDINATE_FIELDS = [
+  "x",
+  "y",
+  "from_x",
+  "from_y",
+  "to_x",
+  "to_y",
+  "start_x",
+  "start_y",
+  "end_x",
+  "end_y",
+];
+const TARGET_FIELDS = [
+  "app",
+  "app_name_or_bundle_identifier",
+  "window_id",
+  "pid",
+  "app_id",
+  "wm_class",
+  "title",
+  "tty",
+  "terminal_pid",
+  "terminal_command",
+  "terminal_cwd",
+];
 
 export function assertLinuxGlibcCompatible(version) {
   if (typeof version !== "string") return;
@@ -79,7 +106,7 @@ export function createMcpNativeRuntime({ env, platform, arch }) {
       if (sessions.has(key)) {
         return sessions.get(key);
       }
-      session = { host, snapshotId: undefined, tail: Promise.resolve() };
+      session = { host, observation: undefined, tail: Promise.resolve() };
       sessions.set(key, session);
     }
     return session;
@@ -139,21 +166,65 @@ export function createMcpNativeRuntime({ env, platform, arch }) {
             const input = args?.arguments;
             if (!input || typeof input !== "object" || Array.isArray(input))
               throw new Error("Computer Use tool arguments must be an object");
-            if (name === "get_app_state") session.snapshotId = undefined;
+            if (name === "get_app_state") session.observation = undefined;
+            let actionInput = input;
             if (ACTION_TOOLS.has(name)) {
-              if (!session.snapshotId || args.snapshotId !== session.snapshotId)
+              const observation = session.observation;
+              if (!observation || args.snapshotId !== observation.id)
                 throw new Error("Computer Use action requires the current observation snapshot");
-              session.snapshotId = undefined;
+              // 修复：当前 id 不能证明目标、时效或截图存在；旧观察不能驱动其他应用或盲点坐标。
+              if (performance.now() - observation.capturedAt >= OBSERVATION_LEASE_MS) {
+                session.observation = undefined;
+                throw new Error("Computer Use observation expired; observe the app again");
+              }
+              for (const field of [...TARGET_FIELDS, "window_title"]) {
+                const observedField = field === "window_title" ? "title" : field;
+                if (
+                  input[field] !== undefined &&
+                  input[field] !== observation.target[observedField]
+                )
+                  throw new Error(
+                    "Computer Use action must target the observed app; observe it again",
+                  );
+              }
+              if (
+                COORDINATE_TOOLS.has(name) &&
+                (name === "drag" ||
+                  COORDINATE_FIELDS.some((field) => input[field] !== undefined)) &&
+                !observation.hasScreenshot
+              )
+                throw new Error(
+                  "Computer Use coordinate action requires an observation screenshot",
+                );
+              // Linux 的应用名只限定 AX 树，动作接口不接受该字段；不跨平台注入参数。
+              actionInput =
+                platform === "win32" && observation.target.app !== undefined
+                  ? { ...input, app: observation.target.app }
+                  : input;
+              session.observation = undefined;
             }
             const called = await session.host.call(
               "tools/call",
-              { name, arguments: input },
+              { name, arguments: actionInput },
               signal,
             );
             if (called.isError) return { content: called.content ?? [], isError: true };
             if (name === "get_app_state") {
-              session.snapshotId = randomUUID();
-              return appendSnapshot(called, session.snapshotId);
+              session.observation = {
+                id: randomUUID(),
+                target: Object.fromEntries(
+                  TARGET_FIELDS.filter((field) => input[field] !== undefined).map((field) => [
+                    field,
+                    input[field],
+                  ]),
+                ),
+                capturedAt: performance.now(),
+                hasScreenshot: (called.content ?? []).some(
+                  (item) =>
+                    item.type === "image" && typeof item.data === "string" && item.data.length > 0,
+                ),
+              };
+              return appendSnapshot(called, session.observation.id);
             }
             return { content: called.content ?? [] };
           });

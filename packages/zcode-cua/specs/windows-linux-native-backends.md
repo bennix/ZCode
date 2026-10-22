@@ -11,6 +11,7 @@
 - 桌面设置导航必须露出「电脑控制」分区，由现有 `ComputerUseSection` 读取插件管理 store 的启用态并调用同一 `setPluginEnabled` 路径；插件列表和专用分区不能各自持有一份开关状态。普通 Web 不显示此分区。首次安装时专用分区可见、总开关关闭；用户打开后两处显示一致。
 - 插件列表的英文描述必须覆盖 macOS、Windows 和 Linux，不得继续宣称只控制 macOS 应用。
 - 允许只读列举和观察；点击、键入等动作必须引用同一 CLI 会话最近一次观察得到的 ZenCode snapshot id。动作消耗该 snapshot；异常或未知结果不自动重试。屏幕图像按 MCP image 内容块转发，不写入长期存储。
+- 观察绑定请求的 `app`、产生时间（单调时钟）和是否实际返回截图；120 秒后必须重新观察。显式指定其他 app 的动作失败且不会触达原生执行器；没有重复指定 app 时沿用观察目标。包含坐标的 click/scroll 与 drag 必须来自含真实 image 内容块的观察；仅 AX/无截图观察仍允许 element_index 动作。失败的目标/截图/时效校验不执行动作，过期快照立即废弃。坐标动作和元素动作不互相猜测降级，不能据 `include_screenshot` 请求参数声称已经取得截图。
 
 ## 状态、接口与时序
 
@@ -50,10 +51,32 @@
    9a. Linux x64 与 arm64 的打包流水线在独立 D-Bus 会话中启动 Weston headless 和 Zenity，启用 AT-SPI，使用预置二进制经 ZenCode runtime 观察明确命名的按钮，再携该次 snapshot id 执行元素 `Click`，并验证对话框进程成功退出。此检查证明 Wayland AT-SPI 元素动作，不证明 GNOME portal 截图或坐标输入。
 10. Windows x64 与 arm64 的打包流水线在登录的交互桌面启动独立 WPF 测试窗口，经预置二进制 `list_apps` 找到窗口、`get_app_state` 读到明确命名的 UIA 文本框与按钮。先携快照执行 `set_value`，重新观察后携新快照执行元素 `click`；按钮事件把文本框内容写入一次性哨兵文件，断言写入值等于预期。窗口保持打开直到执行器完成点击后的状态观察，随后由测试清理阶段关闭。若 CI runner 没有交互桌面，应明确失败，不能把 MCP 握手当成 GUI 动作通过。该测试不代替锁屏与真实应用的手工验收。
 
-Windows UIA 节点缺失时，验收错误须附上本次 `get_app_state` 的有限树文本及 `list_apps` 结果，以区分窗口选择、无障碍树为空与测试名称匹配错误；仍保持失败，不将 MCP 握手或仅发现窗口视为通过。GitHub runner 的 WinForms 文本框实际只暴露为无名称 `pane`（其按钮有名称）；验收窗口改用显式设置 AutomationProperties.Name 的 WPF 控件，使观察、ValuePattern 输入和 InvokePattern 点击都可由 UIA 语义验证。上游 `click` 在动作后还读取窗口状态；测试回调若立即关闭窗口会使这次读取报告 `appNotFound`，因此不能在回调内关闭。
-11. Windows/Linux 每个架构打包后还要从该架构的 unpacked 应用启动隔离首次使用 E2E：`HOME`、桌面 userData/sessionData 与 ZenCode 数据目录各自隔离，首次设置页与插件列表中的电脑控制开关均为关闭；手动开启后两处显示一致。该检查验证包内 renderer、Host 与插件管理链，不等于通过 NSIS/deb/rpm 安装器的安装后验收。流水线必须使用各架构对应的 unpacked 目录，不能以开发态 Electron 替代。
+Windows UIA 节点缺失时，验收错误须附上本次 `get_app_state` 的有限树文本及 `list_apps` 结果，以区分窗口选择、无障碍树为空与测试名称匹配错误；仍保持失败，不将 MCP 握手或仅发现窗口视为通过。GitHub runner 的 WinForms 文本框实际只暴露为无名称 `pane`（其按钮有名称）；验收窗口改用显式设置 AutomationProperties.Name 的 WPF 控件，使观察、ValuePattern 输入和 InvokePattern 点击都可由 UIA 语义验证。上游 `click` 在动作后还读取窗口状态；测试回调若立即关闭窗口会使这次读取报告 `appNotFound`，因此不能在回调内关闭。11. Windows/Linux 每个架构打包后还要从该架构的 unpacked 应用启动隔离首次使用 E2E：`HOME`、桌面 userData/sessionData 与 ZenCode 数据目录各自隔离，首次设置页与插件列表中的电脑控制开关均为关闭；手动开启后两处显示一致。该检查验证包内 renderer、Host 与插件管理链，不等于通过 NSIS/deb/rpm 安装器的安装后验收。流水线必须使用各架构对应的 unpacked 目录，不能以开发态 Electron 替代。
 
 ## 本机验证记录
+
+2026-10-23 对照 [Open Computer Use](https://github.com/iFurySt/open-computer-use/tree/43eb4b53de7a15b3f99ec2c9922bedeb95602266)（MIT）后，独立补充 MCP observation lease 与目标绑定。上游 `get_app_state` 区分 AX 与 screenshot 观察，`query` 的元素索引有 120 秒生命周期；ZenCode 沿用相同生命周期思路，但仍用自己的 session-scoped、一次性 snapshotId，不移植上游全局输入、锁屏/虚拟屏或进程协议。已有 Windows 来源归属继续保留在插件 THIRD_PARTY_NOTICES。macOS 原有 maka.cu/2 digest/frame 契约不被弱化；目前没有为不支持 query 的打包后端虚报 query 能力。
+
+```mermaid
+sequenceDiagram
+  participant C as CLI main session
+  participant R as zcode-cua session owner
+  participant N as Native MCP
+  C->>R: get_app_state(app)
+  R->>N: 同一排队与 generation 校验
+  N-->>R: AX + 可选实际截图
+  R-->>C: snapshotId(app, capture, monotonic time)
+  C->>R: action(snapshotId, app?, element/coordinates)
+  R->>R: 校验当前 id / app / 120s / 坐标截图
+  alt 校验成功
+    R->>R: 消耗 snapshot
+    R->>N: 一次动作（继承已观察 app）
+  else 目标不符/过期/无截图
+    R-->>C: 明确失败，要求重新观察
+  end
+```
+
+验收新增：Win/Linux 均拒绝跨 app、超时和无截图坐标动作；AX-only 元素动作通过；省略 app 正确继承；现有并发观察、跨会话、取消、握手中关闭、重复动作和退出不重放测试继续通过。这些假 MCP 测试证明宿主准入边界，不替代各 OS 登录桌面的原生动作验收。
 
 2026-10-10：预置 Linux ARM64 二进制在 Colima 虚拟机实际执行 `doctor`，报告无图形会话且能力不可用；Node 24 的 Linux ARM64 与模拟 x64 容器均通过 ZenCode runtime 的 `initialize`、`tools/list`、`doctor` 调用。glibc 2.36 容器按预期返回最低版本错误，glibc 2.41 容器通过。此证据不覆盖 Windows 实机或 Linux 已登录图形会话的元素动作。
 
@@ -68,3 +91,5 @@ Windows UIA 节点缺失时，验收错误须附上本次 `get_app_state` 的有
 2026-10-10：隔离数据目录启动当前 macOS Preview 包，插件列表实际显示内置「电脑控制」，启用开关初始为 unchecked；手动点击后为 checked，MCP 数从 1 变为 2。检查同时发现专用设置分区被 `HIDDEN_SETTINGS_SECTIONS` 显式隐藏；当前源码已恢复桌面导航，并以真实 Electron 首次启动 E2E 验证设置页与插件列表共用同一开关。普通 Web 不显示该分区的配置测试通过。此证据不覆盖 Windows/Linux 安装包或实机动作。
 
 2026-10-10：Windows/Linux x64、arm64 打包 workflow 现增加各自 unpacked 产物的首次启用 E2E；测试在 macOS arm64 Preview 包以默认语言和 `--lang=en-US` 两次隔离启动均通过。工作流 YAML 解析及矩阵目录字段本地验证通过。GitHub 默认分支尚无这两个 workflow 的运行记录，因此 Windows/Linux 对应步骤仍待 runner 执行，且 unpacked 启动不代替安装器安装后验收。
+
+Linux 使用自身 schema：`app_name_or_bundle_identifier` 仅限定观察的 AX 树，不注入动作。动作显式 window/pid/app_id/title 等选择器必须与观察字段一致（window_title 对应 title）；Windows 省略 app 时继承。未指定窗口的 Linux 动作沿用原生当前观察语义，不保证 OS 焦点锁定。

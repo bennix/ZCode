@@ -25,3 +25,5 @@ On Windows or Linux, first call `await computerUse.platformTools()` to read the 
 Use `nodeRepl.write` only for a short status; the client emits the structured result itself. A stale or spent snapshot requires a new observation. Never repeat an action whose result is `outcome_unknown`.
 
 For macOS screenshots use `computerUse.screenshot()`; on Windows and Linux use the image content of `get_app_state` or a listed `screenshot` tool. Use `computerUse.stop()` to release the native session. Do not use shell or AppleScript to bypass the user's plugin choice.
+
+Windows/Linux observations expire after 120 seconds and permit one action. Reobserve after each action or expiration. Coordinate click/scroll/drag requires an actual image in the observation; AX-only element actions remain available without an image. Explicit action targets must match the observed target fields. Windows inherits an omitted `app`; Linux actions use their own returned schemas and do not accept the observation-only `app_name_or_bundle_identifier`. Observe the intended window before changing targets.
