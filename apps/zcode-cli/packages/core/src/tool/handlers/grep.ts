@@ -168,6 +168,7 @@ export const grepToolEntry: ToolEntry = {
     denyPriority: "beforeAsk",
   },
   resultBudget: {
+    textCompression: "search",
     maxInlineBytes: MAX_GREP_MODEL_BYTES,
     maxModelBytes: MAX_GREP_MODEL_BYTES,
     strategy: "artifact",

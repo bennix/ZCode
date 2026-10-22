@@ -478,6 +478,7 @@ export const bashToolEntry: ToolEntry = {
     denyPriority: "beforeAsk",
   },
   resultBudget: {
+    textCompression: "logs",
     maxInlineBytes: MAX_INLINE_OUTPUT_BYTES,
     maxModelBytes: 30_000,
     strategy: "artifact",

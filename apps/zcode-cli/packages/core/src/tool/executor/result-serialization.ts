@@ -14,10 +14,9 @@ import {
 } from "@zcode/zcode-cua/frame-contract";
 import type { ToolEntry, ToolResultSerialization } from "../types.js";
 import { formatHookAdditionalContexts } from "./hook-flow.js";
-import {
-  formatGenericPersistedOutputContent,
-  isPersistedOutputContent,
-} from "../result-persistence-format.js";
+import { isPersistedOutputContent } from "../result-persistence-format.js";
+import { compressToolText, formatCompressedToolText } from "../result-text-compression.js";
+import { tryWriteToolArtifact, formatPersistedOutputContent } from "./result-artifact.js";
 import {
   appendHookToPersistedArtifactPreview,
   appendHookToStringContent,
@@ -79,9 +78,18 @@ export async function serializeOutput(
     0,
     Math.min(effectiveBudget.maxModelBytes, effectiveBudget.maxInlineBytes),
   );
+  const compression =
+    typeof modelContent === "string" &&
+    entry.maxModelChars === undefined &&
+    entry.modelContentProtection === undefined &&
+    effectiveBudget.strategy === "artifact" &&
+    effectiveBudget.artifact?.enabled === true
+      ? compressToolText(content, effectiveBudget.textCompression)
+      : undefined;
+  if (compression) signal.throwIfAborted();
   const artifactPath = findArtifactPath(output);
   const shouldPersistArtifact =
-    (originalBytes > maxModelBytes || exceedsCharacterBudget) &&
+    (originalBytes > maxModelBytes || exceedsCharacterBudget || compression !== undefined) &&
     effectiveBudget.artifact?.enabled === true &&
     effectiveBudget.strategy === "artifact";
   const artifact = shouldPersistArtifact
@@ -97,6 +105,35 @@ export async function serializeOutput(
       )
     : undefined;
   const resolvedArtifactPath = artifact?.path ?? artifact?.uri ?? artifactPath;
+  if (compression) {
+    signal.throwIfAborted();
+    // 修复：只有本次真正保存了原文，省略才可取回；不能信任工具正文里自报的路径。
+    const projected = artifact?.path
+      ? formatCompressedToolText(compression, content, artifact.path, maxModelBytes)
+      : undefined;
+    if (projected !== undefined) {
+      const returnedBytes = Buffer.byteLength(projected, "utf8");
+      deps.logger?.debug("Tool output compressed", {
+        ...traceContextToLogContext(traceContext),
+        event: "tool.result.text_compressed",
+        module: "core.tool.executor",
+        toolCallId,
+        toolName: entry.metadata.name,
+        originalBytes,
+        returnedBytes,
+        savedBytes: originalBytes - returnedBytes,
+      });
+      return {
+        content: projected,
+        modelContent: projected,
+        originalBytes,
+        returnedBytes,
+        truncated: true,
+        budgetStrategy: effectiveBudget.strategy,
+        artifactPath: artifact?.path,
+      };
+    }
+  }
 
   if (
     entry.modelContentProtection === OFFICIAL_CUA_FRAME_MODEL_CONTENT_PROTECTION &&
@@ -289,63 +326,6 @@ function structuredMediaBytes(content: ModelMessageContent): number {
 function resolveMaxModelBytes(entry: ToolEntry): number {
   const budget = entry.resultBudget ?? DEFAULT_RESULT_BUDGET;
   return Math.max(0, Math.min(budget.maxModelBytes, budget.maxInlineBytes));
-}
-
-async function tryWriteToolArtifact(
-  deps: ToolExecutorDeps,
-  content: string,
-  contentType: string,
-  entry: ToolEntry,
-  budget: ToolResultBudget,
-  traceContext: TraceContext,
-  toolCallId: string,
-  signal: AbortSignal,
-): Promise<{ path?: string; uri: string } | undefined> {
-  if (!deps.artifactStore) {
-    return undefined;
-  }
-
-  try {
-    return await deps.artifactStore.writeToolResultArtifact(
-      {
-        sessionId: deps.sessionId,
-        turnId: traceContext.turnId ?? deps.turnId,
-        toolCallId,
-        toolName: entry.metadata.name,
-        content,
-        contentType,
-        retention: budget.artifact?.retention ?? "session",
-        trace: traceContext,
-      },
-      { signal },
-    );
-  } catch {
-    // 与主模型交互时，artifact 写入失败不应让一次成功的工具调用变成失败。
-    // 这里回退到统一的 resultBudget 截断路径，保持工具结果可见并避免原始大输出进模型。
-    return undefined;
-  }
-}
-
-function formatPersistedOutputContent(input: {
-  content: string;
-  entry: ToolEntry;
-  originalBytes: number;
-  output: unknown;
-  persistedPath: string;
-}): ModelMessageContent {
-  const projected = input.entry.formatPersistedModelContent?.({
-    content: input.content,
-    originalBytes: input.originalBytes,
-    output: input.output,
-    persistedPath: input.persistedPath,
-  });
-  if (projected !== undefined) return projected;
-
-  return formatGenericPersistedOutputContent({
-    content: input.content,
-    originalBytes: input.originalBytes,
-    persistedPath: input.persistedPath,
-  });
 }
 
 function isEmptyModelContent(content: ModelMessageContent): boolean {

@@ -123,6 +123,8 @@ export interface ToolResultBudget {
    */
   maxModelBytes: number;
   strategy: ToolResultBudgetStrategy;
+  /** Deterministic, recoverable projection of new text results; requires a readable artifact. */
+  textCompression?: "logs" | "search";
   preview?: {
     maxBytes?: number;
     maxLines?: number;
