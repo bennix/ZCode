@@ -23,3 +23,12 @@ test("ordinary output and quoted marker references do not block", () => {
   );
   assert.doesNotThrow(() => assertStudioPromptAllowed('Discuss the marker "SAFETY_BLOCKED:".'));
 });
+
+test("Sora video guardrails remain separate from image model rules", () => {
+  const video = studioPromptSafetyRules("openai/sora-2");
+  assert.match(video, /audiences under 18/);
+  assert.match(video, /Real people/);
+  assert.match(video, /Copyrighted characters/);
+  assert.match(video, /images with human faces/);
+  assert.doesNotMatch(studioPromptSafetyRules("openai/gpt-image-2"), /Real people.*cannot/);
+});
