@@ -114,3 +114,8 @@ afterPack 复制运行时 → 扫描三个资源目录 → 逐个签 Mach-O → 
 - 新 DMG 公证 `bdeaa1e7-794d-4602-a4e5-9e31493e88f5` 与 ZIP 公证 `d4ce2168-fb8c-4b84-95b1-0cde83f337f0` 均为 Accepted。DMG 已装订，挂载后的 App 通过 Gatekeeper `Notarized Developer ID`，`codesign --verify --deep --strict` 通过。本地 `release-artifacts` 只保留 `ZenCode-3.14.35-mac-arm64.dmg`，SHA-256 `6a7a1ca1453cda165bd228ef8c11b14954e9743fa56cb9d4ddce37c02eeb157f`。
 - Windows package run `39036069339` 与 Linux packages run `39036072380` 成功。安装验收 run `39074008610` 全部通过。公开资产摘要与本地文件一致后，替换了 `v3.14.35` 的安装包、blockmap 和更新清单，并保持该版本为 GitHub Latest。
 - Windows x64 SHA-256 `38524e0e10c7d2d7b8fe4e2fd258336e5ffc385ebf69feed17a5f6013d557c38`，ARM64 `1dc03df153ce5cd72affa29af143584ae93fca3084f62bbd1521de5f7869d0d5`。Linux amd64 deb `d71dbc3e108e42d54a99fb6aa5312aed686ac37c6ca1e2cc0ee11c603d13a249`，arm64 deb `349447cdc218570f104596a41e87fc04672d4b56861331ab23b7a08f59f22981`，x86_64 rpm `5586520fd7722c3b86134668af0a33f521a7649143c30a61d1c665a324317381`，aarch64 rpm `1f0dc47cca6574c63853c84e542b350d299b7164a3fe5b814e2e08e284ee4fd9`。
+
+
+### 2026-10-23 媒体、提示词与 Computer Use 同版四平台重建
+
+本轮以同一源码提交重建 macOS arm64、Windows x64/ARM64、Linux x64/ARM64 的 3.14.35。纳入可恢复的工具输出压缩、可见提示词复制、Windows/Linux 观察租约、20 个实测视频模型与各自时长、结构化错误提示和 Sora 专用安全规则。构建前重跑针对性测试、类型与架构检查；已有 lint 超限不得写成通过。Windows/Linux 候选包由 GitHub Actions 构建并执行原生 CUA 与安装验收；Mac 必须完成 Developer ID 签名、DMG/ZIP 公证、装订及 Gatekeeper 校验后才能刷新公开资产。所有产物核对 SHA-256，更新清单使用最终文件摘要；发布标签和 Release target 统一到此次构建提交。用户无关的本地未跟踪文件不进入源码提交。
