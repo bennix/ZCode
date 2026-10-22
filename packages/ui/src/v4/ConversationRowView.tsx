@@ -1288,7 +1288,8 @@ const UserInputRowView = memo(function UserInputRowView({
         )}
       >
         <CopyRowAction
-          text={row.text}
+          // 修复：原始文本含模型环境快照与引擎尾注，复制必须复用气泡可见正文。
+          text={visibleText}
           rowId={row.rowId}
           label={intl.formatMessage({ id: "chat.message.copy" })}
         />
