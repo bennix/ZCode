@@ -1,0 +1,299 @@
+{
+  "date": "2026-10-26",
+  "version": "3.14.36",
+  "status": "published",
+  "source": "fa4b39c582c3c64920380db535c27dff1871afd5",
+  "localSource": "654242b5",
+  "sourceTree": "66e44068655efece49cb626834e987d0688dd931",
+  "release": "https://github.com/bennix/ZCode/releases/tag/v3.14.36",
+  "notarization": {
+    "dmg": "3bdf0871-2422-4b50-be68-1c7f893a3ed1",
+    "zip": "20ccb6f4-8c69-419d-a080-20745cb18fb3",
+    "status": "Accepted"
+  },
+  "runs": {
+    "windowsBuild": 40309917192,
+    "linuxBuild": 40309921734,
+    "installed": 40312799911,
+    "assetStaging": 40312804462,
+    "windowsMetadata": 40312809231
+  },
+  "checks": {
+    "sameSourceTree": true,
+    "macDeepSignaturePassed": true,
+    "packagedOfficeIntegrity": true,
+    "packagedOfficeVersion": "1.0.152",
+    "macAboutUpdateE2E": "passed: final rebuilt app",
+    "desktopNodeVersion": "24.14.0",
+    "typecheck": "passed",
+    "lint": "failed: existing settingService.ts max-lines (403 > 400), 76 warnings",
+    "officeAfterExecution": {
+      "officeVersion": "1.0.152",
+      "docxValidation": "passed",
+      "binaryUnchanged": true,
+      "appSignatureAfterExecution": "passed",
+      "sha256": "7b6feefbc9e7e8c48ed3c8a256435c489475821eceb746d1ec846cf11d9ee70d"
+    },
+    "cliTypecheck": "passed: 27 packages",
+    "cliLint": "failed: existing max-lines errors",
+    "macStaplerPassed": true,
+    "macGatekeeper": "Notarized Developer ID",
+    "macMountedOfficeIntegrity": true,
+    "allBuildsPassed": true,
+    "draftAssetsMatchBuildDigests": true,
+    "updateMetadataMatchesAssets": true,
+    "installedReleaseValidation": "passed: all six Windows/Linux installers",
+    "publicInstallerLinks": "7 HTTP 200",
+    "publicReleaseAssetCount": 40
+  },
+  "remoteRuntime": {
+    "preparedVersion": "24.14.0",
+    "distribution": "GitHub Release",
+    "assetsVerified": 28,
+    "macArmAndX64NodeCliPty": "passed",
+    "linuxArchiveDownloadAndExtraction": "passed",
+    "liveSshWslSession": "not tested",
+    "published": true,
+    "publicDownloadProbe": {
+      "hashesVerified": true,
+      "node": "24.14.0",
+      "cli": "0.16.9"
+    }
+  },
+  "supersededCandidates": [
+    {
+      "source": "640aa8e4368cefc736bb1e388e56092691bc48e8",
+      "notarization": {
+        "dmg": {
+          "id": "04fd4225-2573-4161-99eb-ff24e9e0c39a",
+          "status": "Accepted"
+        },
+        "zip": {
+          "id": "9be11400-40d0-4177-ac18-54a4fb719c84",
+          "status": "Accepted"
+        }
+      },
+      "reason": "OfficeCLI self-update replaced signed binary after execution; not published"
+    }
+  ],
+  "remoteAssets": [
+    {
+      "name": "manifest-darwin-arm64.json",
+      "sha256": "fbd4d6d0b8bc2c699e5ae1de0ce07a560aee2fcd90ed5cfcd92621e3acd93298",
+      "size": 2192
+    },
+    {
+      "name": "manifest-darwin-x64.json",
+      "sha256": "bccebabc328f0bdfd38e9e9efd789a2bdae2aed90f469f4fb31c9723260024a0",
+      "size": 2172
+    },
+    {
+      "name": "manifest-linux-arm64.json",
+      "sha256": "ce84495e980082de3018c826ac5c7268acb0f7c2e377973fd637d970df8e10ab",
+      "size": 3001
+    },
+    {
+      "name": "manifest-linux-x64.json",
+      "sha256": "f4c58d092474285b1fca0584b7f4da5939046534103ae0f18dbc7ce86cc73761",
+      "size": 2973
+    },
+    {
+      "name": "remote-darwin-arm64-glm-848d4398ccfb778093df80087854e611d7b8e8694e54c6dbc3154175560fe897.tar.gz",
+      "sha256": "848d4398ccfb778093df80087854e611d7b8e8694e54c6dbc3154175560fe897",
+      "size": 4996611
+    },
+    {
+      "name": "remote-darwin-arm64-node-pty-fd5ad8b084bd978c82fecd9aaea7854738ae8c6520c64fce62e531a5986e604d.tar.gz",
+      "sha256": "fd5ad8b084bd978c82fecd9aaea7854738ae8c6520c64fce62e531a5986e604d",
+      "size": 368813
+    },
+    {
+      "name": "remote-darwin-arm64-node-runtime-d497a07fdbf572e825c2268ac3750d24f0f82042a6cca887e4258b46e494b01c.tar.gz",
+      "sha256": "d497a07fdbf572e825c2268ac3750d24f0f82042a6cca887e4258b46e494b01c",
+      "size": 39408871
+    },
+    {
+      "name": "remote-darwin-arm64-ripgrep-df16ee3012b6f481c935eb1e63137d4d37a9ad2183834c43bc441fd8c1de68e9.tar.gz",
+      "sha256": "df16ee3012b6f481c935eb1e63137d4d37a9ad2183834c43bc441fd8c1de68e9",
+      "size": 1597619
+    },
+    {
+      "name": "remote-darwin-arm64-server-bundle-a18dd7bed899fbb495a1ad0c0e9ded9f3bb2c72005f8afa39c61353df3518366.tar.gz",
+      "sha256": "a18dd7bed899fbb495a1ad0c0e9ded9f3bb2c72005f8afa39c61353df3518366",
+      "size": 1959031
+    },
+    {
+      "name": "remote-darwin-x64-glm-848d4398ccfb778093df80087854e611d7b8e8694e54c6dbc3154175560fe897.tar.gz",
+      "sha256": "848d4398ccfb778093df80087854e611d7b8e8694e54c6dbc3154175560fe897",
+      "size": 4996611
+    },
+    {
+      "name": "remote-darwin-x64-node-pty-0651917a3afd74ef27626bef6bbf15b0d5af102c57101a9b72597008afa7ecf5.tar.gz",
+      "sha256": "0651917a3afd74ef27626bef6bbf15b0d5af102c57101a9b72597008afa7ecf5",
+      "size": 368326
+    },
+    {
+      "name": "remote-darwin-x64-node-runtime-0d8f204d3e949ae7ff897a1c0dbfe8c97b7c9dbbfb485bfb03291d6a7126a349.tar.gz",
+      "sha256": "0d8f204d3e949ae7ff897a1c0dbfe8c97b7c9dbbfb485bfb03291d6a7126a349",
+      "size": 40385888
+    },
+    {
+      "name": "remote-darwin-x64-ripgrep-b8d8a68a82b69e5d897264c0a572e09f9c6073979f8177495486dc281c92986e.tar.gz",
+      "sha256": "b8d8a68a82b69e5d897264c0a572e09f9c6073979f8177495486dc281c92986e",
+      "size": 1786923
+    },
+    {
+      "name": "remote-darwin-x64-server-bundle-a18dd7bed899fbb495a1ad0c0e9ded9f3bb2c72005f8afa39c61353df3518366.tar.gz",
+      "sha256": "a18dd7bed899fbb495a1ad0c0e9ded9f3bb2c72005f8afa39c61353df3518366",
+      "size": 1959031
+    },
+    {
+      "name": "remote-linux-arm64-bfs-e8797b8abea8a18860af5a70ecb10b097c3ab1fe64f6790dddc890e00dc57f32.tar.gz",
+      "sha256": "e8797b8abea8a18860af5a70ecb10b097c3ab1fe64f6790dddc890e00dc57f32",
+      "size": 422095
+    },
+    {
+      "name": "remote-linux-arm64-glm-848d4398ccfb778093df80087854e611d7b8e8694e54c6dbc3154175560fe897.tar.gz",
+      "sha256": "848d4398ccfb778093df80087854e611d7b8e8694e54c6dbc3154175560fe897",
+      "size": 4996611
+    },
+    {
+      "name": "remote-linux-arm64-node-pty-5b0ea9537f2c62eb5e7c011ff6ed5b74954de3264679528caf7767e049420a36.tar.gz",
+      "sha256": "5b0ea9537f2c62eb5e7c011ff6ed5b74954de3264679528caf7767e049420a36",
+      "size": 372069
+    },
+    {
+      "name": "remote-linux-arm64-node-runtime-93e17c83fb4ee1bb881d139e1323c8db6e424f54d7149b9fb88ff21e5e9b9440.tar.gz",
+      "sha256": "93e17c83fb4ee1bb881d139e1323c8db6e424f54d7149b9fb88ff21e5e9b9440",
+      "size": 44538716
+    },
+    {
+      "name": "remote-linux-arm64-ripgrep-0b773d547533be1537a3ba7d39c448eacfc9783ed21b3f4894486973f3d6c855.tar.gz",
+      "sha256": "0b773d547533be1537a3ba7d39c448eacfc9783ed21b3f4894486973f3d6c855",
+      "size": 2153267
+    },
+    {
+      "name": "remote-linux-arm64-server-bundle-a18dd7bed899fbb495a1ad0c0e9ded9f3bb2c72005f8afa39c61353df3518366.tar.gz",
+      "sha256": "a18dd7bed899fbb495a1ad0c0e9ded9f3bb2c72005f8afa39c61353df3518366",
+      "size": 1959031
+    },
+    {
+      "name": "remote-linux-arm64-ugrep-9314532eb7ba6a21fd0f6dd15f2b8c4ee6e661860e97a011c84b462d95e54ba7.tar.gz",
+      "sha256": "9314532eb7ba6a21fd0f6dd15f2b8c4ee6e661860e97a011c84b462d95e54ba7",
+      "size": 1516859
+    },
+    {
+      "name": "remote-linux-x64-bfs-82f8234ad3938052b2051d79ec70b6afa68f9f8f9a09d2f196550586651ec367.tar.gz",
+      "sha256": "82f8234ad3938052b2051d79ec70b6afa68f9f8f9a09d2f196550586651ec367",
+      "size": 428705
+    },
+    {
+      "name": "remote-linux-x64-glm-848d4398ccfb778093df80087854e611d7b8e8694e54c6dbc3154175560fe897.tar.gz",
+      "sha256": "848d4398ccfb778093df80087854e611d7b8e8694e54c6dbc3154175560fe897",
+      "size": 4996611
+    },
+    {
+      "name": "remote-linux-x64-node-pty-f9eaffafde51249db3608b63ec8b61183b101650fe8fd4cd21ed4296a922911d.tar.gz",
+      "sha256": "f9eaffafde51249db3608b63ec8b61183b101650fe8fd4cd21ed4296a922911d",
+      "size": 374488
+    },
+    {
+      "name": "remote-linux-x64-node-runtime-30e36cef4385d037c576b1db7903b16355438657c564aa6bf0d34b70108a3dfe.tar.gz",
+      "sha256": "30e36cef4385d037c576b1db7903b16355438657c564aa6bf0d34b70108a3dfe",
+      "size": 44568727
+    },
+    {
+      "name": "remote-linux-x64-ripgrep-ea62892f45cd6e6faaf11518d3f00d36547da545089ed7ed654ef0bd35e7ef1f.tar.gz",
+      "sha256": "ea62892f45cd6e6faaf11518d3f00d36547da545089ed7ed654ef0bd35e7ef1f",
+      "size": 2413804
+    },
+    {
+      "name": "remote-linux-x64-server-bundle-a18dd7bed899fbb495a1ad0c0e9ded9f3bb2c72005f8afa39c61353df3518366.tar.gz",
+      "sha256": "a18dd7bed899fbb495a1ad0c0e9ded9f3bb2c72005f8afa39c61353df3518366",
+      "size": 1959031
+    },
+    {
+      "name": "remote-linux-x64-ugrep-cbce02b6dfaa7f7968a6cded70843790479a830206947a761176820116528f05.tar.gz",
+      "sha256": "cbce02b6dfaa7f7968a6cded70843790479a830206947a761176820116528f05",
+      "size": 1569141
+    }
+  ],
+  "assets": [
+    {
+      "name": "latest-mac.yml",
+      "size": 515,
+      "sha256": "6b340608cdc8f1ea7685fb934349d05ee3d8ab5a83a958fb0cf769244124c2bf"
+    },
+    {
+      "name": "latest.yml",
+      "size": 511,
+      "sha256": "f7de5fe7a0bb46294ae0b1d5cdaf84f549e4a35e050044ec4c31e9918bfb05f7"
+    },
+    {
+      "name": "ZenCode-3.14.36-linux-aarch64.rpm",
+      "size": 255858397,
+      "sha256": "59a9f387296dbd959d0315a5babd8855cb627e963947d5fbd052191eea73a331"
+    },
+    {
+      "name": "ZenCode-3.14.36-linux-amd64.deb",
+      "size": 328922412,
+      "sha256": "feb949afa7fe2c0ea6f065341c86ec10fe738217ea825e37f9c887c5042d687c"
+    },
+    {
+      "name": "ZenCode-3.14.36-linux-arm64.deb",
+      "size": 311768772,
+      "sha256": "76a18ed52ab84128262b8a6e4dd4b79ad1ec45c73f8dd88ae694dcf7530f9dca"
+    },
+    {
+      "name": "ZenCode-3.14.36-linux-x86_64.rpm",
+      "size": 267606993,
+      "sha256": "946ee19425f217c1f80151718b842556aaad4ac958a23aaa7955c571ad98fb58"
+    },
+    {
+      "name": "ZenCode-3.14.36-mac-arm64.dmg",
+      "size": 399822290,
+      "sha256": "940e15d58bd60c2dfee0c71ebf05f004e00c2b0616d3592d58e8af259ad17400"
+    },
+    {
+      "name": "ZenCode-3.14.36-mac-arm64.dmg.blockmap",
+      "size": 415966,
+      "sha256": "8d2a7a0b7a4b1bc708f78c18cb4ad318986ec19bf6102119a7e4c9e161bf5b7f"
+    },
+    {
+      "name": "ZenCode-3.14.36-mac-arm64.zip",
+      "size": 386123279,
+      "sha256": "6184cf49f4c45c0e7db8883667fe176bbff43a140c4cd0e90878f35fe5b5df5d"
+    },
+    {
+      "name": "ZenCode-3.14.36-mac-arm64.zip.blockmap",
+      "size": 392927,
+      "sha256": "5f03eb570f3d5a8d7f045ed891b2ac590bfb89959cd45747917213f0d7c9dd59"
+    },
+    {
+      "name": "ZenCode-3.14.36-win-arm64.exe",
+      "size": 323956104,
+      "sha256": "c1f412f2090943fea2cd40c2d923d1bdc0ac39ea1ebaeb3e064b852db259e402"
+    },
+    {
+      "name": "ZenCode-3.14.36-win-x64.exe",
+      "size": 319889053,
+      "sha256": "9f962301a0af9f620736a1141e6ead7bd99751bf8216bb0e1d75a620e8af116f"
+    }
+  ],
+  "landingPage": {
+    "url": "https://bennix.github.io/ZenMuxDev/",
+    "commit": "968de8b2443a43ee7dba4ad56f56ca2b3f740ab9",
+    "deployed": true,
+    "liveWidths": [
+      390,
+      1440
+    ],
+    "bilingual": true,
+    "noHorizontalOverflow": true,
+    "downloadLinks": 7
+  },
+  "localDmg": {
+    "path": "/Users/nellertcai/Zcode/release-artifacts/ZenCode-3.14.36-mac-arm64.dmg",
+    "sha256": "940e15d58bd60c2dfee0c71ebf05f004e00c2b0616d3592d58e8af259ad17400"
+  }
+}

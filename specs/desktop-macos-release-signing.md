@@ -135,3 +135,5 @@ afterPack 复制运行时 → 扫描三个资源目录 → 逐个签 Mach-O → 
 
 - 验收发现 OfficeCLI 1.0.152 的后台自动更新把可写 App 中的二进制替换为 1.0.158，造成 sealed resource 错误。此前公证候选不得发布。修复 launcher 和兼容导出统一强制 OFFICECLI_SKIP_UPDATE=1 后，各平台须重新构建；对新包实际执行 OfficeCLI 再复验完整 App 签名。
 - 用户确认没有自有 CDN，采用自身 GitHub Release 发布远程组件（见 remote-release-distribution.md）。公开清单及组件完整性通过后才宣称远程运行时已可下载。
+
+本轮 3.14.36 已正式发布为 Latest，源码 fa4b39c582c3c64920380db535c27dff1871afd5。全部 40 个资产摘要核验、六个 Windows/Linux 安装验收及七个公开安装包下载通过。最终 DMG/ZIP 公证均 Accepted，DMG 已装订，挂载 App 的签名、Gatekeeper、OfficeCLI 实际创建和验证 DOCX 后签名保持完整。公开 GitHub 远程清单及组件下载、哈希验证和 Node 24.14.0 / CLI 0.16.9 启动通过；实际 SSH/WSL 会话未测试。Landing Page 已部署，390/1440 宽度中英文切换、七个下载入口和无横向溢出检查通过。本地仅保留最新公证 DMG；类型与架构检查通过，全量 lint 仍有既有 max-lines 错误。完整证据见 [发布审计](desktop-release-audit-2026-10-26.json)。
