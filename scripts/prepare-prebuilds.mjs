@@ -31,7 +31,7 @@ import {
   computeDeterministicSourceSha256 as computeComponentSourceSha256,
   packSourceAsDeterministicTarGzip as packComponentSourceAsArchive,
 } from "./deterministic-tar-archive.mjs";
-import { runCommand } from "./spawn-command.mjs";
+import { runCommand, runCommandAndReadStdout } from "./spawn-command.mjs";
 import { resolveIntranetDepsBaseUrl } from "./intranetDefaults.mjs";
 
 export { computeComponentSourceSha256, packComponentSourceAsArchive };
@@ -48,7 +48,20 @@ const ZCODE_AGENT_RUNTIME = {
   },
 };
 const releaseDir = join(mockCdnDir, "releases", version);
-const nodeVersion = "v22.16.0";
+const nodeVersion = "v24.14.0";
+export function isNodeRuntimeVersionCurrent(actualVersion, expectedVersion = nodeVersion) {
+  return typeof actualVersion === "string" && actualVersion.trim() === expectedVersion;
+}
+export function shouldReuseNodeRuntime({
+  actualVersion,
+  recordedVersion,
+  expectedVersion = nodeVersion,
+  canExecute,
+}) {
+  return canExecute
+    ? isNodeRuntimeVersionCurrent(actualVersion, expectedVersion)
+    : typeof recordedVersion === "string" && recordedVersion.trim() === expectedVersion;
+}
 const componentSchemaVersion = 1;
 const remotePlatforms = ["linux-arm64", "linux-x64", "darwin-arm64", "darwin-x64"];
 const pnpmCommand = process.platform === "win32" ? "pnpm.cmd" : "pnpm";
@@ -289,11 +302,41 @@ async function prepareNodeBinaries() {
   for (const platformKey of remotePlatforms) {
     const nodeDir = join(releaseDir, "node", platformKey);
     const nodeBinaryPath = join(nodeDir, "node");
-    await stageNodeNotices(nodeDir, nodeVersion, rootDir);
-
+    const nodeVersionMarker = join(releaseDir, `.node-runtime-${platformKey}.version`);
+    const [targetPlatform, targetArch] = platformKey.split("-");
+    const canExecute =
+      (targetPlatform === "darwin" && process.platform === "darwin") ||
+      (targetPlatform === "linux" && process.platform === "linux");
+    const canExecuteNativeArch = canExecute && targetArch === process.arch;
     if (existsSync(nodeBinaryPath)) {
-      console.log(`  [skip] mock-cdn node/${platformKey} already exists`);
-      continue;
+      let actualVersion = "";
+      if (canExecuteNativeArch) {
+        try {
+          actualVersion = runCommandAndReadStdout(nodeBinaryPath, ["--version"]).trim();
+        } catch {
+          // 损坏或不可执行的本机文件不能复用，走固定版本官方归档重新准备。
+        }
+      }
+      const recordedVersion = existsSync(nodeVersionMarker)
+        ? readFileSync(nodeVersionMarker, "utf8").trim()
+        : "";
+      if (
+        shouldReuseNodeRuntime({
+          actualVersion,
+          recordedVersion,
+          expectedVersion: nodeVersion,
+          canExecute: canExecuteNativeArch,
+        })
+      ) {
+        await stageNodeNotices(nodeDir, nodeVersion, rootDir);
+        console.log(`  [skip] mock-cdn node/${platformKey} is ${nodeVersion}`);
+        continue;
+      }
+      console.log(
+        `  [refresh] mock-cdn node/${platformKey} is ${actualVersion || recordedVersion || "unverified"}; expected ${nodeVersion}`,
+      );
+      rmSync(nodeDir, { recursive: true, force: true });
+      rmSync(nodeVersionMarker, { force: true });
     }
 
     mkdirSync(nodeDir, { recursive: true });
@@ -305,7 +348,18 @@ async function prepareNodeBinaries() {
     try {
       await extractArchiveMember(url, nodeDir, `node-${nodeVersion}-${platformKey}/bin/node`);
       chmodSync(nodeBinaryPath, 0o755);
-      console.log(`  [ok] mock-cdn node/${platformKey}`);
+      let actualVersion = "official archive";
+      if (canExecuteNativeArch) {
+        actualVersion = runCommandAndReadStdout(nodeBinaryPath, ["--version"]).trim();
+        if (!isNodeRuntimeVersionCurrent(actualVersion)) {
+          throw new Error(
+            `Node archive version mismatch: expected ${nodeVersion}, received ${actualVersion}`,
+          );
+        }
+      }
+      writeFileSync(nodeVersionMarker, `${nodeVersion}\n`, "utf8");
+      await stageNodeNotices(nodeDir, nodeVersion, rootDir);
+      console.log(`  [ok] mock-cdn node/${platformKey} ${nodeVersion} (${actualVersion})`);
     } catch (error) {
       console.error(`  [error] 下载或解压失败: ${url}`);
       console.error(

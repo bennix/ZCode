@@ -128,3 +128,5 @@ afterPack 复制运行时 → 扫描三个资源目录 → 逐个签 Mach-O → 
 
 - 发布源为本轮协同设计工作区实现；Windows x64/ARM64 和 Linux x64/ARM64 由目标仓库 Actions 在同一源码 SHA 构建并安装验收，macOS arm64 本机 Developer ID 构建、公证、装订、Gatekeeper 验收。所有候选通过后更新正式 Release 与 Windows/macOS 更新清单，最后同步 Landing Page 中英文入口至公开版本。
 - 仅在全验收通过后替换 `release-artifacts` 中上一份已公证 DMG；未成功的候选不得覆盖。
+- Node 升级验收范围：桌面构建、CLI、Windows/Linux CI 均使用 Node 24.14.0；应用远程执行器也必须从 Node 22.16.0 升到 24.14.0（Linux/macOS x64/arm64）。4 种远程运行时需校验官方归档完整、Node 自报版本、node-pty 子进程与基本 Agent 启动，避免只更新构建机而让已部署远程 Host 继续运行旧 Node。增量构建遇到目标目录中版本不符的 node 时应替换后重建 manifest/hash。
+- Node 24.14.0 兼容性验收：官方 Node 归档下载响应成功，macOS arm64 二进制 `--version` 返回 v24.14.0；本次暂存的 arm64 `pty.node` 在该 Node 下成功 spawn 并收到 `NODE24_PTY_OK`。x64 与 Linux arm64 归档来自对应 Node 官方版本路径；其安装/原生 CUA 检查由目标 CI 架构执行。构建中止过的 22.16.0 文件由版本检查识别并替换；四平台 manifest 将 node-runtime 指向 v24.14.0，并更新归档摘要。
