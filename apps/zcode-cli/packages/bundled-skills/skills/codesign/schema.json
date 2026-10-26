@@ -1,0 +1,278 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "properties": {
+    "version": {
+      "type": "number",
+      "const": 1
+    },
+    "brief": {
+      "type": "object",
+      "properties": {
+        "goal": {
+          "type": "string",
+          "maxLength": 12000
+        },
+        "audience": {
+          "type": "string",
+          "maxLength": 6000
+        },
+        "platform": {
+          "type": "string",
+          "maxLength": 100
+        },
+        "palette": {
+          "type": "string",
+          "maxLength": 100
+        },
+        "typography": {
+          "type": "string",
+          "maxLength": 100
+        },
+        "layout": {
+          "type": "string",
+          "maxLength": 100
+        },
+        "mood": {
+          "type": "string",
+          "maxLength": 100
+        },
+        "density": {
+          "type": "string",
+          "maxLength": 100
+        },
+        "constraints": {
+          "type": "string",
+          "maxLength": 12000
+        }
+      },
+      "required": [
+        "goal",
+        "audience",
+        "platform",
+        "palette",
+        "typography",
+        "layout",
+        "mood",
+        "density",
+        "constraints"
+      ],
+      "additionalProperties": false
+    },
+    "html": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 33554432
+    },
+    "codesign": {
+      "type": "object",
+      "properties": {
+        "kind": {
+          "type": "string",
+          "enum": [
+            "prototype",
+            "poster",
+            "report",
+            "slides"
+          ]
+        },
+        "images": {
+          "maxItems": 8,
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "pattern": "^[a-z][a-z0-9_-]{0,47}$"
+              },
+              "prompt": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 6000
+              },
+              "purpose": {
+                "type": "string",
+                "enum": [
+                  "hero",
+                  "product",
+                  "poster",
+                  "background",
+                  "illustration",
+                  "logo",
+                  "other"
+                ]
+              },
+              "ratio": {
+                "type": "string",
+                "enum": [
+                  "1:1",
+                  "16:9",
+                  "9:16",
+                  "4:3",
+                  "3:4"
+                ]
+              },
+              "alt": {
+                "type": "string",
+                "maxLength": 300
+              }
+            },
+            "required": [
+              "id",
+              "prompt",
+              "purpose",
+              "ratio",
+              "alt"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "tweaks": {
+          "maxItems": 24,
+          "type": "array",
+          "items": {
+            "oneOf": [
+              {
+                "type": "object",
+                "properties": {
+                  "id": {
+                    "type": "string",
+                    "pattern": "^[a-z][a-z0-9_-]{0,47}$"
+                  },
+                  "label": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 80
+                  },
+                  "token": {
+                    "type": "string",
+                    "pattern": "^--[a-z][a-z0-9-]{0,63}$"
+                  },
+                  "kind": {
+                    "type": "string",
+                    "const": "color"
+                  },
+                  "value": {
+                    "type": "string",
+                    "pattern": "^#[0-9a-fA-F]{6}$"
+                  }
+                },
+                "required": [
+                  "id",
+                  "label",
+                  "token",
+                  "kind",
+                  "value"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "id": {
+                    "type": "string",
+                    "pattern": "^[a-z][a-z0-9_-]{0,47}$"
+                  },
+                  "label": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 80
+                  },
+                  "token": {
+                    "type": "string",
+                    "pattern": "^--[a-z][a-z0-9-]{0,63}$"
+                  },
+                  "kind": {
+                    "type": "string",
+                    "const": "number"
+                  },
+                  "value": {
+                    "type": "number"
+                  },
+                  "min": {
+                    "type": "number",
+                    "minimum": -1000,
+                    "maximum": 1000
+                  },
+                  "max": {
+                    "type": "number",
+                    "minimum": -1000,
+                    "maximum": 1000
+                  },
+                  "unit": {
+                    "type": "string",
+                    "enum": [
+                      "px",
+                      "rem",
+                      "%",
+                      ""
+                    ]
+                  }
+                },
+                "required": [
+                  "id",
+                  "label",
+                  "token",
+                  "kind",
+                  "value",
+                  "min",
+                  "max",
+                  "unit"
+                ],
+                "additionalProperties": false
+              }
+            ]
+          }
+        },
+        "comments": {
+          "maxItems": 32,
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "pattern": "^[a-z][a-z0-9_-]{0,47}$"
+              },
+              "elementId": {
+                "type": "string",
+                "pattern": "^zc-[0-9]+$"
+              },
+              "quote": {
+                "type": "string",
+                "maxLength": 500
+              },
+              "note": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 3000
+              }
+            },
+            "required": [
+              "id",
+              "elementId",
+              "quote",
+              "note"
+            ],
+            "additionalProperties": false
+          }
+        }
+      },
+      "required": [
+        "kind",
+        "images",
+        "tweaks",
+        "comments"
+      ],
+      "additionalProperties": false
+    }
+  },
+  "required": [
+    "version",
+    "brief",
+    "html",
+    "codesign"
+  ],
+  "additionalProperties": false
+}

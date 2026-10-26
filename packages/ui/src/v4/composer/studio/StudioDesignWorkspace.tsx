@@ -1,3 +1,18 @@
+import { StudioDesignBriefForm, INITIAL } from "./StudioDesignBriefForm.js";
+import {
+  EMPTY_CODESIGN,
+  parseCoDesignDocument,
+  type CoDesignState,
+  type CoDesignDocument,
+} from "@zcode/shared";
+import { useStudioCoDesign } from "./useStudioCoDesign.js";
+import { StudioCoDesignControls } from "./StudioCoDesignControls.js";
+import { StudioDesignProjectBar } from "./StudioDesignProjectBar.js";
+import {
+  prepareCoDesignHtml,
+  readCoDesignMetadata,
+  syncCoDesignMetadata,
+} from "./coDesignDocument.js";
 import { StudioDesignPreview } from "./StudioDesignPreview.js";
 import { StudioDesignAssetPicker } from "./StudioDesignAssetPicker.js";
 import { useStudioDesignProjects } from "@/hooks/useStudioDesignProjects.js";
@@ -12,37 +27,20 @@ import {
   type StudioDesignBrief,
 } from "./studioDesign.js";
 
-const INITIAL: StudioDesignBrief = {
-  goal: "",
-  audience: "",
-  platform: "responsive-web",
-  palette: "light-neutral",
-  typography: "system-ui",
-  layout: "adaptive-grid",
-  mood: "restrained",
-  density: "comfortable",
-  constraints: "",
-};
-const choices = {
-  platform: ["responsive-web", "mobile-app", "desktop-app"],
-  palette: ["light-neutral", "dark-neutral", "warm-editorial", "brand-blue"],
-  typography: ["system-ui", "serif-editorial", "monospace"],
-  layout: ["adaptive-grid", "sidebar-workspace", "single-column"],
-  mood: ["restrained", "editorial", "playful"],
-  density: ["compact", "comfortable", "spacious"],
-} as const;
 export function StudioDesignWorkspace({
   apiKey,
   model,
   reasoning,
   onBusyChange,
   sourceImageUrl,
+  coDesign = false,
 }: {
   apiKey: string;
   model: string;
   reasoning?: Record<string, unknown>;
   onBusyChange: (busy: boolean) => void;
   sourceImageUrl?: string | null;
+  coDesign?: boolean;
 }) {
   const { intl } = useZCodeIntl();
   const platform = usePlatform();
@@ -59,7 +57,9 @@ export function StudioDesignWorkspace({
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
   const [mobile, setMobile] = useState(false);
-  const [versions, setVersions] = useState<{ html: string; brief: StudioDesignBrief }[]>([]);
+  const [versions, setVersions] = useState<
+    { html: string; brief: StudioDesignBrief; codesign?: CoDesignState }[]
+  >([]);
   const [committedBrief, setCommittedBrief] = useState(INITIAL);
   const run = useRef<AbortController | null>(null);
   useEffect(
@@ -68,6 +68,60 @@ export function StudioDesignWorkspace({
     },
     [],
   );
+  const commitDesign = (next: string, metadata: CoDesignState, currentBrief = brief) => {
+    setVersions((current) =>
+      [...current, { html: next, brief: { ...currentBrief }, codesign: metadata }].slice(-10),
+    );
+    setCommittedBrief({ ...currentBrief });
+    setHtml(next);
+    setSaved(false);
+  };
+  const codesign = useStudioCoDesign({
+    html,
+    apiKey,
+    model,
+    busy,
+    reasoning,
+    run,
+    onBusy: (value) => {
+      setBusy(value);
+      onBusyChange(value);
+    },
+    onError: setError,
+    onOutput: setOutput,
+    onCommit: commitDesign,
+  });
+  const importDesign = (document: CoDesignDocument) => {
+    if (busy || projects.saving) return;
+    const next = syncCoDesignMetadata(prepareCoDesignHtml(document.html), document.codesign);
+    setProjectId(crypto.randomUUID());
+    setBrief(document.brief);
+    setVersions([]);
+    setAsset("");
+    setFeedback("");
+    codesign.reset(document.codesign);
+    commitDesign(next, document.codesign, document.brief);
+    setOutput("");
+    setError("");
+  };
+  const exportCoDesign = async () => {
+    if (!platform.saveFile) return;
+    try {
+      const document = parseCoDesignDocument({
+        version: 1,
+        brief,
+        html,
+        codesign: codesign.metadata,
+      });
+      const result = await platform.saveFile({
+        suggestedName: "zencode-design.zencode-design.json",
+        data: new TextEncoder().encode(JSON.stringify(document, null, 2)).buffer,
+      });
+      if (!result.success && result.error) setError(result.error);
+    } catch (failure) {
+      setError(String(failure));
+    }
+  };
   const execute = async (revise: boolean) => {
     if (busy || loadingAsset || !apiKey || !brief.goal.trim() || (revise && !feedback.trim()))
       return;
@@ -84,7 +138,13 @@ export function StudioDesignWorkspace({
         model,
         reasoning,
         asset,
-        brief,
+        codesign: coDesign,
+        brief: coDesign
+          ? {
+              ...brief,
+              constraints: `${brief.constraints}\nArtifact kind: ${codesign.metadata.kind}`,
+            }
+          : brief,
         previous: revise ? html : "",
         feedback: revise ? feedback : "",
         signal: controller.signal,
@@ -93,10 +153,16 @@ export function StudioDesignWorkspace({
         },
       });
       if (run.current !== controller || controller.signal.aborted) return;
-      setVersions((current) => [...current, { html: next, brief: { ...brief } }].slice(-10));
-      setCommittedBrief({ ...brief });
-      setHtml(next);
-      setSaved(false);
+      if (coDesign) {
+        const metadata = readCoDesignMetadata(next, {
+          ...codesign.metadata,
+          images: [],
+          comments: [],
+        });
+        const prepared = syncCoDesignMetadata(prepareCoDesignHtml(next), metadata);
+        codesign.reset(metadata);
+        commitDesign(prepared, metadata);
+      } else commitDesign(next, codesign.metadata);
       setFeedback("");
     } catch (failure) {
       if (run.current === controller && !controller.signal.aborted)
@@ -128,104 +194,86 @@ export function StudioDesignWorkspace({
       data-testid="studio-design-workspace"
       onInput={() => setSaved(false)}
     >
-      <div>
-        <h3 className="text-ui-base font-medium">{t("title")}</h3>
-        <p className="text-ui-caption text-foreground-subtle">{t("guide")}</p>
-      </div>
-      <div className="flex flex-wrap items-center gap-2">
-        <select
-          aria-label={t("projects")}
-          value={projects.records.some((record) => record.id === projectId) ? projectId : ""}
-          disabled={busy || projects.saving}
-          className="h-8 max-w-full rounded-lg border border-input-border bg-input px-2 text-ui-caption"
-          onChange={(event) => {
-            const project = projects.records.find((record) => record.id === event.target.value);
-            if (!project) return;
-            setProjectId(project.id);
-            setBrief(project.brief);
-            setCommittedBrief(
-              project.versions.findLast((version) => version.html === project.html)?.brief ??
-                project.brief,
-            );
-            setHtml(project.html);
-            setVersions(project.versions);
-            setAsset(project.asset);
-            setFeedback("");
-            setOutput("");
-            setSaved(true);
-            setError("");
-          }}
-        >
-          <option value="" disabled>
-            {t("projects")}
-          </option>
-          {projects.records.map((record) => (
-            <option key={record.id} value={record.id}>
-              {record.title}
-            </option>
-          ))}
-        </select>
-        <Button
-          variant="outline"
-          disabled={busy || projects.saving}
-          onClick={() => {
-            setProjectId(crypto.randomUUID());
-            setBrief(INITIAL);
-            setCommittedBrief(INITIAL);
-            setHtml("");
-            setVersions([]);
-            setAsset("");
-            setFeedback("");
-            setOutput("");
-            setSaved(false);
-            setError("");
-          }}
-        >
-          {t("new")}
-        </Button>
-        <Button
-          variant="outline"
-          disabled={busy || projects.saving || !html}
-          onClick={async () => {
-            setSaved(false);
-            const success = await projects.save({
+      <p className="text-ui-caption text-foreground-subtle">{t("guide")}</p>
+      <StudioDesignProjectBar
+        records={projects.records}
+        projectId={projectId}
+        disabled={busy || projects.saving}
+        hasHtml={Boolean(html)}
+        saved={saved}
+        error={projects.error}
+        onOpen={(project) => {
+          setProjectId(project.id);
+          setBrief(project.brief);
+          setCommittedBrief(
+            project.versions.findLast((version) => version.html === project.html)?.brief ??
+              project.brief,
+          );
+          setHtml(project.html);
+          setVersions(project.versions);
+          setAsset(project.asset);
+          codesign.reset(project.codesign ?? EMPTY_CODESIGN);
+          setFeedback("");
+          setOutput("");
+          setSaved(true);
+          setError("");
+        }}
+        onNew={() => {
+          setProjectId(crypto.randomUUID());
+          setBrief(INITIAL);
+          setCommittedBrief(INITIAL);
+          setHtml("");
+          setVersions([]);
+          setAsset("");
+          codesign.reset();
+          setFeedback("");
+          setOutput("");
+          setSaved(false);
+          setError("");
+        }}
+        onSave={async () => {
+          setSaved(false);
+          if (
+            await projects.save({
               id: projectId,
               title: brief.goal.trim().slice(0, 120) || "Design",
               brief: { ...brief },
               html,
               versions,
               asset,
+              codesign: codesign.metadata,
               updatedAt: Date.now(),
-            });
-            if (success) setSaved(true);
-          }}
-        >
-          {t("save")}
-        </Button>
-        <Button
-          variant="ghost"
-          disabled={
-            busy || projects.saving || !projects.records.some((record) => record.id === projectId)
+            })
+          )
+            setSaved(true);
+        }}
+        onDelete={async () => {
+          if (await projects.remove(projectId)) {
+            setProjectId(crypto.randomUUID());
+            setSaved(false);
           }
-          onClick={async () => {
-            if (await projects.remove(projectId)) {
-              setProjectId(crypto.randomUUID());
-              setSaved(false);
-            }
-          }}
-        >
-          {t("delete")}
-        </Button>
-        {saved ? (
-          <span role="status" className="text-ui-xs text-foreground-subtle">
-            {t("saved")}
-          </span>
-        ) : null}
-      </div>
-      {projects.error ? (
-        <p role="alert" className="text-ui-caption text-destructive">
-          {t("storageError")}
-        </p>
+        }}
+      />
+      {coDesign ? (
+        <StudioCoDesignControls
+          revision={html}
+          canExport={Boolean(platform.saveFile)}
+          value={codesign.metadata}
+          disabled={busy || projects.saving}
+          hasHtml={Boolean(html)}
+          selecting={codesign.selecting}
+          selection={codesign.selection}
+          note={codesign.note}
+          progress={codesign.progress}
+          onChange={codesign.change}
+          onImport={importDesign}
+          onExport={() => void exportCoDesign()}
+          onImages={() => void codesign.generateImages()}
+          onSelecting={codesign.toggleSelection}
+          onNote={codesign.setNote}
+          onEdit={() => void codesign.applyComment()}
+          onError={setError}
+        />
       ) : null}
       <StudioDesignAssetPicker
         sourceImageUrl={sourceImageUrl}
@@ -236,60 +284,7 @@ export function StudioDesignWorkspace({
         onChange={setAsset}
         onError={setError}
       />
-      <fieldset disabled={busy} className="min-w-0 space-y-2">
-        <legend className="mb-2 text-ui-caption font-medium">{t("brief")}</legend>
-        {(["goal", "audience"] as const).map((key) => (
-          <label key={key} className="block text-ui-caption">
-            {t(key)}
-            <textarea
-              aria-label={t(key)}
-              value={brief[key]}
-              onChange={(event) =>
-                setBrief((current) => ({ ...current, [key]: event.target.value }))
-              }
-              className="mt-1 min-h-14 w-full rounded-lg border border-input-border bg-input p-2 text-ui-base"
-            />
-          </label>
-        ))}
-        <details>
-          <summary className="cursor-pointer text-ui-caption">{t("system")}</summary>
-          <div className="mt-2 grid grid-cols-2 gap-2 sm:grid-cols-3">
-            {Object.entries(choices).map(([key, values]) => (
-              <label key={key} className="min-w-0 text-ui-caption">
-                {t(key)}
-                <select
-                  aria-label={t(key)}
-                  value={brief[key as keyof StudioDesignBrief]}
-                  onChange={(event) =>
-                    setBrief((current) => ({ ...current, [key]: event.target.value }))
-                  }
-                  className="mt-1 h-8 w-full rounded-lg border border-input-border bg-input px-2"
-                >
-                  {values.map((value) => (
-                    <option key={value} value={value}>
-                      {t(`option.${value}`)}
-                    </option>
-                  ))}
-                </select>
-              </label>
-            ))}
-          </div>
-          <label className="mt-2 block text-ui-caption">
-            {t("constraints")}
-            <textarea
-              aria-label={t("constraints")}
-              value={brief.constraints}
-              onChange={(event) =>
-                setBrief((current) => ({ ...current, constraints: event.target.value }))
-              }
-              className="mt-1 min-h-14 w-full rounded-lg border border-input-border bg-input p-2 text-ui-base"
-            />
-          </label>
-          <pre className="mt-2 max-h-48 overflow-auto whitespace-pre-wrap rounded-lg bg-surface p-2 text-ui-caption">
-            {deriveDesignSystem(brief)}
-          </pre>
-        </details>
-      </fieldset>
+      <StudioDesignBriefForm brief={brief} setBrief={setBrief} busy={busy} />
       <div className="flex flex-wrap items-center gap-2">
         <Button
           disabled={busy || loadingAsset || !apiKey || !brief.goal.trim()}
@@ -342,6 +337,7 @@ export function StudioDesignWorkspace({
                   setHtml(version.html);
                   setBrief(version.brief);
                   setCommittedBrief(version.brief);
+                  codesign.reset(version.codesign ?? EMPTY_CODESIGN);
                 }
               }}
             >
@@ -352,7 +348,13 @@ export function StudioDesignWorkspace({
               ))}
             </select>
           </div>
-          <StudioDesignPreview html={html} mobile={mobile} title={t("preview")} />
+          <StudioDesignPreview
+            html={html}
+            mobile={mobile}
+            title={t("preview")}
+            selecting={coDesign && codesign.selecting}
+            onSelection={codesign.setSelection}
+          />
           <label className="block text-ui-caption">
             {t("feedback")}
             <textarea

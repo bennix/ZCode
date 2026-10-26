@@ -1,3 +1,4 @@
+import type { CoDesignState } from "@zcode/shared";
 export interface StudioDesignBrief {
   goal: string;
   audience: string;
@@ -10,10 +11,12 @@ export interface StudioDesignBrief {
   constraints: string;
 }
 export interface StudioDesignVersion {
+  codesign?: CoDesignState;
   html: string;
   brief: StudioDesignBrief;
 }
 export interface StudioDesignProject {
+  codesign?: CoDesignState;
   id: string;
   title: string;
   updatedAt: number;

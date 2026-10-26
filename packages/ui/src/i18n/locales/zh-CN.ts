@@ -1,5 +1,23 @@
 /** 中文翻译 */
 const zhCN: Record<string, string> = {
+  "chat.studio.codesign.title": "协同设计",
+  "chat.studio.codesign.guide": "创建原型、海报、报告或幻灯片；点选局部修改，连接内置生图。",
+  "chat.studio.codesign.format": "创作类型",
+  "chat.studio.codesign.prototype": "交互原型",
+  "chat.studio.codesign.poster": "海报",
+  "chat.studio.codesign.report": "报告",
+  "chat.studio.codesign.slides": "幻灯片",
+  "chat.studio.codesign.import": "导入设计文件",
+  "chat.studio.codesign.export": "导出设计文件",
+  "chat.studio.codesign.tooLarge": "设计文件过大",
+  "chat.studio.codesign.images": "图片素材计划",
+  "chat.studio.codesign.generateImages": "生成素材",
+  "chat.studio.codesign.imageHint": "使用设置中的默认生图模型，逐张生成；调用可能产生费用。",
+  "chat.studio.codesign.select": "在预览中点选修改区域",
+  "chat.studio.codesign.comment": "描述选中区域如何修改",
+  "chat.studio.codesign.applyComment": "修改选中区域",
+  "chat.studio.codesign.imageProgress": "正在生成 {current}/{total} 张素材",
+  "chat.studio.codesign.missingKey": "请先配置 AI API Key",
   "workbench.returnToChat": "返回对话布局",
   "workbench.expandAI": "展开 AI",
   "workbench.collapseAI": "收起 AI",
@@ -2107,8 +2125,7 @@ const zhCN: Record<string, string> = {
   "settings.httpProxyAddressDescription":
     "检测并填写会读取这台电脑的系统代理并保存为手动地址，macOS、Windows、Linux 各读自己的系统设置。也可以直接修改下面的地址后保存。",
   "settings.httpProxyDetect": "检测并填写",
-  "settings.httpProxyDetectEmpty":
-    "没有检测到系统代理。请先在系统里打开代理，或直接填写本地地址。",
+  "settings.httpProxyDetectEmpty": "没有检测到系统代理。请先在系统里打开代理，或直接填写本地地址。",
   "settings.httpProxyDetected": "已填入 {proxy}",
   "settings.httpProxyPlaceholder": "例如 http://127.0.0.1:7897 或 socks5://127.0.0.1:1080",
   "settings.httpProxyNoProxy": "不使用代理的地址",

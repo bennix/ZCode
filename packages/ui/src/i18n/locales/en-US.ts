@@ -1,5 +1,25 @@
 /** English translations */
 const enUS: Record<string, string> = {
+  "chat.studio.codesign.title": "CoDesign",
+  "chat.studio.codesign.guide":
+    "Create prototypes, posters, reports or slides; edit selected elements and generate image assets.",
+  "chat.studio.codesign.format": "Format",
+  "chat.studio.codesign.prototype": "Prototype",
+  "chat.studio.codesign.poster": "Poster",
+  "chat.studio.codesign.report": "Report",
+  "chat.studio.codesign.slides": "Slides",
+  "chat.studio.codesign.import": "Import design file",
+  "chat.studio.codesign.export": "Export design file",
+  "chat.studio.codesign.tooLarge": "Design file is too large",
+  "chat.studio.codesign.images": "Image asset plan",
+  "chat.studio.codesign.generateImages": "Generate assets",
+  "chat.studio.codesign.imageHint":
+    "Uses your default image model sequentially. Generation may incur charges.",
+  "chat.studio.codesign.select": "Select an element in the preview",
+  "chat.studio.codesign.comment": "Describe changes to the selected element",
+  "chat.studio.codesign.applyComment": "Edit selected element",
+  "chat.studio.codesign.imageProgress": "Generating asset {current}/{total}",
+  "chat.studio.codesign.missingKey": "Configure your AI API key first",
   "workbench.returnToChat": "Return to chat layout",
   "workbench.expandAI": "Expand AI",
   "workbench.collapseAI": "Collapse AI",

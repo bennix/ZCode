@@ -25,6 +25,8 @@ export { DYNAMIC_WORKFLOW_SKILL_NAME };
 
 /** 技能包里每个文件都是必需资产：丢任何一个都拒绝整包，而不是装出一个引用文件缺失的技能。 */
 export const BUNDLED_SKILL_PACK_REQUIRED_PATHS = [
+  "skills/codesign/SKILL.md",
+  "skills/codesign/schema.json",
   "skills/officecli/SKILL.md",
   "skills/officecli/scripts/officecli.mjs",
   "skills/officecli/scripts/release.json",

@@ -34,7 +34,7 @@ jobs:
           test "$(jq -r '.conclusion' <<< "$run_json")" = 'success'
           test "$(jq -r '.head_repository.full_name' <<< "$run_json")" = "$GITHUB_REPOSITORY"
           test "$(jq -r '.head_sha' <<< "$run_json")" = "$EXPECTED_SHA"
-          release_json="$(gh release view v3.14.35 --repo "$GITHUB_REPOSITORY" --json isDraft,targetCommitish)"
+          release_json="$(gh release view v3.14.36 --repo "$GITHUB_REPOSITORY" --json isDraft,targetCommitish)"
           test "$(jq -r '.isDraft' <<< "$release_json")" = 'true'
           test "$(jq -r '.targetCommitish' <<< "$release_json")" = "$EXPECTED_SHA"
 
@@ -55,7 +55,7 @@ jobs:
           const { createHash } = require('node:crypto');
           const { readFileSync, statSync, writeFileSync } = require('node:fs');
           const { join } = require('node:path');
-          const version = '3.14.35';
+          const version = '3.14.36';
           const files = ['x64', 'arm64'].map((arch) => {
             const name = `ZenCode-${version}-win-${arch}.exe`;
             const path = join('installers', `zencode-windows-${arch}`, name);
@@ -68,7 +68,7 @@ jobs:
           writeFileSync('latest.yml', `${lines.join('\n')}\n`);
           NODE
           digest="sha256:$(sha256sum latest.yml | cut -d' ' -f1)"
-          gh release upload v3.14.35 latest.yml --repo "$GITHUB_REPOSITORY"
-          remote="$(gh release view v3.14.35 --repo "$GITHUB_REPOSITORY" --json assets | jq -r '[.assets[] | select(.name == "latest.yml") | .digest] | if length == 1 then .[0] else empty end')"
+          gh release upload v3.14.36 latest.yml --repo "$GITHUB_REPOSITORY"
+          remote="$(gh release view v3.14.36 --repo "$GITHUB_REPOSITORY" --json assets | jq -r '[.assets[] | select(.name == "latest.yml") | .digest] | if length == 1 then .[0] else empty end')"
           test "$remote" = "$digest"
           echo "latest.yml $digest"

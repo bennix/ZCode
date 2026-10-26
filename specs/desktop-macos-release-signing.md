@@ -123,3 +123,8 @@ afterPack 复制运行时 → 扫描三个资源目录 → 逐个签 Mach-O → 
 本轮发布已完成：构建源码 `c2a34399798b8227c20be9edcf9abddc3de41914`；Windows 构建 `39865489201`、Linux 构建 `39865493718`（x64 因软件源慢下载重跑后通过），Windows 安装验收 `39868190326`、Linux 安装验收 `39870835996` 均成功。DMG 公证 `ac05de30-9704-458d-aeef-1ae5ea1527fc`、ZIP 公证 `f0a0d305-157f-4007-aeeb-d2aec7d5afcd` 均为 Accepted；DMG 已装订，挂载 App 通过深度签名、Gatekeeper 与 About E2E。全部 12 个公开资产的 SHA-256/大小与本地一致，两个更新清单下载后逐字节一致；Release tag 与 target 同步到构建源码并保持 Latest。安装验收的六个公开摘要常量同步刷新；审计/常量提交晚于构建，不改变软件来源。
 
 本地只在 `release-artifacts` 保留最新已公证 `ZenCode-3.14.35-mac-arm64.dmg`，SHA-256 `38a002b8c7f1f4100f0e7c89e7bbacdc8e2d823ccbfacbfd0139254846e5d606`。根目录和 CLI 类型检查、针对性测试及架构检查通过；全量 lint 仍有既有超限错误，未写成通过。完整摘要与 CI 证据见 [发布审计](desktop-release-audit-2026-10-23.json)。
+
+## 3.14.36 协同设计四平台发布（2026-10-26）
+
+- 发布源为本轮协同设计工作区实现；Windows x64/ARM64 和 Linux x64/ARM64 由目标仓库 Actions 在同一源码 SHA 构建并安装验收，macOS arm64 本机 Developer ID 构建、公证、装订、Gatekeeper 验收。所有候选通过后更新正式 Release 与 Windows/macOS 更新清单，最后同步 Landing Page 中英文入口至公开版本。
+- 仅在全验收通过后替换 `release-artifacts` 中上一份已公证 DMG；未成功的候选不得覆盖。

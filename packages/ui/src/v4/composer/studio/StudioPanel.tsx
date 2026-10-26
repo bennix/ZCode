@@ -371,6 +371,7 @@ export function StudioPanel({
   const apiKey = mediaLoading || mediaSettingsError ? "" : readApiKey(modelSelectionView);
   const sketchRef = useRef<SketchPadHandle>(null);
   const [mode, setMode] = useState<StudioMode>("image");
+  const [coDesignOpen, setCoDesignOpen] = useState(false);
   const [designOpen, setDesignOpen] = useState(false);
   const [poseOpen, setPoseOpen] = useState(true);
   const [usePoseReference, setUsePoseReference] = useState(true);
@@ -498,9 +499,7 @@ export function StudioPanel({
                     ...images.flatMap((url, index) => {
                       const caption = imageCaptions?.[index];
                       const image = { type: "image_url" as const, image_url: { url } };
-                      return caption
-                        ? [{ type: "text" as const, text: caption }, image]
-                        : [image];
+                      return caption ? [{ type: "text" as const, text: caption }, image] : [image];
                     }),
                   ],
           },
@@ -1308,12 +1307,26 @@ export function StudioPanel({
         ))}
         <Button
           type="button"
-          variant={designOpen ? "secondary" : "ghost"}
+          variant={designOpen && !coDesignOpen ? "secondary" : "ghost"}
           disabled={busy || designBusy}
           className="h-7 px-2 text-ui-caption"
-          onClick={() => setDesignOpen(true)}
+          onClick={() => {
+            setCoDesignOpen(false);
+            setDesignOpen(true);
+          }}
         >
           {intl.formatMessage({ id: "chat.studio.design.title" })}
+        </Button>
+        <Button
+          variant={designOpen && coDesignOpen ? "secondary" : "ghost"}
+          disabled={busy || designBusy}
+          className="h-7 px-2 text-ui-caption"
+          onClick={() => {
+            setCoDesignOpen(true);
+            setDesignOpen(true);
+          }}
+        >
+          {intl.formatMessage({ id: "chat.studio.codesign.title" })}
         </Button>
       </div>
       <div hidden={!designOpen}>
@@ -1337,6 +1350,7 @@ export function StudioPanel({
           </select>
         </label>
         <StudioDesignWorkspace
+          coDesign={coDesignOpen}
           sourceImageUrl={imageUrl}
           apiKey={apiKey}
           model={intentId}
