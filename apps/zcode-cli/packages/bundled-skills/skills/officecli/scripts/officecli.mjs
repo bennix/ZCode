@@ -13,6 +13,15 @@ const DOWNLOAD_TIMEOUT_MS = 5 * 60 * 1000;
 const RELEASE_BASE = `https://github.com/iOfficeAI/OfficeCLI/releases/download/v${release.version}`;
 const execFileAsync = promisify(execFile);
 
+export function createOfficeRuntimeEnv(env = process.env) {
+  // 上游后台更新会替换签名包内的二进制，破坏固定哈希及 App 封印；版本必须由 ZenCode 发布管理。
+  // Windows 环境变量不区分大小写，清除大小写变体，避免继承值重新开启自动更新。
+  return {
+    ...Object.fromEntries(Object.entries(env).filter(([key]) => key.toUpperCase() !== "OFFICECLI_SKIP_UPDATE")),
+    OFFICECLI_SKIP_UPDATE: "1",
+  };
+}
+
 export function selectAsset(platform, arch, musl = false) {
   if (!["x64", "arm64"].includes(arch)) throw new Error(`Unsupported architecture: ${arch}`);
   const os = { darwin: "mac", win32: "win", linux: musl ? "linux-alpine" : "linux" }[platform];
@@ -124,7 +133,7 @@ async function main(args) {
   try {
     const binary = await ensureRuntime({ signal: controller.signal });
     process.exitCode = await new Promise((resolve, reject) => {
-      const child = spawn(binary, args, { stdio: "inherit", shell: false, signal: controller.signal });
+      const child = spawn(binary, args, { stdio: "inherit", shell: false, signal: controller.signal, env: createOfficeRuntimeEnv() });
       child.once("error", reject);
       child.once("close", (code) => resolve(code ?? 1));
     });

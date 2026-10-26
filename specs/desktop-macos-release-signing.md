@@ -130,3 +130,8 @@ afterPack 复制运行时 → 扫描三个资源目录 → 逐个签 Mach-O → 
 - 仅在全验收通过后替换 `release-artifacts` 中上一份已公证 DMG；未成功的候选不得覆盖。
 - Node 升级验收范围：桌面构建、CLI、Windows/Linux CI 均使用 Node 24.14.0；应用远程执行器也必须从 Node 22.16.0 升到 24.14.0（Linux/macOS x64/arm64）。4 种远程运行时需校验官方归档完整、Node 自报版本、node-pty 子进程与基本 Agent 启动，避免只更新构建机而让已部署远程 Host 继续运行旧 Node。增量构建遇到目标目录中版本不符的 node 时应替换后重建 manifest/hash。
 - Node 24.14.0 兼容性验收：官方 Node 归档下载响应成功，macOS arm64 二进制 `--version` 返回 v24.14.0；本次暂存的 arm64 `pty.node` 在该 Node 下成功 spawn 并收到 `NODE24_PTY_OK`。x64 与 Linux arm64 归档来自对应 Node 官方版本路径；其安装/原生 CUA 检查由目标 CI 架构执行。构建中止过的 22.16.0 文件由版本检查识别并替换；四平台 manifest 将 node-runtime 指向 v24.14.0，并更新归档摘要。
+
+- 发布边界补充：正式桌面应用通过 Electron 自报 Node v24.14.0；本地远程资源 manifest 也已升级，但生产 CDN 的 3.14.36 清单检查返回 404。没有部署成功证据前，Release/Landing Page 仅说明桌面 Node 版本，不宣称远程 Host 已自动升级。远程 CDN 发布入口待确认。
+
+- 验收发现 OfficeCLI 1.0.152 的后台自动更新把可写 App 中的二进制替换为 1.0.158，造成 sealed resource 错误。此前公证候选不得发布。修复 launcher 和兼容导出统一强制 OFFICECLI_SKIP_UPDATE=1 后，各平台须重新构建；对新包实际执行 OfficeCLI 再复验完整 App 签名。
+- 用户确认没有自有 CDN，采用自身 GitHub Release 发布远程组件（见 remote-release-distribution.md）。公开清单及组件完整性通过后才宣称远程运行时已可下载。

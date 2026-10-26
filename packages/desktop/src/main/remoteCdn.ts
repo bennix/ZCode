@@ -1,7 +1,7 @@
 import { ZCODE_VERSION, type ZCodeEnv } from "@zcode/shared";
 
 declare const __ZCODE_CDN_BASE_URL__: string | undefined;
-const DEFAULT_CDN_BASE_URL = "https://cdn-zcode.z.ai";
+const DEFAULT_RELEASE_BASE_URL = "https://github.com/bennix/ZCode/releases/download";
 
 export interface ResolveRemoteCdnOptions {
   env?: ZCodeEnv;
@@ -24,8 +24,9 @@ export function resolveRemoteCdnBaseUrls(options: ResolveRemoteCdnOptions = {}):
   if (override) return [normalizeBaseUrl(override)];
   const baseUrl =
     process.env.ZCODE_CDN_BASE_URL?.trim() ||
-    (typeof __ZCODE_CDN_BASE_URL__ === "undefined" ? "" : __ZCODE_CDN_BASE_URL__) ||
-    DEFAULT_CDN_BASE_URL;
+    (typeof __ZCODE_CDN_BASE_URL__ === "undefined" ? "" : __ZCODE_CDN_BASE_URL__);
+  // 上游 CDN 不发布 ZenCode 的版本；默认使用与安装包同属的 GitHub Release。
+  if (!baseUrl) return [`${DEFAULT_RELEASE_BASE_URL}/v${options.version ?? ZCODE_VERSION}`];
   return [
     `${normalizeBaseUrl(baseUrl)}/zcode/electron/releases/${options.version ?? ZCODE_VERSION}`,
   ];

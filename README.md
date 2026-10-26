@@ -85,6 +85,8 @@ ZCODE_DATA_BASE_DIR="$HOME/.zcode-dev-home" pnpm dev:desktop:test
 
 ### 远程功能（SSH/WSL）
 
+正式版默认从 ZenCode 自身 GitHub Release 下载与应用版本一致的远程运行时，无需部署独立 CDN。维护者可在准备资源后执行 `node scripts/stage-remote-release-assets.mjs <版本号> <空暂存目录>`，校验并生成需上传到对应 Release 的组件与清单。
+
 先执行 `pnpm bootstrap:with-remote` 准备远程资源（mock-cdn），再 `pnpm dev:desktop`；连接远程项目时资源选择「本地下载后上传」。开发态资源取自本地 `packages/desktop/mock-cdn` 和本地构建产物，经 SFTP 上传到远程，不访问 CDN。
 
 ### Web 开发

@@ -29,6 +29,10 @@ sequenceDiagram
 
 ## 打包
 
+OfficeCLI 二进制版本由 ZenCode 的 `release.json` 和发布流程唯一管理。普通 launcher 与兼容导出子进程都必须强制传入上游开关 `OFFICECLI_SKIP_UPDATE=1`，覆盖继承环境中的同名值（Windows 不区分大小写），不改变父进程环境。上游后台自动更新、待应用更新及技能自动刷新不得改变签名包或绕过固定 SHA256；更新工具只能通过新的受验收 ZenCode 发行版完成。2026-10-26 已观察到直接运行 1.0.152 后后台将包内文件替换为 1.0.158，导致 sealed resource 校验失败。
+
+验收新增：继承值为 `0` 或大小写变体时，真实 launcher 子进程仍收到 `1`；继承的其它环境保留；兼容导出复用同一环境策略。可写安装副本经 launcher 执行版本查询和文档操作后，OfficeCLI 摘要及完整 App 签名保持有效。
+
 桌面与远程 skill 清单必须包含 compatibility.mjs。CLI launcher 保留固定版本与 SHA256 校验、离线缓存；打包预置的二进制仍必须验哈希，不能使用未验证系统工具。若用户级缓存文件存在但 SHA256 不符，launcher 删除这份已失效缓存并重新下载锁定版本；新文件通过 SHA256 后才原子发布和执行。下载或校验失败要报告具体错误，不能静默改用另一个导出器，也不能执行未验证文件。打包预置资源哈希不匹配仍须显式失败，以暴露安装包损坏。
 
 Desktop staging 在复制 OfficeCLI 到 `bundled-agents/<platform>/glm` 后校验其 SHA256。macOS Developer ID 签名会改变 Mach-O 原始字节，因此签名前必须匹配上游 SHA256；签名后由 electron-builder 校验严格代码签名与固定 Team ID。安装时同样先校验上游 SHA256，若文件是已签名内置 macOS 资源，则验证严格代码签名与固定 Team ID。未签名、签名无效或 Team ID 不符均失败；用户缓存仍只接受上游 SHA256。其他平台的最终资源始终匹配 `release.json`。

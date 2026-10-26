@@ -14,6 +14,7 @@ from the upstream skill.
 
 1. Use `node "<this-skill-directory>/scripts/officecli.mjs" --version` through the normal command tool. Resolve the absolute skill directory from the loaded skill path. The launcher downloads a pinned, checksum-verified binary into the ZenCode tools cache on first use and reports progress; subsequent calls work offline.
 2. Invoke all commands through that launcher: `node "<this-skill-directory>/scripts/officecli.mjs" <arguments>`. Below, `officecli` is shorthand for this launcher. Read `officecli --help` and the selected command's help before using flags.
+   The launcher disables upstream self-updates to preserve the pinned runtime and application signature. Never execute the bundled binary directly or enable its automatic updater; runtime upgrades arrive through ZenCode releases.
 3. If download or execution fails, report the concrete runtime setup error. Do not report success
    or silently execute an installer that modifies other agents' configurations.
 

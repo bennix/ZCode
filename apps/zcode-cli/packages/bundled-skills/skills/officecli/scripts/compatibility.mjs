@@ -3,7 +3,7 @@ import { copyFile, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { extname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
-import { ensureRuntime } from "./officecli.mjs";
+import { createOfficeRuntimeEnv, ensureRuntime } from "./officecli.mjs";
 
 export function validateSlideImages(images) {
   if (!Array.isArray(images) || !images.length || images.length > 500) throw new Error("invalid_slide_images");
@@ -19,7 +19,7 @@ export function validateSlideImages(images) {
 
 async function invoke(binary, args) {
   return new Promise((resolveResult, reject) => {
-    const child = spawn(binary, args, { shell: false, stdio: ["ignore", "pipe", "pipe"], env: { ...process.env, OFFICECLI_RESIDENT_FLUSH: "each" } });
+    const child = spawn(binary, args, { shell: false, stdio: ["ignore", "pipe", "pipe"], env: { ...createOfficeRuntimeEnv(), OFFICECLI_RESIDENT_FLUSH: "each" } });
     let output = "";
     let errors = "";
     const timer = setTimeout(() => { child.kill(); reject(new Error("officecli_timeout")); }, 120_000);
