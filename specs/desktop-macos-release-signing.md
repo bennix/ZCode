@@ -141,3 +141,5 @@ afterPack 复制运行时 → 扫描三个资源目录 → 逐个签 Mach-O → 
 ## 3.14.37 TokenEconomizer 发布（2026-10-30）
 
 同一源码构建 macOS ARM64、Windows x64/ARM64、Linux x64/ARM64（DEB/RPM）。新增默认开启的原生 TokenEconomizer 适配；不宣称生产费用节省。复用 Developer ID 和 ZenCode Keychain profile，保留时间戳，DMG/ZIP 公证成功后装订 DMG、验证挂载 App 以及 OfficeCLI 执行后签名，再更新发布资产和本地最新 DMG。远程运行时与版本清单上传自身 GitHub Release。只有所有构建和安装验收通过才发布 Latest；此前已公证 DMG 在此之前不删除。基线 freshness 本轮因 GitHub git 直连超时未完成，将以 GitHub API 核对目标分支树，不能将网络失败写成基线通过。
+
+3.14.37 已发布为 GitHub Latest，tag 指向构建源码 `f44063615ccd593276bdca8495140e98d9038cb0`。Windows x64/ARM64 和 Linux DEB/RPM x64/ARM64 构建与安装验收通过。Apple DMG 公证 `698d8f3b-a9a4-4611-ba60-07fbeeb961ec`、ZIP 公证 `2f72e8d4-42c7-48e0-b8b8-2e489123ebf0` 均 Accepted；DMG 装订后通过 hdiutil、挂载应用深度签名、Gatekeeper Notarized Developer ID 与 OfficeCLI 二进制哈希/签名核对。40 个正式资产的 SHA-256 和大小与本地一致，Landing Page 已更新源码；本地 `release-artifacts` 仅保留最新已公证 DMG，SHA-256 `6a775e070e1ae2506dc682f1be3c2197b6f18a617a0f465cac88c17ca8e53604`。完整证据见 [发布审计](desktop-release-audit-2026-10-30.json)。
