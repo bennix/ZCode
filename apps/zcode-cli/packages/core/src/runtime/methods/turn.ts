@@ -1,3 +1,4 @@
+import { saveTokenEconomizer } from "./token-economizer.js";
 import { retrieveKnowledgeContext } from "../helpers/knowledge.js";
 import { beginLocalTurnPreparation, type LocalTtftDetail } from "@zcode/contracts";
 import { runtimeInputMetadata } from "../../agent/runtime-input-presentation.js";
@@ -660,6 +661,7 @@ export async function executeTurnCommand(
           await runRegularTurnLoop.call(this, loopState);
           completeTurnPhase("regular_turn_loop", phaseStartedAt);
         } finally {
+          await saveTokenEconomizer(this);
           finishOutputTokenRecovery(loopState.turnRequestState);
           await closeGoalStateChangeReminderDeferral.call(this, activeTurn, turnTraceContext);
         }

@@ -137,3 +137,7 @@ afterPack 复制运行时 → 扫描三个资源目录 → 逐个签 Mach-O → 
 - 用户确认没有自有 CDN，采用自身 GitHub Release 发布远程组件（见 remote-release-distribution.md）。公开清单及组件完整性通过后才宣称远程运行时已可下载。
 
 本轮 3.14.36 已正式发布为 Latest，源码 fa4b39c582c3c64920380db535c27dff1871afd5。全部 40 个资产摘要核验、六个 Windows/Linux 安装验收及七个公开安装包下载通过。最终 DMG/ZIP 公证均 Accepted，DMG 已装订，挂载 App 的签名、Gatekeeper、OfficeCLI 实际创建和验证 DOCX 后签名保持完整。公开 GitHub 远程清单及组件下载、哈希验证和 Node 24.14.0 / CLI 0.16.9 启动通过；实际 SSH/WSL 会话未测试。Landing Page 已部署，390/1440 宽度中英文切换、七个下载入口和无横向溢出检查通过。本地仅保留最新公证 DMG；类型与架构检查通过，全量 lint 仍有既有 max-lines 错误。完整证据见 [发布审计](desktop-release-audit-2026-10-26.json)。
+
+## 3.14.37 TokenEconomizer 发布（2026-10-30）
+
+同一源码构建 macOS ARM64、Windows x64/ARM64、Linux x64/ARM64（DEB/RPM）。新增默认开启的原生 TokenEconomizer 适配；不宣称生产费用节省。复用 Developer ID 和 ZenCode Keychain profile，保留时间戳，DMG/ZIP 公证成功后装订 DMG、验证挂载 App 以及 OfficeCLI 执行后签名，再更新发布资产和本地最新 DMG。远程运行时与版本清单上传自身 GitHub Release。只有所有构建和安装验收通过才发布 Latest；此前已公证 DMG 在此之前不删除。基线 freshness 本轮因 GitHub git 直连超时未完成，将以 GitHub API 核对目标分支树，不能将网络失败写成基线通过。

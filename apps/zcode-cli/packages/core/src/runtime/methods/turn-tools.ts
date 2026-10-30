@@ -1,3 +1,4 @@
+import { observeTokenEconomizerResults } from "./token-economizer.js";
 import { createPartId, traceContextToLogContext, TurnMachineImpl } from "../deps.js";
 import type {
   MessageId,
@@ -420,6 +421,8 @@ export async function executeToolCallsForModelStep(
   if (deferredCheckpointCancellation) {
     throw deferredCheckpointCancellation;
   }
+
+  await observeTokenEconomizerResults(this, state, results, options.toolCalls, options.modelTraceContext);
 
   const stopTurnResult = results.find((result) => result.turnControl?.stopTurnAfterResult === true);
   if (stopTurnResult) {

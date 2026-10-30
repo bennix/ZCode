@@ -1,3 +1,4 @@
+import type { TokenEconomizerSession } from "../token-economizer/session.js";
 import type { KnowledgePort } from "@zcode/contracts";
 import { DEFAULT_ZCODE_MODEL_CONTEXT_BUDGET_STRATEGY, resolveExecutionState } from "@zcode/shared";
 import type { BackgroundBashOutputResult } from "@zcode/shared";
@@ -158,6 +159,7 @@ export class AgentRuntime {
   private sessionModelSelection: ModelSelection | undefined;
   private messageHistory: MessageHistory;
   private readFileState: ReadFileStateMap;
+  private tokenEconomizer?: TokenEconomizerSession;
   private cachedTools: ModelToolContract[] | null = null;
   private contextBuilder: ContextBuilder | null = null;
   private contextInitialized = false;

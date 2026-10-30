@@ -1,3 +1,4 @@
+import type { TokenEconomizerSession } from "../token-economizer/session.js";
 import type { KnowledgePort } from "@zcode/contracts";
 import { PermissionService, ToolScheduler } from "./deps.js";
 import type {
@@ -86,6 +87,7 @@ export interface AgentRuntimeInternal
   sessionModelSelection: ModelSelection | undefined;
   messageHistory: MessageHistory;
   readFileState: ReadFileStateMap;
+  tokenEconomizer?: TokenEconomizerSession;
   cachedTools: ModelToolContract[] | null;
   contextBuilder: ContextBuilder | null;
   contextInitialized: boolean;

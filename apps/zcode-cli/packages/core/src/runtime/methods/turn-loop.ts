@@ -1,3 +1,4 @@
+import { prepareTokenEconomizer } from "./token-economizer.js";
 import { beginLocalTurnPreparation } from "@zcode/contracts";
 import {
   CompactPhase,
@@ -106,16 +107,19 @@ export async function runRegularTurnLoop(
     await this.initializeMcp(state.turnTraceContext);
     finishMcp();
     throwIfTurnAborted(state.turnAbortSignal);
+    await prepareTokenEconomizer(this, state);
     const finishTools = beginLocalTurnPreparation(state.turnTraceContext, "tools");
     const turnDisallowedTools = buildTurnDisallowedTools(state);
     // automation 派发到已 active 会话或重试恢复时，入口 metadata 可能没有带到
     // loop state；但 queryId 仍是 automation-*。provider 请求边界必须按 queryId 再硬过滤
     // automation 写工具，否则模型会先看到并创建、修改或删除任务定义。
-    const tools = state.automationCreateLimitReached
+    const availableTools = state.automationCreateLimitReached
       ? []
       : turnDisallowedTools
         ? this.getTools(state.model).filter((tool) => !turnDisallowedTools.has(tool.name))
         : this.getTools(state.model);
+    const tools = this.tokenEconomizer?.projectTools(availableTools, state.turnId,
+      (name) => Boolean(this.registry.getMetadata(name)?.mcpPresentation)) ?? availableTools;
     finishTools();
     if (!outputTokenRecoveryActive && this.needsPlanModeExitReminder) {
       this.needsPlanModeExitReminder = false;

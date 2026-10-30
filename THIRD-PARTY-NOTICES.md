@@ -50238,3 +50238,14 @@ their own copyright notices and license terms:
 
 
 ````
+
+## TokenEconomizer design reference
+
+ZenCode's native TypeScript token-economizer implementation is informed by the
+micro-skills, tool-pruning evidence and failure-loop intervention concepts in
+[Microsoft TokenEconomizer](https://github.com/microsoft/TokenEconomizer), revision
+`1deb887bb6816188e24580f8812e65288af5757c` (Apache-2.0).
+This is an independent conservative adaptation, not a bundled copy of its Python
+plugin. No upstream source code is included. It uses fixed environment observations,
+lossless duplicate-description removal, and a bounded local failure reminder; it does
+not implement the upstream paid judge or claim the upstream benchmark savings.
