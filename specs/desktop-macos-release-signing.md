@@ -167,3 +167,12 @@ sequenceDiagram
 ```
 
 3.14.38 候选源码为 `b85be607300e844c6a55ab31306a6dd5fd5278df`。Windows/Linux 构建与草稿暂存已通过，六个安装器的公开验收常量按 GitHub 草稿资产 SHA-256 更新。该常量提交属于验收元数据，构建 run、Release target 与最终 tag 仍固定至同一源码。
+
+## 3.14.38 发布验收
+
+- 构建源码与最终 tag 均为 `b85be607300e844c6a55ab31306a6dd5fd5278df`。Windows 构建 `41925191201`、Linux 构建 `41925196558` 成功；候选安装验收 `41927662284`（Linux）与 `41928418390`（Windows）通过。
+- DMG 公证 `c90a9441-8e4f-4adb-81b3-58b742c2078c`、ZIP 公证 `7fd0924e-c9e4-43d9-b326-ac7f37170b88` 均 Accepted。DMG 已装订，挂载 App 的严格签名与 Gatekeeper Notarized Developer ID 检查通过。OfficeCLI 1.0.152 实际创建/校验 DOCX 后，二进制摘要与 App 签名保持完整。
+- 40 个发布资产已核对摘要和大小，六个 Windows/Linux 安装器摘要来自成功 CI run 的暂存验证。正式 Mac DMG 匿名下载摘要匹配 `32e6fc66a619d23531d3b295eed2fe154a58fba281b6f1f1c8a1b9744d101aa2`；正式 Windows/Linux 下载复验 run 为 `41930652261`。
+- 中英文 README 与 Landing Page 已同步 3.14.38；线上页面的 390/1440px 双语、持久化、七个安装器链接和无横向溢出检查通过。Typecheck 和架构检查通过，完整 Lint 仍有 settingService.ts 既有 max-lines 错误。发布审计见 `desktop-release-audit-2026-11-04.json`。
+
+正式下载复验 `41930652261` 已全部成功，覆盖 Windows x64/ARM64 与 Linux 两架构 DEB/RPM；Mac DMG 匿名下载及装订校验通过。本地 `release-artifacts` 留存最新 3.14.38 已公证 DMG。
