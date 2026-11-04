@@ -18,14 +18,14 @@ ZenCode 是 AI 编程工作台，提供桌面应用、浏览器界面和终端 A
 
 从 [GitHub 最新发行版](https://github.com/bennix/ZCode/releases/latest) 下载 macOS DMG、Windows 安装程序或 Linux 软件包。下载页只展示已完成构建与验证的平台；源码开发步骤见下文。
 
-当前正式版为 **3.14.33**。macOS Apple Silicon DMG 已通过 Apple 公证；Windows 与 Linux x64/ARM64 安装包均通过构建和安装验收。按设备选择对应安装包：
+当前正式版为 **3.14.34**。macOS Apple Silicon DMG 已通过 Apple 公证；Windows 与 Linux x64/ARM64 安装包均通过构建和安装验收。按设备选择对应安装包：
 
 | 系统                | 安装包                                                                                                                                                                                                  |
 | ------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| macOS Apple Silicon | [已公证 DMG](https://github.com/bennix/ZCode/releases/latest/download/ZenCode-3.14.33-mac-arm64.dmg)                                                                                                   |
-| Windows x64 / ARM64 | [x64](https://github.com/bennix/ZCode/releases/latest/download/ZenCode-3.14.33-win-x64.exe) · [ARM64](https://github.com/bennix/ZCode/releases/latest/download/ZenCode-3.14.33-win-arm64.exe)             |
-| Linux x64           | [DEB](https://github.com/bennix/ZCode/releases/latest/download/ZenCode-3.14.33-linux-amd64.deb) · [RPM](https://github.com/bennix/ZCode/releases/latest/download/ZenCode-3.14.33-linux-x86_64.rpm)    |
-| Linux ARM64         | [DEB](https://github.com/bennix/ZCode/releases/latest/download/ZenCode-3.14.33-linux-arm64.deb) · [RPM](https://github.com/bennix/ZCode/releases/latest/download/ZenCode-3.14.33-linux-aarch64.rpm)   |
+| macOS Apple Silicon | [已公证 DMG](https://github.com/bennix/ZCode/releases/latest/download/ZenCode-3.14.34-mac-arm64.dmg)                                                                                                   |
+| Windows x64 / ARM64 | [x64](https://github.com/bennix/ZCode/releases/latest/download/ZenCode-3.14.34-win-x64.exe) · [ARM64](https://github.com/bennix/ZCode/releases/latest/download/ZenCode-3.14.34-win-arm64.exe)             |
+| Linux x64           | [DEB](https://github.com/bennix/ZCode/releases/latest/download/ZenCode-3.14.34-linux-amd64.deb) · [RPM](https://github.com/bennix/ZCode/releases/latest/download/ZenCode-3.14.34-linux-x86_64.rpm)    |
+| Linux ARM64         | [DEB](https://github.com/bennix/ZCode/releases/latest/download/ZenCode-3.14.34-linux-arm64.deb) · [RPM](https://github.com/bennix/ZCode/releases/latest/download/ZenCode-3.14.34-linux-aarch64.rpm)   |
 
 ## 产品能力
 
