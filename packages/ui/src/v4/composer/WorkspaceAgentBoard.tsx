@@ -1,3 +1,4 @@
+import { GuidedSteps } from "./GuidedSteps.js";
 /* oxlint-disable eslint(max-lines) -- 工作区同时承载名单、白板、附件和流式输出。 */
 /**
  * 对话框里的多 Agent 工作区。模型来自当前设置，流式调用 ZenMux，可取消。
@@ -252,6 +253,7 @@ export function WorkspaceAgentBoard({
   const [judgeEffort, setJudgeEffort] = useState(stored.judgeEffort ?? "");
   const [whiteboardOn, setWhiteboardOn] = useState(stored.whiteboardOn === true);
   const [whiteboard, setWhiteboard] = useState(stored.whiteboard ?? "");
+  const [step, setStep] = useState(0);
   const [task, setTask] = useState("");
   const [images, setImages] = useState<BoardImage[]>([]);
   const [notes, setNotes] = useState<string[]>([]);
@@ -309,6 +311,7 @@ export function WorkspaceAgentBoard({
     abortRef.current?.abort();
     const controller = new AbortController();
     abortRef.current = controller;
+    setStep(2);
     setRunning(true);
     setError(null);
     setSearchStatus(null);
@@ -431,57 +434,75 @@ export function WorkspaceAgentBoard({
           {intl.formatMessage({ id: "chat.workspace.noModel" })}
         </p>
       ) : null}
+      <GuidedSteps
+        steps={["chat.guide.task", "chat.guide.team", "chat.guide.results"]}
+        current={step}
+        onChange={setStep}
+        disabled={running}
+        canAdvance={(step === 0 && Boolean(task.trim())) || (step === 1 && Boolean(liveBoard))}
+      />
+      {step > 0 ? (
+        <p className="mb-3 whitespace-pre-wrap break-words text-ui-caption">{task}</p>
+      ) : null}
+      {step === 1 ? (
+        <p className="mb-3 text-ui-caption text-foreground-subtle">
+          {intl.formatMessage({ id: "chat.guide.teamSummary" }, { count: agents.length })}
+        </p>
+      ) : null}
       <div className="mb-3 rounded-xl border border-border bg-surface p-3 max-sm:p-2">
-        <p className="mb-2 text-ui-caption font-medium text-foreground">
-          {intl.formatMessage({ id: "chat.workspace.guideTask" })}
-        </p>
-        <textarea
-          value={task}
-          placeholder={intl.formatMessage({ id: "chat.workspace.task" })}
-          onChange={(event) => setTask(event.target.value)}
-          onPaste={(event) => {
-            const files = [...event.clipboardData.files];
-            if (files.length === 0) return;
-            event.preventDefault();
-            void addFiles(files);
-          }}
-          onDragOver={(event) => event.preventDefault()}
-          onDrop={(event) => {
-            event.preventDefault();
-            void addFiles([...event.dataTransfer.files]);
-          }}
-          className="mt-2 min-h-16 w-full rounded-lg border border-border bg-background p-2 text-ui-base max-sm:min-h-12"
-        />
-        <p className="mt-1 text-ui-caption text-muted-foreground">
-          {intl.formatMessage({ id: "chat.workspace.drop" })}
-        </p>
-        {images.length > 0 ? (
-          <div className="mt-2 flex flex-wrap gap-2">
-            {images.map((image) => (
-              <div
-                key={image.id}
-                className="relative size-12 overflow-hidden rounded-lg border border-border"
-              >
-                <img src={image.url} alt={image.name} className="size-full object-cover" />
-                <button
-                  type="button"
-                  aria-label={intl.formatMessage({ id: "chat.attachments.remove" })}
-                  className="absolute top-0.5 right-0.5 z-10 grid size-3.5 place-items-center rounded-full bg-primary text-[10px] leading-none text-primary-foreground"
-                  onClick={() =>
-                    setImages((current) => current.filter((item) => item.id !== image.id))
-                  }
+        <div hidden={step !== 0}>
+          <p className="mb-2 text-ui-caption font-medium text-foreground">
+            {intl.formatMessage({ id: "chat.workspace.guideTask" })}
+          </p>
+          <textarea
+            value={task}
+            placeholder={intl.formatMessage({ id: "chat.workspace.task" })}
+            onChange={(event) => setTask(event.target.value)}
+            onPaste={(event) => {
+              const files = [...event.clipboardData.files];
+              if (files.length === 0) return;
+              event.preventDefault();
+              void addFiles(files);
+            }}
+            onDragOver={(event) => event.preventDefault()}
+            onDrop={(event) => {
+              event.preventDefault();
+              void addFiles([...event.dataTransfer.files]);
+            }}
+            className="mt-2 min-h-16 w-full rounded-lg border border-border bg-background p-2 text-ui-base max-sm:min-h-12"
+          />
+          <p className="mt-1 text-ui-caption text-muted-foreground">
+            {intl.formatMessage({ id: "chat.workspace.drop" })}
+          </p>
+          {images.length > 0 ? (
+            <div className="mt-2 flex flex-wrap gap-2">
+              {images.map((image) => (
+                <div
+                  key={image.id}
+                  className="relative size-12 overflow-hidden rounded-lg border border-border"
                 >
-                  ×
-                </button>
-              </div>
-            ))}
-          </div>
-        ) : null}
+                  <img src={image.url} alt={image.name} className="size-full object-cover" />
+                  <button
+                    type="button"
+                    aria-label={intl.formatMessage({ id: "chat.attachments.remove" })}
+                    className="absolute top-0.5 right-0.5 z-10 grid size-3.5 place-items-center rounded-full bg-primary text-[10px] leading-none text-primary-foreground"
+                    onClick={() =>
+                      setImages((current) => current.filter((item) => item.id !== image.id))
+                    }
+                  >
+                    ×
+                  </button>
+                </div>
+              ))}
+            </div>
+          ) : null}
+        </div>
         {error ? <p className="mt-2 text-ui-caption text-warning">{error}</p> : null}
-        <div className="mt-2 flex gap-2">
+        <div hidden={step === 0} className="mt-2 flex flex-wrap gap-2">
           <Button
             type="button"
             className={cn("h-8 px-3 text-ui-caption")}
+            hidden={step !== 1}
             disabled={running || !apiKey || !task.trim() || choices.length === 0}
             onClick={() => void run()}
           >
@@ -491,6 +512,7 @@ export function WorkspaceAgentBoard({
             type="button"
             variant="ghost"
             className="h-8 px-3 text-ui-caption"
+            hidden={step !== 2}
             disabled={!running}
             onClick={() => abortRef.current?.abort()}
           >
@@ -546,229 +568,233 @@ export function WorkspaceAgentBoard({
           </Button>
         </div>
       </div>
-      <details className="rounded-xl border border-border bg-surface p-3">
-        <summary className="cursor-pointer text-ui-caption font-medium">
-          {intl.formatMessage({ id: "chat.workspace.configure" })}
-        </summary>
-        <div className="mt-3">
-          <Button
-            type="button"
-            variant="ghost"
-            className="mb-2 h-7 px-2 text-ui-caption"
-            disabled={agents.length >= MAX_AGENTS || running}
-            onClick={() => {
-              const next = [
-                ...agents,
-                {
-                  id: `agent-${Date.now()}`,
-                  name: `Agent ${agents.length + 1}`,
-                  modelKey: firstKey,
-                  stance: "collaborate" as const,
-                  effort: defaultEffort(choices[0]?.efforts ?? []),
-                },
-              ];
-              setAgents(next);
-              persist({ agents: next });
-            }}
-          >
-            {intl.formatMessage({ id: "chat.workspace.add" })}
-          </Button>
-          <div className="flex flex-col gap-2">
-            {agents.map((agent) => {
-              const efforts = choiceByKey(agent.modelKey)?.efforts ?? [];
-              return (
-                <div key={agent.id} className="rounded-xl border border-border bg-surface p-2">
-                  <div className="flex flex-wrap items-center gap-2">
-                    <input
-                      value={agent.name}
-                      onChange={(event) => {
-                        const next = agents.map((item) =>
-                          item.id === agent.id ? { ...item, name: event.target.value } : item,
-                        );
-                        setAgents(next);
-                        persist({ agents: next });
-                      }}
-                      className="h-7 w-28 rounded-lg border border-border bg-background px-2 text-ui-caption"
-                    />
-                    <select
-                      value={agent.modelKey}
-                      onChange={(event) => {
-                        const modelKey = event.target.value;
-                        const effort = defaultEffort(
-                          choices.find((choice) => choice.key === modelKey)?.efforts ?? [],
-                        );
-                        const next = agents.map((item) =>
-                          item.id === agent.id ? { ...item, modelKey, effort } : item,
-                        );
-                        setAgents(next);
-                        persist({ agents: next });
-                      }}
-                      className="h-7 max-w-full flex-1 rounded-lg border border-border bg-background px-2 text-ui-caption"
-                    >
-                      {choices.map((choice) => (
-                        <option key={choice.key} value={choice.key}>
-                          {choice.label}
-                        </option>
-                      ))}
-                    </select>
-                    <select
-                      value={agent.stance}
-                      onChange={(event) => {
-                        const stance: Stance =
-                          event.target.value === "critique" ? "critique" : "collaborate";
-                        const next = agents.map((item) =>
-                          item.id === agent.id ? { ...item, stance } : item,
-                        );
-                        setAgents(next);
-                        persist({ agents: next });
-                      }}
-                      className="h-7 rounded-lg border border-border bg-background px-2 text-ui-caption"
-                    >
-                      <option value="collaborate">
-                        {intl.formatMessage({ id: "chat.workspace.collaborate" })}
-                      </option>
-                      <option value="critique">
-                        {intl.formatMessage({ id: "chat.workspace.critique" })}
-                      </option>
-                    </select>
-                    {efforts.length > 0 ? (
-                      <select
-                        aria-label={intl.formatMessage({ id: "chat.workspace.effort" })}
-                        value={resolveEffort(agent.effort, efforts)}
+      <div hidden={step !== 1}>
+        <details className="rounded-xl border border-border bg-surface p-3">
+          <summary className="cursor-pointer text-ui-caption font-medium">
+            {intl.formatMessage({ id: "chat.workspace.configure" })}
+          </summary>
+          <div className="mt-3">
+            <Button
+              type="button"
+              variant="ghost"
+              className="mb-2 h-7 px-2 text-ui-caption"
+              disabled={agents.length >= MAX_AGENTS || running}
+              onClick={() => {
+                const next = [
+                  ...agents,
+                  {
+                    id: `agent-${Date.now()}`,
+                    name: `Agent ${agents.length + 1}`,
+                    modelKey: firstKey,
+                    stance: "collaborate" as const,
+                    effort: defaultEffort(choices[0]?.efforts ?? []),
+                  },
+                ];
+                setAgents(next);
+                persist({ agents: next });
+              }}
+            >
+              {intl.formatMessage({ id: "chat.workspace.add" })}
+            </Button>
+            <div className="flex flex-col gap-2">
+              {agents.map((agent) => {
+                const efforts = choiceByKey(agent.modelKey)?.efforts ?? [];
+                return (
+                  <div key={agent.id} className="rounded-xl border border-border bg-surface p-2">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <input
+                        value={agent.name}
                         onChange={(event) => {
                           const next = agents.map((item) =>
-                            item.id === agent.id ? { ...item, effort: event.target.value } : item,
+                            item.id === agent.id ? { ...item, name: event.target.value } : item,
+                          );
+                          setAgents(next);
+                          persist({ agents: next });
+                        }}
+                        className="h-7 w-28 rounded-lg border border-border bg-background px-2 text-ui-caption"
+                      />
+                      <select
+                        value={agent.modelKey}
+                        onChange={(event) => {
+                          const modelKey = event.target.value;
+                          const effort = defaultEffort(
+                            choices.find((choice) => choice.key === modelKey)?.efforts ?? [],
+                          );
+                          const next = agents.map((item) =>
+                            item.id === agent.id ? { ...item, modelKey, effort } : item,
+                          );
+                          setAgents(next);
+                          persist({ agents: next });
+                        }}
+                        className="h-7 max-w-full flex-1 rounded-lg border border-border bg-background px-2 text-ui-caption"
+                      >
+                        {choices.map((choice) => (
+                          <option key={choice.key} value={choice.key}>
+                            {choice.label}
+                          </option>
+                        ))}
+                      </select>
+                      <select
+                        value={agent.stance}
+                        onChange={(event) => {
+                          const stance: Stance =
+                            event.target.value === "critique" ? "critique" : "collaborate";
+                          const next = agents.map((item) =>
+                            item.id === agent.id ? { ...item, stance } : item,
                           );
                           setAgents(next);
                           persist({ agents: next });
                         }}
                         className="h-7 rounded-lg border border-border bg-background px-2 text-ui-caption"
                       >
-                        {efforts.map((effort) => (
-                          <option key={effort} value={effort}>
-                            {effort}
-                          </option>
-                        ))}
+                        <option value="collaborate">
+                          {intl.formatMessage({ id: "chat.workspace.collaborate" })}
+                        </option>
+                        <option value="critique">
+                          {intl.formatMessage({ id: "chat.workspace.critique" })}
+                        </option>
                       </select>
-                    ) : null}
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      className="h-7 px-2 text-ui-caption"
-                      disabled={agents.length <= 1 || running}
-                      onClick={() => {
-                        const next = agents.filter((item) => item.id !== agent.id);
-                        setAgents(next);
-                        persist({ agents: next });
-                      }}
-                    >
-                      {intl.formatMessage({ id: "chat.workspace.remove" })}
-                    </Button>
+                      {efforts.length > 0 ? (
+                        <select
+                          aria-label={intl.formatMessage({ id: "chat.workspace.effort" })}
+                          value={resolveEffort(agent.effort, efforts)}
+                          onChange={(event) => {
+                            const next = agents.map((item) =>
+                              item.id === agent.id ? { ...item, effort: event.target.value } : item,
+                            );
+                            setAgents(next);
+                            persist({ agents: next });
+                          }}
+                          className="h-7 rounded-lg border border-border bg-background px-2 text-ui-caption"
+                        >
+                          {efforts.map((effort) => (
+                            <option key={effort} value={effort}>
+                              {effort}
+                            </option>
+                          ))}
+                        </select>
+                      ) : null}
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        className="h-7 px-2 text-ui-caption"
+                        disabled={agents.length <= 1 || running}
+                        onClick={() => {
+                          const next = agents.filter((item) => item.id !== agent.id);
+                          setAgents(next);
+                          persist({ agents: next });
+                        }}
+                      >
+                        {intl.formatMessage({ id: "chat.workspace.remove" })}
+                      </Button>
+                    </div>
                   </div>
-                </div>
-              );
-            })}
-            <div className="rounded-xl border border-border bg-surface p-2">
-              <div className="flex flex-wrap items-center gap-2">
-                <span className="text-ui-caption">
-                  {intl.formatMessage({ id: "chat.workspace.judge" })}
-                </span>
-                <select
-                  value={judgeModelKey}
-                  onChange={(event) => {
-                    const modelKey = event.target.value;
-                    const effort = defaultEffort(
-                      choices.find((choice) => choice.key === modelKey)?.efforts ?? [],
-                    );
-                    setJudgeModelKey(modelKey);
-                    setJudgeEffort(effort);
-                    persist({ judgeModelKey: modelKey, judgeEffort: effort });
-                  }}
-                  className="h-7 max-w-full flex-1 rounded-lg border border-border bg-background px-2 text-ui-caption"
-                >
-                  {choices.map((choice) => (
-                    <option key={choice.key} value={choice.key}>
-                      {choice.label}
-                    </option>
-                  ))}
-                </select>
-                {(choiceByKey(judgeModelKey)?.efforts.length ?? 0) > 0 ? (
+                );
+              })}
+              <div className="rounded-xl border border-border bg-surface p-2">
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="text-ui-caption">
+                    {intl.formatMessage({ id: "chat.workspace.judge" })}
+                  </span>
                   <select
-                    aria-label={intl.formatMessage({ id: "chat.workspace.effort" })}
-                    value={resolveEffort(judgeEffort, choiceByKey(judgeModelKey)?.efforts ?? [])}
+                    value={judgeModelKey}
                     onChange={(event) => {
-                      setJudgeEffort(event.target.value);
-                      persist({ judgeEffort: event.target.value });
+                      const modelKey = event.target.value;
+                      const effort = defaultEffort(
+                        choices.find((choice) => choice.key === modelKey)?.efforts ?? [],
+                      );
+                      setJudgeModelKey(modelKey);
+                      setJudgeEffort(effort);
+                      persist({ judgeModelKey: modelKey, judgeEffort: effort });
                     }}
-                    className="h-7 rounded-lg border border-border bg-background px-2 text-ui-caption"
+                    className="h-7 max-w-full flex-1 rounded-lg border border-border bg-background px-2 text-ui-caption"
                   >
-                    {choiceByKey(judgeModelKey)?.efforts.map((effort) => (
-                      <option key={effort} value={effort}>
-                        {effort}
+                    {choices.map((choice) => (
+                      <option key={choice.key} value={choice.key}>
+                        {choice.label}
                       </option>
                     ))}
                   </select>
-                ) : null}
+                  {(choiceByKey(judgeModelKey)?.efforts.length ?? 0) > 0 ? (
+                    <select
+                      aria-label={intl.formatMessage({ id: "chat.workspace.effort" })}
+                      value={resolveEffort(judgeEffort, choiceByKey(judgeModelKey)?.efforts ?? [])}
+                      onChange={(event) => {
+                        setJudgeEffort(event.target.value);
+                        persist({ judgeEffort: event.target.value });
+                      }}
+                      className="h-7 rounded-lg border border-border bg-background px-2 text-ui-caption"
+                    >
+                      {choiceByKey(judgeModelKey)?.efforts.map((effort) => (
+                        <option key={effort} value={effort}>
+                          {effort}
+                        </option>
+                      ))}
+                    </select>
+                  ) : null}
+                </div>
               </div>
             </div>
+            <label className="mt-2 flex items-center gap-2 text-ui-caption">
+              <input
+                type="checkbox"
+                checked={whiteboardOn}
+                onChange={(event) => {
+                  setWhiteboardOn(event.target.checked);
+                  persist({ whiteboardOn: event.target.checked });
+                }}
+              />
+              {intl.formatMessage({ id: "chat.workspace.whiteboard" })}
+            </label>
+            {whiteboardOn ? (
+              <textarea
+                value={whiteboard}
+                onChange={(event) => {
+                  setWhiteboard(event.target.value);
+                  persist({ whiteboard: event.target.value });
+                }}
+                placeholder={intl.formatMessage({ id: "chat.workspace.whiteboardHint" })}
+                className="mt-2 min-h-16 w-full rounded-lg border border-border bg-background p-2 text-ui-base"
+              />
+            ) : null}
           </div>
-          <label className="mt-2 flex items-center gap-2 text-ui-caption">
-            <input
-              type="checkbox"
-              checked={whiteboardOn}
-              onChange={(event) => {
-                setWhiteboardOn(event.target.checked);
-                persist({ whiteboardOn: event.target.checked });
-              }}
-            />
-            {intl.formatMessage({ id: "chat.workspace.whiteboard" })}
-          </label>
-          {whiteboardOn ? (
-            <textarea
-              value={whiteboard}
-              onChange={(event) => {
-                setWhiteboard(event.target.value);
-                persist({ whiteboard: event.target.value });
-              }}
-              placeholder={intl.formatMessage({ id: "chat.workspace.whiteboardHint" })}
-              className="mt-2 min-h-16 w-full rounded-lg border border-border bg-background p-2 text-ui-base"
-            />
-          ) : null}
-        </div>
-      </details>
-      {searchLog.length > 0 ? (
-        <div className="mt-2 flex flex-col gap-2">
-          {searchLog.map((entry) => (
-            <div key={entry.query} className="rounded-xl border border-border bg-surface p-2">
-              <p className="text-ui-caption text-muted-foreground">{entry.query}</p>
-              {entry.hits.length === 0 ? (
-                <p className="text-ui-caption">
-                  {intl.formatMessage({ id: "chat.workspace.searchEmpty" })}
-                </p>
-              ) : (
-                entry.hits.map((hit) => (
-                  <button
-                    key={`${entry.query}-${hit.url}`}
-                    type="button"
-                    className="mt-1 block w-full text-left"
-                    onClick={() => platform.openExternal(hit.url)}
-                  >
-                    <span className="text-ui-caption text-foreground">{hit.title}</span>
-                    <span className="mt-0.5 block text-ui-caption text-muted-foreground">
-                      {hit.snippet}
-                    </span>
-                  </button>
-                ))
-              )}
-            </div>
-          ))}
-        </div>
-      ) : null}
-      {liveBoard ? (
-        <div className="mt-2 rounded-lg border border-border bg-background p-2">
-          <WorkspaceMarkdown text={liveBoard} streaming={running} />
-        </div>
-      ) : null}
+        </details>
+      </div>
+      <div hidden={step !== 2}>
+        {searchLog.length > 0 ? (
+          <div className="mt-2 flex flex-col gap-2">
+            {searchLog.map((entry) => (
+              <div key={entry.query} className="rounded-xl border border-border bg-surface p-2">
+                <p className="text-ui-caption text-muted-foreground">{entry.query}</p>
+                {entry.hits.length === 0 ? (
+                  <p className="text-ui-caption">
+                    {intl.formatMessage({ id: "chat.workspace.searchEmpty" })}
+                  </p>
+                ) : (
+                  entry.hits.map((hit) => (
+                    <button
+                      key={`${entry.query}-${hit.url}`}
+                      type="button"
+                      className="mt-1 block w-full text-left"
+                      onClick={() => platform.openExternal(hit.url)}
+                    >
+                      <span className="text-ui-caption text-foreground">{hit.title}</span>
+                      <span className="mt-0.5 block text-ui-caption text-muted-foreground">
+                        {hit.snippet}
+                      </span>
+                    </button>
+                  ))
+                )}
+              </div>
+            ))}
+          </div>
+        ) : null}
+        {liveBoard ? (
+          <div className="mt-2 rounded-lg border border-border bg-background p-2">
+            <WorkspaceMarkdown text={liveBoard} streaming={running} />
+          </div>
+        ) : null}
+      </div>
     </section>
   );
 }

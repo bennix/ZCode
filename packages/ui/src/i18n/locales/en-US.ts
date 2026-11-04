@@ -1,5 +1,29 @@
 /** English translations */
 const enUS: Record<string, string> = {
+  "chat.guide.rules": "View design rules",
+  "chat.guide.steps": "Creation and collaboration steps",
+  "chat.guide.back": "Previous step",
+  "chat.guide.next": "Next step",
+  "chat.guide.task": "Describe task",
+  "chat.guide.team": "Review team",
+  "chat.guide.results": "Run and review",
+  "chat.guide.idea": "Describe idea",
+  "chat.guide.materials": "Materials and settings",
+  "chat.guide.confirm": "Review and generate",
+  "chat.guide.output": "Results and revisions",
+  "chat.guide.purpose": "Purpose and audience",
+  "chat.guide.visual": "Content and visuals",
+  "chat.guide.preview": "Preview and revise",
+  "chat.guide.optional": "Materials and settings are optional. Continue to use the defaults.",
+  "chat.guide.summary": "Review your brief below before generating.",
+  "chat.guide.attachments": "{images} reference images · {files} attachments",
+  "chat.guide.teamSummary":
+    "{count} agents research and discuss in sequence, followed by a final review. Expand to adjust roles and models.",
+  "chat.guide.structure": "Content structure and constraints",
+  "chat.guide.structureHint":
+    "Describe the pages or sections, the point each should make, and content to preserve.",
+  "chat.guide.designReview":
+    "Review the content structure and shared visual rules before generating. Preview, refine and export the result.",
   "chat.studio.codesign.title": "CoDesign",
   "chat.studio.codesign.guide":
     "Create prototypes, posters, reports or slides; edit selected elements and generate image assets.",
@@ -5011,7 +5035,7 @@ const enUS: Record<string, string> = {
   "chat.studio.stopped": "Stopped; completed content kept",
   "chat.studio.stop": "Stop",
   "chat.studio.guide":
-    "Choose what to make, then describe your idea. Open detailed settings when needed.",
+    "Choose a format, describe your idea, add optional materials, then review and generate.",
   "chat.studio.toggle": "Create",
   "chat.studio.references.body": "Body / pose",
   "chat.studio.references.face": "Face identity",
@@ -5022,7 +5046,7 @@ const enUS: Record<string, string> = {
   "chat.studio.references.person": "Person",
   "chat.studio.references.assign": "Which mannequin this image follows",
   "chat.studio.references.guide":
-    "Character and sketch show one at a time. The mannequin is the body reference by default. When adding appearance or clothing, choose which mannequin from the left it follows. Scene references are not tied to one mannequin. Click a card, then paste an image.",
+    "Add appearance, clothing, scene or body references as needed. Choose Character to open the pose editor, or Sketch to draw.",
   "chat.studio.references.pipeline":
     "Image order: body, then clothing, background and face. A step is skipped when that reference is missing.",
   "chat.studio.design.title": "Design",

@@ -102,6 +102,8 @@ export async function verifyStudioPanel(page) {
   await page.getByRole("button", { name: "Slides", exact: true }).click();
   assert.equal(await page.getByPlaceholder("Topic", { exact: true }).isVisible(), true);
   await page.getByPlaceholder("Topic", { exact: true }).fill("Test deck");
+  await page.getByRole("button", { name: "Next step", exact: true }).click();
+  await page.getByRole("button", { name: "Next step", exact: true }).click();
   await page.getByRole("button", { name: "Make slides", exact: true }).click();
   await page
     .getByText("Request interrupted. Retrying in 1s (attempt 2/3)", { exact: true })
@@ -120,10 +122,13 @@ export async function verifyStudioPanel(page) {
   await page.getByRole('checkbox',{name:'Select',exact:true}).uncheck();
   console.log('PASS: selection/move while generation is busy survives later page commits');
 
+  await page.getByRole("button", { name: /Describe idea$/ }).click();
   await page
     .locator("select")
     .filter({ has: page.locator("option", { hasText: "瑞士风" }) })
     .selectOption({ label: "瑞士风" });
+  for (let step = 0; step < 3; step++) await page.getByRole("button", { name: "Next step", exact: true }).click();
+
   await page.waitForFunction(
     () => document.querySelector("iframe")?.contentDocument?.body?.dataset.studioTheme === "swiss",
   );
@@ -133,10 +138,13 @@ export async function verifyStudioPanel(page) {
       .evaluate((frame) => getComputedStyle(frame.contentDocument.body).backgroundColor),
     "rgb(255, 255, 255)",
   );
+  await page.getByRole("button", { name: /Describe idea$/ }).click();
   await page
     .locator("select")
     .filter({ has: page.locator("option", { hasText: "瑞士风" }) })
     .selectOption({ label: "杂志风" });
+  for (let step = 0; step < 3; step++) await page.getByRole("button", { name: "Next step", exact: true }).click();
+
   await page.waitForFunction(
     () =>
       document.querySelector("iframe")?.contentDocument?.body?.dataset.studioTheme === "magazine",
@@ -318,6 +326,7 @@ export async function verifyStudioPanel(page) {
   await page.evaluate(() => {
     globalThis.fetch = async () => new Response('{"error":{"message":"denied"}}', { status: 401 });
   });
+  await page.getByRole("button", { name: "Previous step", exact: true }).click();
   await page.getByRole("button", { name: "Make slides", exact: true }).click();
   await page.getByText("Generation failed; no slides completed", { exact: true }).waitFor();
   assert.equal(await page.locator("iframe").count(), 0);
@@ -333,6 +342,7 @@ export async function verifyStudioPanel(page) {
       );
     };
   });
+  await page.getByRole("button", { name: "Previous step", exact: true }).click();
   await page.getByRole("button", { name: "Make slides", exact: true }).click();
   await page
     .getByText("目录规划失败（已尝试 3 次）：目录需要 10 页，实际返回 0 页", { exact: true })

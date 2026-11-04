@@ -1,3 +1,5 @@
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import assert from "node:assert/strict";
 import { createRequire } from "node:module";
 import { createServer } from "vite";
@@ -5,6 +7,7 @@ import tailwindcss from "@tailwindcss/vite";
 const { chromium } = createRequire(import.meta.url)("playwright-core");
 const server = await createServer({
   configFile: false,
+  cacheDir: join(tmpdir(), "zcode-studio-creation-vite"),
   plugins: [tailwindcss()],
   esbuild: { jsx: "automatic" },
   root: process.cwd(),
@@ -15,11 +18,13 @@ await server.listen();
 const browser = await chromium.launch({ channel: "chrome", headless: true });
 try {
   const page = await browser.newPage({ viewport: { width: 390, height: 844 } });
+  page.setDefaultTimeout(15_000);
+  page.setDefaultNavigationTimeout(15_000);
   page.on("console", (msg) => {
     if (msg.type() === "error") console.error(msg.text());
   });
   page.on("pageerror", (error) => console.error(error.message));
-  await page.goto("http://localhost:5197/packages/ui/tests/studio-creation-fixture.html");
+  await page.goto(new URL("packages/ui/tests/studio-creation-fixture.html", server.resolvedUrls.local[0]).href);
   await page.evaluate(async () => {
     await import("/packages/ui/src/styles.css");
     const { React, createRoot } = await import("/packages/ui/tests/studio-react-entry.js");
@@ -116,6 +121,36 @@ try {
     "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVQIHWP4z8DwHwAFgAI/ScLbtAAAAABJRU5ErkJggg==",
     "base64",
   );
+  const next = () => page.getByRole("button", { name: "Next step", exact: true }).click();
+  const previous = () => page.getByRole("button", { name: "Previous step", exact: true }).click();
+  const assertNoOverflow = async () => {
+    const geometry = await page.evaluate(() => ({
+      width: innerWidth,
+      scroll: document.documentElement.scrollWidth,
+    }));
+    assert.ok(geometry.scroll <= geometry.width, JSON.stringify(geometry));
+  };
+  const prompt = page.getByPlaceholder("Describe the image, video, or the talk", { exact: true });
+  assert.equal(
+    await page.getByRole("button", { name: "Next step", exact: true }).isDisabled(),
+    true,
+  );
+  assert.equal(
+    await page.getByRole("button", { name: "Character", exact: true }).isVisible(),
+    false,
+  );
+  await page.setViewportSize({ width: 320, height: 700 });
+  await assertNoOverflow();
+  await page.screenshot({ path: "/tmp/zcode-guided-create-mobile.png", fullPage: true });
+  await page.setViewportSize({ width: 1280, height: 900 });
+  await page.screenshot({ path: "/tmp/zcode-guided-create-desktop.png", fullPage: true });
+  await page.setViewportSize({ width: 390, height: 844 });
+  await prompt.fill("A person running in a park");
+  await next();
+  await previous();
+  assert.equal(await prompt.inputValue(), "A person running in a park");
+  await next();
+  await page.getByRole("button", { name: "Character", exact: true }).click();
   await page.locator('[data-reference-kind="face"]').click({ position: { x: 8, y: 8 } });
   assert.equal(
     await page.evaluate(() => document.activeElement?.getAttribute("data-reference-kind")),
@@ -166,7 +201,9 @@ try {
   assert.equal(await page.getByLabel("Color", { exact: true }).isVisible(), true);
   assert.equal(await page.getByLabel("Face identity", { exact: true }).isVisible(), false);
   assert.equal(await page.getByLabel("Pose preset", { exact: true }).isVisible(), false);
+  await next();
   assert.equal(await page.getByLabel("Reference role", { exact: true }).count(), 4);
+  await previous();
   assert.equal(await page.getByLabel("Person", { exact: true }).count(), 2);
   await page.getByLabel("Person", { exact: true }).first().selectOption("2");
   await page.getByRole("button", { name: "Design", exact: true }).click();
@@ -176,6 +213,22 @@ try {
   await page
     .getByLabel("Who is it for, and what should they do?", { exact: true })
     .fill("Readers finding new books");
+  await next();
+  await page
+    .getByLabel("Content structure and constraints", { exact: true })
+    .fill("Hero, book catalogue, contact");
+  await previous();
+  assert.equal(
+    await page.getByLabel("What would you like to design?", { exact: true }).inputValue(),
+    "A shop for local books",
+  );
+  await next();
+  assert.equal(
+    await page.getByLabel("Content structure and constraints", { exact: true }).inputValue(),
+    "Hero, book catalogue, contact",
+  );
+  await assertNoOverflow();
+  await page.screenshot({ path: "/tmp/zcode-guided-design-brief.png", fullPage: true });
   await page.getByRole("button", { name: "Generate prototype", exact: true }).click();
   const frame = page.frameLocator('iframe[title="Design prototype preview"]');
   await frame.getByRole("heading", { name: "Initial" }).waitFor();
@@ -200,6 +253,10 @@ try {
   await page.getByRole("button", { name: "Refine with feedback", exact: true }).click();
   await frame.getByRole("heading", { name: "Revised" }).waitFor();
   const requests = await page.evaluate(() => globalThis.designRequests);
+  assert.match(
+    JSON.parse(requests[0].messages[1].content).designSystem,
+    /Hero, book catalogue, contact/,
+  );
   assert.equal(JSON.parse(requests[1].messages[1].content).feedback, "Make the headline clearer");
   assert.match(JSON.parse(requests[1].messages[1].content).previousHtml, /Initial/);
   await page.getByRole("button", { name: "Export HTML", exact: true }).click();
@@ -215,6 +272,10 @@ try {
   });
   await page.getByLabel("3 · Describe the next change", { exact: true }).fill("Another change");
   await page.getByRole("button", { name: "Refine with feedback", exact: true }).click();
+  assert.equal(
+    await page.getByRole("button", { name: "Previous step", exact: true }).isDisabled(),
+    true,
+  );
   await page.getByRole("button", { name: "Stop", exact: true }).click();
   await frame.getByRole("heading", { name: "Initial" }).waitFor();
   await page.getByRole("button", { name: "Image", exact: true }).click();
@@ -222,9 +283,13 @@ try {
   await page
     .getByPlaceholder("Describe the image, video, or the talk", { exact: true })
     .fill("A person running in a park");
+  await next();
+  await next();
   await page.getByRole("button", { name: "Generate", exact: true }).click();
   await page.waitForFunction(() => globalThis.imageRequests.length === 4);
-  await page.getByRole("button", { name: "Generate", exact: true }).waitFor({ state: "visible" });
+  await page
+    .getByRole("button", { name: "Previous step", exact: true })
+    .waitFor({ state: "visible" });
   const requestsImages = await page.evaluate(() =>
     globalThis.imageRequests.map((item) => item.instances[0]),
   );
@@ -243,8 +308,10 @@ try {
     ),
   );
   await page.getByRole("button", { name: "Design", exact: true }).click();
+  await previous();
   await page.getByRole("button", { name: "Use current image", exact: true }).click();
   await page.getByRole("img", { name: "Design asset", exact: true }).waitFor();
+  await next();
   await page.evaluate(() => {
     globalThis.holdDesign = false;
   });
@@ -272,7 +339,9 @@ try {
   assert.equal(await page.locator('iframe[title="Design prototype preview"]').count(), 0);
   await page.getByLabel("Design projects", { exact: true }).selectOption(projectId);
   await frame.getByRole("heading", { name: "Revised" }).waitFor();
+  await previous();
   await page.getByRole("img", { name: "Design asset", exact: true }).waitFor();
+  await next();
   const persisted = await page.evaluate(async () => {
     const { listStudioDesigns } = await import("/packages/ui/src/store/studioDesignHistory.ts");
     return (await listStudioDesigns())[0];

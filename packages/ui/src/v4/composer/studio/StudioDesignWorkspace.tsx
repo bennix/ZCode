@@ -1,3 +1,7 @@
+import type { StudioDesignVersion } from "@/store/studioDesignHistory.js";
+import { StudioDesignPreviewToolbar } from "./StudioDesignPreviewToolbar.js";
+import { StudioDesignFeedback } from "./StudioDesignFeedback.js";
+import { GuidedSteps } from "../GuidedSteps.js";
 import { StudioDesignBriefForm, INITIAL } from "./StudioDesignBriefForm.js";
 import {
   EMPTY_CODESIGN,
@@ -24,7 +28,6 @@ import {
   deriveDesignSystem,
   generateDesignPrototype,
   isolateDesignDocument,
-  type StudioDesignBrief,
 } from "./studioDesign.js";
 
 export function StudioDesignWorkspace({
@@ -48,6 +51,7 @@ export function StudioDesignWorkspace({
   const [projectId, setProjectId] = useState<string>(() => crypto.randomUUID());
   const [saved, setSaved] = useState(false);
   const t = (key: string) => intl.formatMessage({ id: `chat.studio.design.${key}` });
+  const [step, setStep] = useState(0);
   const [brief, setBrief] = useState(INITIAL);
   const [html, setHtml] = useState("");
   const [feedback, setFeedback] = useState("");
@@ -57,9 +61,7 @@ export function StudioDesignWorkspace({
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
   const [mobile, setMobile] = useState(false);
-  const [versions, setVersions] = useState<
-    { html: string; brief: StudioDesignBrief; codesign?: CoDesignState }[]
-  >([]);
+  const [versions, setVersions] = useState<StudioDesignVersion[]>([]);
   const [committedBrief, setCommittedBrief] = useState(INITIAL);
   const run = useRef<AbortController | null>(null);
   useEffect(
@@ -73,6 +75,7 @@ export function StudioDesignWorkspace({
       [...current, { html: next, brief: { ...currentBrief }, codesign: metadata }].slice(-10),
     );
     setCommittedBrief({ ...currentBrief });
+    setStep(2);
     setHtml(next);
     setSaved(false);
   };
@@ -128,6 +131,7 @@ export function StudioDesignWorkspace({
     run.current?.abort();
     const controller = new AbortController();
     run.current = controller;
+    setStep(2);
     setBusy(true);
     onBusyChange(true);
     setError("");
@@ -194,7 +198,6 @@ export function StudioDesignWorkspace({
       data-testid="studio-design-workspace"
       onInput={() => setSaved(false)}
     >
-      <p className="text-ui-caption text-foreground-subtle">{t("guide")}</p>
       <StudioDesignProjectBar
         records={projects.records}
         projectId={projectId}
@@ -209,6 +212,7 @@ export function StudioDesignWorkspace({
             project.versions.findLast((version) => version.html === project.html)?.brief ??
               project.brief,
           );
+          setStep(project.html ? 2 : 0);
           setHtml(project.html);
           setVersions(project.versions);
           setAsset(project.asset);
@@ -222,6 +226,7 @@ export function StudioDesignWorkspace({
           setProjectId(crypto.randomUUID());
           setBrief(INITIAL);
           setCommittedBrief(INITIAL);
+          setStep(0);
           setHtml("");
           setVersions([]);
           setAsset("");
@@ -254,39 +259,70 @@ export function StudioDesignWorkspace({
           }
         }}
       />
-      {coDesign ? (
-        <StudioCoDesignControls
-          revision={html}
-          canExport={Boolean(platform.saveFile)}
-          value={codesign.metadata}
-          disabled={busy || projects.saving}
-          hasHtml={Boolean(html)}
-          selecting={codesign.selecting}
-          selection={codesign.selection}
-          note={codesign.note}
-          progress={codesign.progress}
-          onChange={codesign.change}
-          onImport={importDesign}
-          onExport={() => void exportCoDesign()}
-          onImages={() => void codesign.generateImages()}
-          onSelecting={codesign.toggleSelection}
-          onNote={codesign.setNote}
-          onEdit={() => void codesign.applyComment()}
+      <GuidedSteps
+        steps={["chat.guide.purpose", "chat.guide.visual", "chat.guide.preview"]}
+        current={step}
+        onChange={setStep}
+        disabled={busy}
+        canAdvance={(step === 0 && Boolean(brief.goal.trim())) || (step === 1 && Boolean(html))}
+      />
+      <div hidden={!coDesign}>
+        <details open={step === 2}>
+          <summary className="cursor-pointer text-ui-caption">
+            {intl.formatMessage({ id: "chat.studio.codesign.title" })}
+          </summary>
+          {coDesign ? (
+            <StudioCoDesignControls
+              revision={html}
+              canExport={Boolean(platform.saveFile)}
+              value={codesign.metadata}
+              disabled={busy || projects.saving}
+              hasHtml={Boolean(html)}
+              selecting={codesign.selecting}
+              selection={codesign.selection}
+              note={codesign.note}
+              progress={codesign.progress}
+              onChange={codesign.change}
+              onImport={importDesign}
+              onExport={() => void exportCoDesign()}
+              onImages={() => void codesign.generateImages()}
+              onSelecting={codesign.toggleSelection}
+              onNote={codesign.setNote}
+              onEdit={() => void codesign.applyComment()}
+              onError={setError}
+            />
+          ) : null}
+        </details>
+      </div>
+      <div hidden={step !== 1 || (!sourceImageUrl && !asset)}>
+        <StudioDesignAssetPicker
+          sourceImageUrl={sourceImageUrl}
+          asset={asset}
+          disabled={busy}
+          loading={loadingAsset}
+          onLoadingChange={setLoadingAsset}
+          onChange={setAsset}
           onError={setError}
         />
+      </div>
+      <div hidden={step === 2}>
+        <StudioDesignBriefForm
+          brief={brief}
+          setBrief={setBrief}
+          busy={busy}
+          stage={step === 0 ? "purpose" : "visual"}
+        />
+      </div>
+      {step === 1 ? (
+        <p className="my-2 text-ui-caption text-foreground-subtle">
+          {brief.goal} · {brief.audience}
+          <br />
+          {intl.formatMessage({ id: "chat.guide.designReview" })}
+        </p>
       ) : null}
-      <StudioDesignAssetPicker
-        sourceImageUrl={sourceImageUrl}
-        asset={asset}
-        disabled={busy}
-        loading={loadingAsset}
-        onLoadingChange={setLoadingAsset}
-        onChange={setAsset}
-        onError={setError}
-      />
-      <StudioDesignBriefForm brief={brief} setBrief={setBrief} busy={busy} />
       <div className="flex flex-wrap items-center gap-2">
         <Button
+          hidden={step !== 1}
           disabled={busy || loadingAsset || !apiKey || !brief.goal.trim()}
           onClick={() => void execute(false)}
         >
@@ -317,83 +353,47 @@ export function StudioDesignWorkspace({
           <pre className="max-h-48 overflow-auto whitespace-pre-wrap text-ui-caption">{output}</pre>
         </details>
       ) : null}
-      {html ? (
-        <>
-          <div className="flex flex-wrap items-center gap-2">
-            <Button variant={mobile ? "ghost" : "secondary"} onClick={() => setMobile(false)}>
-              {t("desktop")}
-            </Button>
-            <Button variant={mobile ? "secondary" : "ghost"} onClick={() => setMobile(true)}>
-              {t("mobile")}
-            </Button>
-            <select
-              aria-label={t("versions")}
-              value={String(versions.findLastIndex((version) => version.html === html))}
-              disabled={busy}
-              className="h-8 rounded-lg border border-input-border bg-input text-ui-caption"
-              onChange={(event) => {
-                const version = versions[Number(event.target.value)];
-                if (version) {
-                  setHtml(version.html);
-                  setBrief(version.brief);
-                  setCommittedBrief(version.brief);
-                  codesign.reset(version.codesign ?? EMPTY_CODESIGN);
-                }
+      <div hidden={step !== 2}>
+        {html ? (
+          <>
+            <StudioDesignPreviewToolbar
+              html={html}
+              versions={versions.map((version) => version.html)}
+              mobile={mobile}
+              busy={busy}
+              onMobile={setMobile}
+              onVersion={(index) => {
+                const version = versions[index];
+                if (!version) return;
+                setHtml(version.html);
+                setBrief(version.brief);
+                setCommittedBrief(version.brief);
+                codesign.reset(version.codesign ?? EMPTY_CODESIGN);
               }}
-            >
-              {versions.map((_, index) => (
-                <option key={index} value={index}>
-                  {t("version")} {index + 1}
-                </option>
-              ))}
-            </select>
-          </div>
-          <StudioDesignPreview
-            html={html}
-            mobile={mobile}
-            title={t("preview")}
-            selecting={coDesign && codesign.selecting}
-            onSelection={codesign.setSelection}
-          />
-          <label className="block text-ui-caption">
-            {t("feedback")}
-            <textarea
-              aria-label={t("feedback")}
-              value={feedback}
-              disabled={busy}
-              onChange={(event) => setFeedback(event.target.value)}
-              className="mt-1 min-h-14 w-full rounded-lg border border-input-border bg-input p-2 text-ui-base"
             />
-          </label>
-          <div className="flex flex-wrap gap-2">
-            <Button
-              disabled={busy || !apiKey || !feedback.trim()}
-              onClick={() => void execute(true)}
-            >
-              {t("revise")}
-            </Button>
-            <Button
-              variant="outline"
-              disabled={busy || !platform.saveFile}
-              onClick={() => void save("html")}
-            >
-              {t("exportHtml")}
-            </Button>
-            <Button
-              variant="outline"
-              disabled={busy || !platform.saveFile}
-              onClick={() => void save("system")}
-            >
-              {t("exportSystem")}
-            </Button>
-          </div>
-          {!platform.saveFile ? <p className="text-ui-caption">{t("noSave")}</p> : null}
-        </>
-      ) : (
-        <p className="rounded-xl border border-border bg-surface p-3 text-ui-caption text-foreground-subtle">
-          {t("empty")}
-        </p>
-      )}
+            <StudioDesignPreview
+              html={html}
+              mobile={mobile}
+              title={t("preview")}
+              selecting={coDesign && codesign.selecting}
+              onSelection={codesign.setSelection}
+            />
+            <StudioDesignFeedback
+              feedback={feedback}
+              busy={busy}
+              canRevise={Boolean(apiKey)}
+              canSave={Boolean(platform.saveFile)}
+              onFeedback={setFeedback}
+              onRevise={() => void execute(true)}
+              onSave={(kind) => void save(kind)}
+            />
+          </>
+        ) : (
+          <p className="rounded-xl border border-border bg-surface p-3 text-ui-caption text-foreground-subtle">
+            {t("empty")}
+          </p>
+        )}
+      </div>
       <p className="text-ui-xs text-foreground-subtle">{t("draftNotice")}</p>
     </div>
   );

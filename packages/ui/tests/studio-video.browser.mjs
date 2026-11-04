@@ -1,3 +1,5 @@
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import assert from "node:assert/strict";
 import { createRequire } from "node:module";
 import { createServer } from "vite";
@@ -5,10 +7,11 @@ const require = createRequire(import.meta.url);
 const { chromium } = require("playwright-core");
 const server = await createServer({
   configFile: false,
+  cacheDir: join(tmpdir(), "zcode-studio-video-vite"),
   esbuild: { jsx: "automatic" },
   root: process.cwd(),
-  server: { port: 0, watch: null },
-  optimizeDeps: { entries: [] },
+  server: { port: 0, watch: null, hmr: false },
+  optimizeDeps: { entries: ["packages/ui/src/v4/composer/studio/StudioPanel.tsx", "packages/ui/tests/studio-react-entry.js"] },
   resolve: { alias: { "@": `${process.cwd()}/packages/ui/src` } },
   plugins: [
     {
@@ -154,6 +157,8 @@ try {
     );
   });
   await page.getByRole("button", { name: "Video", exact: true }).click();
+  await page.getByPlaceholder("Describe the image, video, or the talk", { exact: true }).fill("A forest at dawn");
+  await page.getByRole("button", { name: "Next step", exact: true }).click();
   await page.getByRole("button", { name: "Show generation settings", exact: true }).click();
   const duration = page.getByLabel("Duration (sec)", { exact: true });
   await duration.waitFor({ state: "visible" });

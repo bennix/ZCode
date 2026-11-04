@@ -51,9 +51,15 @@ test(
       );
       await page.getByRole("button", { name: "创作", exact: true }).click();
       await page.waitForTimeout(700);
-      assert.equal(await page.getByRole("button", { name: "开始生成" }).isVisible(), true);
+      assert.equal(await page.getByRole("button", { name: "开始生成" }).isVisible(), false);
+      assert.equal(
+        await page.getByRole("button", { name: "下一步", exact: true }).isDisabled(),
+        true,
+      );
       const studioPanel = await page.locator('[data-testid="composer-guided-panel"]').boundingBox();
-      const studioStart = await page.getByRole("button", { name: "开始生成" }).boundingBox();
+      const studioStart = await page
+        .getByRole("button", { name: "下一步", exact: true })
+        .boundingBox();
       assert.ok(
         studioPanel &&
           studioPanel.y >= 56 &&
@@ -72,7 +78,10 @@ test(
       await page.getByRole("button", { name: "创作", exact: true }).click();
       assert.equal(await page.locator('[data-testid="chat-empty"]').isVisible(), true);
       await page.getByRole("button", { name: "工作区", exact: true }).click();
-      assert.equal(await page.getByRole("button", { name: "开始", exact: true }).isVisible(), true);
+      assert.equal(
+        await page.getByRole("button", { name: "开始", exact: true }).isVisible(),
+        false,
+      );
       const boardHeading = await page.getByText("多 Agent 工作区", { exact: true }).boundingBox();
       const guidedGeometry = await page.evaluate(() => ({
         content: document.querySelector("#content")?.getBoundingClientRect().toJSON(),
@@ -87,7 +96,7 @@ test(
         JSON.stringify({ boardHeading, guidedGeometry }),
       );
       const boardStart = await page
-        .getByRole("button", { name: "开始", exact: true })
+        .getByRole("button", { name: "下一步", exact: true })
         .boundingBox();
       assert.ok(
         boardStart &&

@@ -24,29 +24,48 @@ export function StudioDesignBriefForm({
   brief,
   setBrief,
   busy,
+  stage = "purpose",
 }: {
   brief: StudioDesignBrief;
   setBrief: Dispatch<SetStateAction<StudioDesignBrief>>;
   busy: boolean;
+  stage?: "purpose" | "visual";
 }) {
   const { intl } = useZCodeIntl();
   const t = (key: string) => intl.formatMessage({ id: `chat.studio.design.${key}` });
   return (
     <fieldset disabled={busy} className="min-w-0 space-y-2">
-      <legend className="mb-2 text-ui-caption font-medium">{t("brief")}</legend>
-      {(["goal", "audience"] as const).map((key) => (
-        <label key={key} className="block text-ui-caption">
-          {t(key)}
+      <legend className="mb-2 text-ui-caption font-medium">
+        {t(stage === "purpose" ? "brief" : "system")}
+      </legend>
+      <div hidden={stage !== "purpose"}>
+        {(["goal", "audience"] as const).map((key) => (
+          <label key={key} className="block text-ui-caption">
+            {t(key)}
+            <textarea
+              aria-label={t(key)}
+              value={brief[key]}
+              onChange={(event) =>
+                setBrief((current) => ({ ...current, [key]: event.target.value }))
+              }
+              className="mt-1 min-h-14 w-full rounded-lg border border-input-border bg-input p-2 text-ui-base"
+            />
+          </label>
+        ))}
+      </div>
+      <div hidden={stage !== "visual"}>
+        <label className="mt-2 block text-ui-caption">
+          {intl.formatMessage({ id: "chat.guide.structure" })}
           <textarea
-            aria-label={t(key)}
-            value={brief[key]}
-            onChange={(event) => setBrief((current) => ({ ...current, [key]: event.target.value }))}
+            aria-label={intl.formatMessage({ id: "chat.guide.structure" })}
+            placeholder={intl.formatMessage({ id: "chat.guide.structureHint" })}
+            value={brief.constraints}
+            onChange={(event) =>
+              setBrief((current) => ({ ...current, constraints: event.target.value }))
+            }
             className="mt-1 min-h-14 w-full rounded-lg border border-input-border bg-input p-2 text-ui-base"
           />
         </label>
-      ))}
-      <details>
-        <summary className="cursor-pointer text-ui-caption">{t("system")}</summary>
         <div className="mt-2 grid grid-cols-2 gap-2 sm:grid-cols-3">
           {Object.entries(choices).map(([key, values]) => (
             <label key={key} className="min-w-0 text-ui-caption">
@@ -68,21 +87,15 @@ export function StudioDesignBriefForm({
             </label>
           ))}
         </div>
-        <label className="mt-2 block text-ui-caption">
-          {t("constraints")}
-          <textarea
-            aria-label={t("constraints")}
-            value={brief.constraints}
-            onChange={(event) =>
-              setBrief((current) => ({ ...current, constraints: event.target.value }))
-            }
-            className="mt-1 min-h-14 w-full rounded-lg border border-input-border bg-input p-2 text-ui-base"
-          />
-        </label>
-        <pre className="mt-2 max-h-48 overflow-auto whitespace-pre-wrap rounded-lg bg-surface p-2 text-ui-caption">
-          {deriveDesignSystem(brief)}
-        </pre>
-      </details>
+        <details>
+          <summary className="cursor-pointer text-ui-caption text-foreground-subtle">
+            {intl.formatMessage({ id: "chat.guide.rules" })}
+          </summary>
+          <pre className="mt-2 max-h-48 overflow-auto whitespace-pre-wrap rounded-lg bg-surface p-2 text-ui-caption">
+            {deriveDesignSystem(brief)}
+          </pre>
+        </details>
+      </div>
     </fieldset>
   );
 }

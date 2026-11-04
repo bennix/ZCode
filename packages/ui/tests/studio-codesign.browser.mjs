@@ -1,3 +1,5 @@
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import assert from "node:assert/strict";
 import { createRequire } from "node:module";
 import { createServer } from "vite";
@@ -5,6 +7,7 @@ import tailwindcss from "@tailwindcss/vite";
 const { chromium } = createRequire(import.meta.url)("playwright-core");
 const server = await createServer({
   configFile: false,
+  cacheDir: join(tmpdir(), "zcode-studio-codesign-vite"),
   plugins: [tailwindcss()],
   esbuild: { jsx: "automatic" },
   root: process.cwd(),
@@ -19,7 +22,7 @@ try {
     if (msg.type() === "error") console.error(msg.text());
   });
   page.on("pageerror", (error) => console.error(error.message));
-  await page.goto("http://localhost:5198/packages/ui/tests/studio-creation-fixture.html");
+  await page.goto(new URL("packages/ui/tests/studio-creation-fixture.html", server.resolvedUrls.local[0]).href);
   await page.evaluate(async () => {
     await import("/packages/ui/src/styles.css");
     const { React, createRoot } = await import("/packages/ui/tests/studio-react-entry.js");
@@ -114,6 +117,7 @@ try {
   });
 
   await page.getByRole("button", { name: "CoDesign", exact: true }).click();
+  await page.locator("summary").filter({ hasText: "CoDesign" }).click();
   const design = {
     version: 1,
     brief: {

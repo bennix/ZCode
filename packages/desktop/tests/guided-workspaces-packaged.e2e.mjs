@@ -55,12 +55,14 @@ test("packaged first-use Studio and Agent board show task before advanced settin
 
     await page.getByRole("button", { name: "创作", exact: true }).click();
     const guided = page.locator('[data-testid="composer-guided-panel"]');
-    await guided.getByText("选择要创作的内容，再填写想法；需要时展开详细设置。").waitFor();
+    await guided.getByText("选择作品类型，按步骤描述想法、补充素材，再确认生成。").waitFor();
     assert.equal(
       await guided.getByPlaceholder("描述要生成的画面，或直接说 PPT 要讲什么").isVisible(),
       true,
     );
-    assert.equal(await guided.getByRole("button", { name: "开始生成" }).isVisible(), true);
+    assert.equal(await guided.getByRole("button", { name: "开始生成" }).isVisible(), false);
+    await guided.getByPlaceholder("描述要生成的画面，或直接说 PPT 要讲什么").fill("一片森林");
+    await guided.getByRole("button", { name: "下一步", exact: true }).click();
     const expand = guided.getByRole("button", { name: "展开生成设置" });
     assert.equal(await expand.getAttribute("aria-expanded"), "false");
     const studioBox = await guided.boundingBox();
@@ -84,6 +86,12 @@ test("packaged first-use Studio and Agent board show task before advanced settin
         boardBox.y >= 0 &&
         boardBox.y + boardBox.height <= boardInputBox.y + 1,
     );
+    assert.equal(
+      await guided.getByRole("button", { name: "开始", exact: true }).isVisible(),
+      false,
+    );
+    await guided.getByPlaceholder("任务").fill("分析方案");
+    await guided.getByRole("button", { name: "下一步", exact: true }).click();
     assert.equal(await guided.getByRole("button", { name: "开始", exact: true }).isVisible(), true);
     assert.equal(await guided.getByRole("button", { name: "添加 Agent" }).isVisible(), false);
     await guided.locator("summary").filter({ hasText: "配置 Agent、裁定与白板" }).click();

@@ -1,3 +1,5 @@
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { verifyStudioPanel } from "./studio-panel.browser-scenarios.mjs";
 import assert from "node:assert/strict";
 import { createRequire } from "node:module";
@@ -6,16 +8,17 @@ const require = createRequire(import.meta.url);
 const { chromium } = require("playwright-core");
 const server = await createServer({
   configFile: false,
+  cacheDir: join(tmpdir(), "zcode-studio-ppt-vite"),
   esbuild: { jsx: "automatic" },
   root: process.cwd(),
-  server: { port: 5198 },
+  server: { port: 5198, hmr: false, watch: null },
   resolve: { alias: { "@": `${process.cwd()}/packages/ui/src` } },
 });
 await server.listen();
 const browser = await chromium.launch({ channel: "chrome", headless: true });
 try {
   const page = await browser.newPage();
-  await page.goto("http://localhost:5198");
+  await page.goto(server.resolvedUrls.local[0]);
   const result = await page.evaluate(async () => {
     const { generateStudioDeck } =
       await import("/packages/ui/src/v4/composer/studio/studioPptGenerate.ts");

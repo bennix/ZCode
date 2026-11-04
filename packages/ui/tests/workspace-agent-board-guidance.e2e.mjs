@@ -56,18 +56,25 @@ test("workspace board keeps setup behind disclosure and streams one visible resu
     await page.addScriptTag({ content: bundle.outputFiles[0].text });
     const add = page.getByRole("button", { name: "chat.workspace.add" });
     assert.equal(await add.isVisible(), false);
+    assert.equal(await page.getByRole("button", { name: "chat.guide.next" }).isDisabled(), true);
+    await page.getByPlaceholder("chat.workspace.task").fill("讨论任务");
+    await page.getByRole("button", { name: "chat.guide.next" }).click();
+    await page.getByRole("button", { name: "chat.guide.back" }).click();
+    assert.equal(await page.getByPlaceholder("chat.workspace.task").inputValue(), "讨论任务");
+    await page.getByRole("button", { name: "chat.guide.next" }).click();
     await page.locator("summary").filter({ hasText: "chat.workspace.configure" }).click();
     assert.equal(await add.isVisible(), true);
     await page.locator("summary").filter({ hasText: "chat.workspace.configure" }).click();
-    await page.getByPlaceholder("chat.workspace.task").fill("讨论任务");
     await page.getByRole("button", { name: "chat.workspace.run" }).click();
     await page.getByText("Agent 结论", { exact: false }).waitFor();
-    const taskBox = await page.getByPlaceholder("chat.workspace.task").boundingBox();
+    const taskBox = await page.getByText("讨论任务", { exact: true }).first().boundingBox();
     const searchBox = await page.getByText("chat.workspace.searchEmpty").boundingBox();
     assert.ok(taskBox && searchBox && searchBox.y > taskBox.y);
     assert.equal(await page.getByText("Agent 结论", { exact: false }).count(), 1);
     assert.equal(await page.getByText("裁定完成", { exact: false }).count(), 1);
     await page.setViewportSize({ width: 320, height: 700 });
+    await page.getByRole("button", { name: "chat.guide.back" }).click();
+    await page.getByRole("button", { name: "chat.guide.back" }).click();
     await page.getByPlaceholder("chat.workspace.task").scrollIntoViewIfNeeded();
     const mobile = await page.evaluate(() => ({
       scrollWidth: document.documentElement.scrollWidth,
@@ -75,7 +82,7 @@ test("workspace board keeps setup behind disclosure and streams one visible resu
     }));
     assert.ok(mobile.scrollWidth <= mobile.viewportWidth, JSON.stringify(mobile));
     assert.equal(await page.getByPlaceholder("chat.workspace.task").isVisible(), true);
-    assert.equal(await page.getByRole("button", { name: "chat.workspace.run" }).isVisible(), true);
+    assert.equal(await page.getByRole("button", { name: "chat.workspace.run" }).isVisible(), false);
   } finally {
     await browser.close();
     await vite.close();
