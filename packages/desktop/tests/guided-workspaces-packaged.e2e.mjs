@@ -21,7 +21,12 @@ test("packaged first-use Studio and Agent board show task before advanced settin
   assert.ok(executable, "ZENCODE_PACKAGED_APP_PATH must point to a packaged desktop executable");
   const root = await mkdtemp(join(tmpdir(), "zencode-guided-packaged-e2e-"));
   const port = await freePort();
-  const child = spawn(executable, [`--remote-debugging-port=${port}`], {
+  // Linux CI 的解包应用需要与现有打包验收一致的 sandbox 开关，避免窗口启动前被环境拦截。
+  const launchArgs = [
+    `--remote-debugging-port=${port}`,
+    ...(process.env.ZENCODE_TEST_DISABLE_SANDBOX === "1" ? ["--no-sandbox"] : []),
+  ];
+  const child = spawn(executable, launchArgs, {
     env: {
       ...process.env,
       HOME: join(root, "home"),
