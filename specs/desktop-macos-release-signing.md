@@ -165,3 +165,5 @@ sequenceDiagram
   R->>R: 全量摘要、来源和安装验收
   R->>L: 公开 Latest 后同步下载与中英文介绍
 ```
+
+3.14.38 候选源码为 `b85be607300e844c6a55ab31306a6dd5fd5278df`。Windows/Linux 构建与草稿暂存已通过，六个安装器的公开验收常量按 GitHub 草稿资产 SHA-256 更新。该常量提交属于验收元数据，构建 run、Release target 与最终 tag 仍固定至同一源码。
