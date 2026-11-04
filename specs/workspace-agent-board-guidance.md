@@ -45,3 +45,5 @@ sequenceDiagram
 使用 Node 24.14.0 执行 `node --test packages/ui/tests/workspace-agent-board-guidance.e2e.mjs` 通过，覆盖空任务校验、第二步配置、返回草稿保留、唯一结果区、裁定和 320px 无横向溢出。完整 Typecheck 与架构检查通过；完整 Lint 的既有错误与本轮环境范围见 `studio-media.md` 的“本轮验证”。
 
 Linux 打包验收与现有 Computer Use 测试使用同一 `ZENCODE_TEST_DISABLE_SANDBOX=1` 环境开关，仅在 CI 夹具启动参数中添加 `--no-sandbox`，使 Xvfb 下的引导入口测试可运行。
+
+打包测试使用中文/英文双语定位，并从独立临时 cwd 启动安装包，以兼容系统语言和避免借用源码工作区资源。
