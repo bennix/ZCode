@@ -48,6 +48,11 @@ jobs:
           ZENCODE_PACKAGED_APP_PATH: packages/desktop/dist/${{ matrix.unpacked }}/ZenCode.exe
         run: node --test packages/desktop/tests/computer-use-settings.e2e.mjs
 
+      - name: Check packaged guided workspace and creation
+        env:
+          ZENCODE_PACKAGED_APP_PATH: packages/desktop/dist/${{ matrix.unpacked }}/ZenCode.exe
+        run: node --test packages/desktop/tests/guided-workspaces-packaged.e2e.mjs
+
       - name: Check native Windows UIA observation and click
         env:
           ZCODE_CUA_PLUGIN_ROOT: packages/desktop/bundled-agents/win32-${{ matrix.arch }}/glm/packages/zcode-cua-plugin

@@ -39,3 +39,10 @@ The desktop Scheduler is hosted by the running Electron app. It polls due automa
 ## 2026-10-23 release copy synchronization
 
 The existing v3.14.35 download URLs continue to resolve to the rebuilt installers. `bennix/ZenMuxDev` commit `b95b7371287ca72fd04f9ef9884453221df4c71f` updates both languages with the dated same-version reinstall notice, recoverable tool-output compression, clean prompt copying, desktop observation checks, the catalog of 20 subscription-tested video models, per-model durations, English-first generated media prompts, and subscription/pay-as-you-go billing copy. The page preserves the supplied screenshots, opt-in videos, featured Mac download treatment and referral disclosure. Browser coverage checks both languages at 1280px and 390px, locale persistence, seven exact installer URLs, no horizontal overflow, and a visible release heading below the sticky header. The standalone page repository passed lint (75 warnings / 0 errors) and architecture checks; its copied application workspace typecheck reported unresolved workspace packages and is not claimed as passing. This does not change the released desktop binaries.
+
+## 3.14.38 引导式创作介绍（2026-11-04）
+
+- 从已上线的 3.14.37 双语页面更新，保留现有真实产品截图、演示视频、Mac 下载重点及推荐奖励披露。新版公开前，线上下载入口继续使用当前 Latest。
+- 新版公开后，版本和七个安装器链接统一为 3.14.38。首要更新说明工作区的描述任务 → 确认协作 → 执行验收，以及创作的描述想法 → 素材设置 → 确认生成 → 结果修改。设计说明用途受众、内容结构、视觉规则、预览与局部反馈。中英文都说明返回时保留草稿，人偶按需打开。
+- 沿用页面自身 locale、弹窗和视频状态，新增文案不产生新的业务状态。只使用真实 UI 截图，新增界面截图标为产品界面；不将示意画面描述为真实录屏。
+- 验收包含 390/1440px 的双语切换、首屏和更新卡片可读、七个下载入口精确匹配新 Release、无横向溢出及 GitHub Pages 线上部署。

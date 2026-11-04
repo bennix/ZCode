@@ -143,3 +143,25 @@ afterPack 复制运行时 → 扫描三个资源目录 → 逐个签 Mach-O → 
 同一源码构建 macOS ARM64、Windows x64/ARM64、Linux x64/ARM64（DEB/RPM）。新增默认开启的原生 TokenEconomizer 适配；不宣称生产费用节省。复用 Developer ID 和 ZenCode Keychain profile，保留时间戳，DMG/ZIP 公证成功后装订 DMG、验证挂载 App 以及 OfficeCLI 执行后签名，再更新发布资产和本地最新 DMG。远程运行时与版本清单上传自身 GitHub Release。只有所有构建和安装验收通过才发布 Latest；此前已公证 DMG 在此之前不删除。基线 freshness 本轮因 GitHub git 直连超时未完成，将以 GitHub API 核对目标分支树，不能将网络失败写成基线通过。
 
 3.14.37 已发布为 GitHub Latest，tag 指向构建源码 `f44063615ccd593276bdca8495140e98d9038cb0`。Windows x64/ARM64 和 Linux DEB/RPM x64/ARM64 构建与安装验收通过。Apple DMG 公证 `698d8f3b-a9a4-4611-ba60-07fbeeb961ec`、ZIP 公证 `2f72e8d4-42c7-48e0-b8b8-2e489123ebf0` 均 Accepted；DMG 装订后通过 hdiutil、挂载应用深度签名、Gatekeeper Notarized Developer ID 与 OfficeCLI 二进制哈希/签名核对。40 个正式资产的 SHA-256 和大小与本地一致，Landing Page 已更新源码；本地 `release-artifacts` 仅保留最新已公证 DMG，SHA-256 `6a775e070e1ae2506dc682f1be3c2197b6f18a617a0f465cac88c17ca8e53604`。完整证据见 [发布审计](desktop-release-audit-2026-10-30.json)。
+
+## 3.14.38 引导式工作区与创作发布（2026-11-04）
+
+- 从已发布 3.14.37 源码与当前 main 的推荐奖励披露合并出独立候选，带入本次已验收的分步工作区、媒体创作及设计引导。版本、tag、工作流安装名统一为 3.14.38。
+- macOS ARM64 使用 Developer ID 签名、DMG/ZIP 公证、DMG 装订和挂载后严格签名/Gatekeeper 检查。Windows x64/ARM64 与 Linux x64/ARM64 DEB/RPM 使用同一提交，由现有 CI 构建并真实安装验收。构建流程增加已存在的引导入口打包测试，验证第一步输入、第二步配置及草稿保留。
+- GitHub Release 独占公开状态。源码推送后先建立 Draft，再暂存成功 CI run 的安装包并验证精确 SHA、全部资产摘要和 Windows 更新元数据；远程四架构资源清单随同版本发布。验证完成后公开 Latest、复验正式下载，再更新中英文 Landing Page 与 README 下载入口。
+- 本地保留上一份已公证 DMG 到新包验证成功。凭据仅用于本机 Keychain 与 Apple 公证，构建源码、产物和日志不包含密码。
+
+```mermaid
+sequenceDiagram
+  participant S as 固定源码 SHA
+  participant C as 各平台构建与安装验收
+  participant A as Apple 公证
+  participant R as GitHub Release
+  participant L as Landing Page
+  S->>C: Windows / Linux 双架构
+  S->>A: macOS 签名包
+  C->>R: 成功 run 与已核验候选资产
+  A->>R: Accepted 且已装订的 macOS 包
+  R->>R: 全量摘要、来源和安装验收
+  R->>L: 公开 Latest 后同步下载与中英文介绍
+```
