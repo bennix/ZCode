@@ -21,19 +21,27 @@ test("packaged first-use Studio and Agent board show task before advanced settin
   assert.ok(executable, "ZENCODE_PACKAGED_APP_PATH must point to a packaged desktop executable");
   const root = await mkdtemp(join(tmpdir(), "zencode-guided-packaged-e2e-"));
   const port = await freePort();
-  const child = spawn(executable, [`--remote-debugging-port=${port}`], {
-    env: {
-      ...process.env,
-      HOME: join(root, "home"),
-      ZCODE_DATA_BASE_DIR: join(root, "data"),
-      ZCODE_DESKTOP_APPLICATION_NAME: "ZenCode Guided Packaged E2E",
-      ZCODE_DESKTOP_HOME_DIR: join(root, "home"),
-      ZCODE_DESKTOP_USER_DATA_DIR: join(root, "user"),
-      ZCODE_DESKTOP_SESSION_DATA_DIR: join(root, "session"),
-      ZCODE_DISABLE_FIXED_REMOTE_DEBUGGING_PORT: "1",
+  const child = spawn(
+    executable,
+    [
+      `--remote-debugging-port=${port}`,
+      ...(process.env.ZENCODE_TEST_DISABLE_SANDBOX === "1" ? ["--no-sandbox"] : []),
+    ],
+    {
+      cwd: root,
+      env: {
+        ...process.env,
+        HOME: join(root, "home"),
+        ZCODE_DATA_BASE_DIR: join(root, "data"),
+        ZCODE_DESKTOP_APPLICATION_NAME: "ZenCode Guided Packaged E2E",
+        ZCODE_DESKTOP_HOME_DIR: join(root, "home"),
+        ZCODE_DESKTOP_USER_DATA_DIR: join(root, "user"),
+        ZCODE_DESKTOP_SESSION_DATA_DIR: join(root, "session"),
+        ZCODE_DISABLE_FIXED_REMOTE_DEBUGGING_PORT: "1",
+      },
+      stdio: "ignore",
     },
-    stdio: "ignore",
-  });
+  );
   let browser;
   try {
     for (let attempt = 0; attempt < 50; attempt++) {
@@ -49,6 +57,9 @@ test("packaged first-use Studio and Agent board show task before advanced settin
     // 根因：CDP 端口先于首个窗口可用；等待真正的页面，避免首次启动被误判为失败。
     const page = context?.pages()[0] ?? (await context?.waitForEvent("page", { timeout: 30_000 }));
     assert.ok(page, "packaged desktop window did not open");
+    // 宿主可能使用英文系统语言；隔离 profile 显式选中文，不能把语言差异误判为启动失败。
+    await page.addInitScript(() => localStorage.setItem("zcode-locale-preference", "zh-CN"));
+    await page.reload({ waitUntil: "domcontentloaded" });
     await page.getByRole("heading", { name: "欢迎来到 ZenCode" }).waitFor();
     await page.getByText("暂时跳过", { exact: true }).click();
     for (let step = 0; step < 3; step++) await page.getByText("跳过", { exact: true }).click();
