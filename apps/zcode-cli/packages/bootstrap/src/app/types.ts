@@ -195,6 +195,7 @@ export interface ZCodeAppOptions {
 }
 
 export interface SubmitPromptOptionsBase {
+  epilogueStart?: ExecuteTurnOptions["epilogueStart"];
   traceContext?: TraceContext;
   abortSignal?: AbortSignal;
   inputId?: string;

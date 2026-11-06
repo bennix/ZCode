@@ -3,7 +3,7 @@ import { spawn } from "node:child_process";
 import { mkdtemp, rm } from "node:fs/promises";
 import { createServer } from "node:net";
 import { tmpdir } from "node:os";
-import { join, resolve } from "node:path";
+import { join } from "node:path";
 import { test } from "node:test";
 import { chromium } from "playwright-core";
 
@@ -21,13 +21,7 @@ test("packaged first-use Studio and Agent board show task before advanced settin
   assert.ok(executable, "ZENCODE_PACKAGED_APP_PATH must point to a packaged desktop executable");
   const root = await mkdtemp(join(tmpdir(), "zencode-guided-packaged-e2e-"));
   const port = await freePort();
-  // Linux CI 的解包应用需要与现有打包验收一致的 sandbox 开关，避免窗口启动前被环境拦截。
-  const launchArgs = [
-    `--remote-debugging-port=${port}`,
-    ...(process.env.ZENCODE_TEST_DISABLE_SANDBOX === "1" ? ["--no-sandbox"] : []),
-  ];
-  const child = spawn(resolve(executable), launchArgs, {
-    cwd: root,
+  const child = spawn(executable, [`--remote-debugging-port=${port}`], {
     env: {
       ...process.env,
       HOME: join(root, "home"),
@@ -55,41 +49,21 @@ test("packaged first-use Studio and Agent board show task before advanced settin
     // 根因：CDP 端口先于首个窗口可用；等待真正的页面，避免首次启动被误判为失败。
     const page = context?.pages()[0] ?? (await context?.waitForEvent("page", { timeout: 30_000 }));
     assert.ok(page, "packaged desktop window did not open");
-    // 系统语言决定首次界面文案，不能把中文文案当作安装成功的前提。
-    await page
-      .getByRole("heading", { name: /^(?:欢迎来到 ZenCode|Welcome to ZenCode)$/ })
-      .waitFor();
-    await page.getByText(/^(?:暂时跳过|Skip for now)$/).click();
-    for (let step = 0; step < 3; step++) await page.getByText(/^(?:跳过|Skip)$/).click();
+    await page.getByRole("heading", { name: "欢迎来到 ZenCode" }).waitFor();
+    await page.getByText("暂时跳过", { exact: true }).click();
+    for (let step = 0; step < 3; step++) await page.getByText("跳过", { exact: true }).click();
 
-    await page.getByRole("button", { name: /^(?:创作|Create)$/ }).click();
+    await page.getByRole("button", { name: "创作", exact: true }).click();
     const guided = page.locator('[data-testid="composer-guided-panel"]');
-    await guided
-      .getByText(
-        /^(?:选择作品类型，按步骤描述想法、补充素材，再确认生成。|Choose a format, describe your idea, add optional materials, then review and generate\.)$/,
-      )
-      .waitFor();
+    await guided.getByText("选择作品类型，按步骤描述想法、补充素材，再确认生成。").waitFor();
     assert.equal(
-      await guided
-        .getByPlaceholder(
-          /^(?:描述要生成的画面，或直接说 PPT 要讲什么|Describe the image, video, or the talk)$/,
-        )
-        .isVisible(),
+      await guided.getByPlaceholder("描述要生成的画面，或直接说 PPT 要讲什么").isVisible(),
       true,
     );
-    assert.equal(
-      await guided.getByRole("button", { name: /^(?:开始生成|Generate)$/ }).isVisible(),
-      false,
-    );
-    await guided
-      .getByPlaceholder(
-        /^(?:描述要生成的画面，或直接说 PPT 要讲什么|Describe the image, video, or the talk)$/,
-      )
-      .fill("一片森林");
-    await guided.getByRole("button", { name: /^(?:下一步|Next step)$/ }).click();
-    const expand = guided.getByRole("button", {
-      name: /^(?:展开生成设置|Show generation settings)$/,
-    });
+    assert.equal(await guided.getByRole("button", { name: "开始生成" }).isVisible(), false);
+    await guided.getByPlaceholder("描述要生成的画面，或直接说 PPT 要讲什么").fill("一片森林");
+    await guided.getByRole("button", { name: "下一步", exact: true }).click();
+    const expand = guided.getByRole("button", { name: "展开生成设置" });
     assert.equal(await expand.getAttribute("aria-expanded"), "false");
     const studioBox = await guided.boundingBox();
     const inputBox = await page.locator(".chat-composer-input-surface").boundingBox();
@@ -98,14 +72,12 @@ test("packaged first-use Studio and Agent board show task before advanced settin
     );
     await expand.click();
     assert.equal(
-      await guided
-        .getByRole("button", { name: /^(?:收起生成设置|Hide generation settings)$/ })
-        .getAttribute("aria-expanded"),
+      await guided.getByRole("button", { name: "收起生成设置" }).getAttribute("aria-expanded"),
       "true",
     );
 
-    await page.getByRole("button", { name: /^(?:工作区|Workspace)$/ }).click();
-    await guided.getByPlaceholder(/^(?:任务|Task)$/).waitFor();
+    await page.getByRole("button", { name: "工作区", exact: true }).click();
+    await guided.getByPlaceholder("任务").waitFor();
     const boardBox = await guided.boundingBox();
     const boardInputBox = await page.locator(".chat-composer-input-surface").boundingBox();
     assert.ok(
@@ -114,22 +86,16 @@ test("packaged first-use Studio and Agent board show task before advanced settin
         boardBox.y >= 0 &&
         boardBox.y + boardBox.height <= boardInputBox.y + 1,
     );
-    assert.equal(await guided.getByRole("button", { name: /^(?:开始|Run)$/ }).isVisible(), false);
-    await guided.getByPlaceholder(/^(?:任务|Task)$/).fill("分析方案");
-    await guided.getByRole("button", { name: /^(?:下一步|Next step)$/ }).click();
-    assert.equal(await guided.getByRole("button", { name: /^(?:开始|Run)$/ }).isVisible(), true);
     assert.equal(
-      await guided.getByRole("button", { name: /^(?:添加 Agent|Add agent)$/ }).isVisible(),
+      await guided.getByRole("button", { name: "开始", exact: true }).isVisible(),
       false,
     );
-    await guided
-      .locator("summary")
-      .filter({ hasText: /^(?:配置 Agent、裁定与白板|Configure agents, review, and whiteboard)$/ })
-      .click();
-    assert.equal(
-      await guided.getByRole("button", { name: /^(?:添加 Agent|Add agent)$/ }).isVisible(),
-      true,
-    );
+    await guided.getByPlaceholder("任务").fill("分析方案");
+    await guided.getByRole("button", { name: "下一步", exact: true }).click();
+    assert.equal(await guided.getByRole("button", { name: "开始", exact: true }).isVisible(), true);
+    assert.equal(await guided.getByRole("button", { name: "添加 Agent" }).isVisible(), false);
+    await guided.locator("summary").filter({ hasText: "配置 Agent、裁定与白板" }).click();
+    assert.equal(await guided.getByRole("button", { name: "添加 Agent" }).isVisible(), true);
   } finally {
     await browser?.close();
     if (child.exitCode === null && child.signalCode === null) {

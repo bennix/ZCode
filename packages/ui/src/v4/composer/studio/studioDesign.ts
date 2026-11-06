@@ -14,6 +14,8 @@ export function deriveDesignSystem(brief: StudioDesignBrief): string {
 export { requireDesignDocument, isolateDesignDocument } from "./studioDesignDocument.js";
 import { requireDesignDocument } from "./studioDesignDocument.js";
 export async function generateDesignPrototype(input: {
+  onRetry?: () => void;
+  onUsage?: (usage: { inputTokens: number; outputTokens: number }) => void;
   apiKey: string;
   model: string;
   brief: StudioDesignBrief;
@@ -31,6 +33,8 @@ export async function generateDesignPrototype(input: {
     model: input.model,
     signal: input.signal,
     requireComplete: true,
+    onRetry: input.onRetry,
+    onUsage: input.onUsage,
     reasoning: input.reasoning,
     onAttempt: () => {
       output = "";

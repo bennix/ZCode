@@ -176,3 +176,7 @@ sequenceDiagram
 - 中英文 README 与 Landing Page 已同步 3.14.38；线上页面的 390/1440px 双语、持久化、七个安装器链接和无横向溢出检查通过。Typecheck 和架构检查通过，完整 Lint 仍有 settingService.ts 既有 max-lines 错误。发布审计见 `desktop-release-audit-2026-11-04.json`。
 
 正式下载复验 `41930652261` 已全部成功，覆盖 Windows x64/ARM64 与 Linux 两架构 DEB/RPM；Mac DMG 匿名下载及装订校验通过。本地 `release-artifacts` 留存最新 3.14.38 已公证 DMG。
+
+## 3.14.39 候选（2026-11-06）
+
+本次发布包含融合的 WorkCoder 三角色编排、无需思考配置、目录选择、自动批准与项目 Hook 授权、研究探针及入口互斥/不透明底座修复。全部桌面安装器使用同一源码提交。Mac arm64 必须签名、公证、装订及 Gatekeeper 验证；Windows x64/ARM64 与 Linux 两架构 DEB/RPM 通过构建及安装验收后才公开。此前已公证 3.14.38 DMG 保留到新版完成校验。Landing Page 在新版公开后同步双语介绍与七个安装器链接，不提前切换下载入口。

@@ -1,3 +1,4 @@
+import { startProbe } from "@/store/researchProbeStore.js";
 import { useRef, useState, type RefObject } from "react";
 import { EMPTY_CODESIGN, validateCoDesignState, type CoDesignState } from "@zcode/shared";
 import { useStudioMediaLibrary } from "@/hooks/useStudioMediaLibrary.js";
@@ -14,6 +15,7 @@ import {
 } from "./coDesignGeneration.js";
 
 export function useStudioCoDesign(input: {
+  probeScope?: string;
   html: string;
   apiKey: string;
   model: string;
@@ -39,7 +41,14 @@ export function useStudioCoDesign(input: {
     setSelection(null);
     input.onCommit(syncCoDesignMetadata(html, checked), checked);
   };
-  const execute = async (action: (signal: AbortSignal) => Promise<void>) => {
+  const execute = async (
+    action: (
+      signal: AbortSignal,
+      onRetry: () => void,
+      onUsage: ((usage: { inputTokens: number; outputTokens: number }) => void) | undefined,
+    ) => Promise<void>,
+    operation = "design.images",
+  ) => {
     if (input.busy || admitted.current) return;
     if (!input.apiKey) {
       input.onError(intl.formatMessage({ id: "chat.studio.codesign.missingKey" }));
@@ -52,9 +61,19 @@ export function useStudioCoDesign(input: {
     input.onBusy(true);
     input.onError("");
     setProgress("");
+    const finishProbe = startProbe(input.probeScope ?? "", "local-edit", operation, input.model);
+    let retries = 0;
     try {
-      await action(controller.signal);
+      await action(
+        controller.signal,
+        () => {
+          retries++;
+        },
+        finishProbe.usage,
+      );
+      finishProbe(controller.signal.aborted ? "cancelled" : "success", retries);
     } catch (failure) {
+      finishProbe(controller.signal.aborted ? "cancelled" : "failed", retries);
       if (!controller.signal.aborted)
         input.onError(failure instanceof Error ? failure.message : String(failure));
     } finally {
@@ -120,11 +139,13 @@ export function useStudioCoDesign(input: {
         });
       }),
     applyComment: () =>
-      execute(async (signal) => {
+      execute(async (signal, onRetry, onUsage) => {
         if (!selection || !note.trim()) return;
         const next = await reviseCoDesignElement({
           html: input.html,
           elementId: selection.elementId,
+          onRetry,
+          onUsage,
           note,
           apiKey: input.apiKey,
           model: input.model,
@@ -143,6 +164,6 @@ export function useStudioCoDesign(input: {
         };
         commit(next, { ...metadata, comments: [...metadata.comments, comment].slice(-32) });
         setNote("");
-      }),
+      }, "design.local-edit"),
   };
 }

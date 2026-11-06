@@ -1,14 +1,11 @@
+import { useStudioDesignExport } from "./useStudioDesignExport.js";
+import { startProbe } from "@/store/researchProbeStore.js";
 import type { StudioDesignVersion } from "@/store/studioDesignHistory.js";
 import { StudioDesignPreviewToolbar } from "./StudioDesignPreviewToolbar.js";
 import { StudioDesignFeedback } from "./StudioDesignFeedback.js";
 import { GuidedSteps } from "../GuidedSteps.js";
 import { StudioDesignBriefForm, INITIAL } from "./StudioDesignBriefForm.js";
-import {
-  EMPTY_CODESIGN,
-  parseCoDesignDocument,
-  type CoDesignState,
-  type CoDesignDocument,
-} from "@zcode/shared";
+import { EMPTY_CODESIGN, type CoDesignState, type CoDesignDocument } from "@zcode/shared";
 import { useStudioCoDesign } from "./useStudioCoDesign.js";
 import { StudioCoDesignControls } from "./StudioCoDesignControls.js";
 import { StudioDesignProjectBar } from "./StudioDesignProjectBar.js";
@@ -24,13 +21,10 @@ import { useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button.js";
 import { usePlatform } from "@/hooks/usePlatform.js";
 import { useZCodeIntl } from "@/i18n/IntlProvider.js";
-import {
-  deriveDesignSystem,
-  generateDesignPrototype,
-  isolateDesignDocument,
-} from "./studioDesign.js";
+import { generateDesignPrototype } from "./studioDesign.js";
 
 export function StudioDesignWorkspace({
+  probeScope = "",
   apiKey,
   model,
   reasoning,
@@ -38,6 +32,7 @@ export function StudioDesignWorkspace({
   sourceImageUrl,
   coDesign = false,
 }: {
+  probeScope?: string;
   apiKey: string;
   model: string;
   reasoning?: Record<string, unknown>;
@@ -80,6 +75,7 @@ export function StudioDesignWorkspace({
     setSaved(false);
   };
   const codesign = useStudioCoDesign({
+    probeScope,
     html,
     apiKey,
     model,
@@ -107,24 +103,6 @@ export function StudioDesignWorkspace({
     setOutput("");
     setError("");
   };
-  const exportCoDesign = async () => {
-    if (!platform.saveFile) return;
-    try {
-      const document = parseCoDesignDocument({
-        version: 1,
-        brief,
-        html,
-        codesign: codesign.metadata,
-      });
-      const result = await platform.saveFile({
-        suggestedName: "zencode-design.zencode-design.json",
-        data: new TextEncoder().encode(JSON.stringify(document, null, 2)).buffer,
-      });
-      if (!result.success && result.error) setError(result.error);
-    } catch (failure) {
-      setError(String(failure));
-    }
-  };
   const execute = async (revise: boolean) => {
     if (busy || loadingAsset || !apiKey || !brief.goal.trim() || (revise && !feedback.trim()))
       return;
@@ -136,8 +114,19 @@ export function StudioDesignWorkspace({
     onBusyChange(true);
     setError("");
     setOutput("");
+    const finishProbe = startProbe(
+      probeScope,
+      "local-edit",
+      revise ? "design.full-revision" : "design.generate",
+      model,
+    );
+    let retries = 0;
     try {
       const next = await generateDesignPrototype({
+        onUsage: finishProbe.usage,
+        onRetry: () => {
+          retries++;
+        },
         apiKey,
         model,
         reasoning,
@@ -168,30 +157,26 @@ export function StudioDesignWorkspace({
         commitDesign(prepared, metadata);
       } else commitDesign(next, codesign.metadata);
       setFeedback("");
+      finishProbe("success", retries);
     } catch (failure) {
+      finishProbe(controller.signal.aborted ? "cancelled" : "failed", retries);
       if (run.current === controller && !controller.signal.aborted)
         setError(failure instanceof Error ? failure.message : String(failure));
     } finally {
+      finishProbe("cancelled", retries);
       if (run.current === controller) {
         setBusy(false);
         onBusyChange(false);
       }
     }
   };
-  const save = async (kind: "html" | "system") => {
-    if (!platform.saveFile) return;
-    try {
-      const result = await platform.saveFile({
-        suggestedName: kind === "html" ? "zencode-prototype.html" : "DESIGN.md",
-        data: new TextEncoder().encode(
-          kind === "html" ? isolateDesignDocument(html) : deriveDesignSystem(committedBrief),
-        ).buffer,
-      });
-      if (!result.success && result.error) setError(result.error);
-    } catch (failure) {
-      setError(failure instanceof Error ? failure.message : String(failure));
-    }
-  };
+  const save = useStudioDesignExport({
+    html,
+    brief: committedBrief,
+    draftBrief: brief,
+    codesign: codesign.metadata,
+    onError: setError,
+  });
   return (
     <div
       className="space-y-3"
@@ -260,6 +245,8 @@ export function StudioDesignWorkspace({
         }}
       />
       <GuidedSteps
+        probeScope={probeScope}
+        probeTrack="local-edit"
         steps={["chat.guide.purpose", "chat.guide.visual", "chat.guide.preview"]}
         current={step}
         onChange={setStep}
@@ -284,7 +271,7 @@ export function StudioDesignWorkspace({
               progress={codesign.progress}
               onChange={codesign.change}
               onImport={importDesign}
-              onExport={() => void exportCoDesign()}
+              onExport={() => void save("codesign")}
               onImages={() => void codesign.generateImages()}
               onSelecting={codesign.toggleSelection}
               onNote={codesign.setNote}

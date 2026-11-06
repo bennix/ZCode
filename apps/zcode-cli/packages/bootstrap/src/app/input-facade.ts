@@ -128,6 +128,7 @@ export function createInputFacade(deps: CreateInputFacadeDeps): InputFacade {
       abortSignal: options?.abortSignal,
       browserAmbientContext: options?.browserAmbientContext,
       continueActiveTargetAfterTurn: true,
+      epilogueStart: options?.epilogueStart,
       ...(resolvedCommandPrompt !== undefined ? { displayInput: promptInput.text } : {}),
       inputId: options?.inputId,
       ...turnAttribution,
@@ -221,7 +222,7 @@ export function createInputFacade(deps: CreateInputFacadeDeps): InputFacade {
         });
         if (result.kind === "started") {
           await recordAcceptedInputHistory(
-            promptInput.text,
+            options?.epilogueStart === undefined ? promptInput.text : promptInput.text.slice(0, options.epilogueStart),
             "prompt",
             options?.traceContext ?? deps.traceContext,
             prepared.storedAttachments,

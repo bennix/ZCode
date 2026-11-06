@@ -1,4 +1,4 @@
-import { access, readFile, mkdir, rename } from "node:fs/promises";
+import { access, readFile, mkdir } from "node:fs/promises";
 import { join } from "node:path";
 import { homedir } from "node:os";
 import type {
@@ -21,6 +21,7 @@ import { isEffectiveDevelopmentNodeEnv } from "../runtime-tools/nodeEnv.js";
 import { maybeThrowInjectedFsFault } from "../fs/fsFaultInjection.js";
 import { atomicWriteText } from "../fs/atomicFileUtils.js";
 import { withSettingsWriteQueueTimeout } from "./settingsWriteQueue.js";
+import { quarantineCorruptSettingsFile } from "./settingsFileRecovery.js";
 import {
   migrateLegacyAccountConnectionSettings,
   needsLegacyAccountConnectionMigration,
@@ -64,40 +65,14 @@ function getSettingsFile() {
 
 function normalizeStudioVideoSettings(settings: AppSettings): AppSettings {
   if (!settings.studioMediaLibrary) return settings;
-  return { ...settings, studioMediaLibrary: normalizeStudioVideoSelection(settings.studioMediaLibrary) };
+  return {
+    ...settings,
+    studioMediaLibrary: normalizeStudioVideoSelection(settings.studioMediaLibrary),
+  };
 }
 
 function defaultSettings(): AppSettings {
   return appSettingsSchema.parse({});
-}
-
-function buildCorruptSettingsBackupPath(settingsFile: string): string {
-  const timestamp = new Date().toISOString().replace(/[:.]/g, "-");
-  return `${settingsFile}.corrupt-${timestamp}`;
-}
-
-async function quarantineCorruptSettingsFile(settingsFile: string, error: unknown): Promise<void> {
-  const backupPath = buildCorruptSettingsBackupPath(settingsFile);
-  try {
-    // 用户手动编辑或远端磁盘异常可能把 setting.json 写成非 JSON（例如 ":wq"）。
-    // 如果只返回默认值不隔离坏文件，每次启动都会重复解析失败；这里保留备份后让后续 update 重建合法配置。
-    maybeThrowInjectedFsFault({ operation: "rename", path: settingsFile });
-    await rename(settingsFile, backupPath);
-    log("invalid settings json backed up:", backupPath, "error:", error);
-  } catch (renameError) {
-    if (
-      renameError &&
-      typeof renameError === "object" &&
-      "code" in renameError &&
-      (renameError as { code?: string }).code === "ENOENT"
-    ) {
-      // 启动时多个服务可能同时读取同一个坏 setting.json。
-      // 第一个读取已经完成隔离后，后续读取再 rename 会遇到 ENOENT；这是并发下的预期结果，不应当按备份失败刷错误日志。
-      log("invalid settings json already quarantined by another reader, returning defaults");
-      return;
-    }
-    log("invalid settings json backup failed, returning defaults. error:", renameError);
-  }
 }
 
 function delay(ms: number): Promise<void> {
@@ -144,7 +119,7 @@ async function readSettingsWithMeta(): Promise<ReadSettingsResult> {
         }
       }
       if (rawValue === undefined) {
-        await quarantineCorruptSettingsFile(settingsFile, lastParseError);
+        await quarantineCorruptSettingsFile(settingsFile, lastParseError, log);
         return {
           settings: defaultSettings(),
           needsMigrationPersist: false,
@@ -167,8 +142,10 @@ async function readSettingsWithMeta(): Promise<ReadSettingsResult> {
     debugLog("read result:", JSON.stringify(settings));
     return {
       settings,
-      needsMigrationPersist: shouldPersistSettingsMigrations(rawValue) ||
-        JSON.stringify(settings.studioMediaLibrary) !== JSON.stringify(result.data.studioMediaLibrary),
+      needsMigrationPersist:
+        shouldPersistSettingsMigrations(rawValue) ||
+        JSON.stringify(settings.studioMediaLibrary) !==
+          JSON.stringify(result.data.studioMediaLibrary),
     };
   } catch (err) {
     if (
@@ -311,7 +288,7 @@ export function createSettingServiceWithMigrations(): {
         const current = await readSettings();
         // 修复：旧前端模型设置只迁移一次；队列内判断，不能覆盖另一窗口已保存的新默认值。
         if (current.studioMediaLibrary) return;
-        const merged = appSettingsSchema.parse({...current, studioMediaLibrary:library});
+        const merged = appSettingsSchema.parse({ ...current, studioMediaLibrary: library });
         await writeSettings(merged, shouldCommit, runSettingsCommit, enterCommitPhase);
       });
     },

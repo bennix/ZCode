@@ -1,3 +1,5 @@
+import { NO_REASONING_OPTION_SPEC } from "@zcode/shared/model-config";
+import { Button } from "@/components/ui/button.js";
 import type { ReactNode } from "react";
 import type { ModelConfigObject } from "@zcode/provider";
 import { useZCodeIntl } from "@/i18n/IntlProvider.js";
@@ -37,6 +39,28 @@ export function ProviderModelReasoningSettings({
 
   return (
     <ModelSettingsGroup group="reasoning">
+      <div className="space-y-1">
+        <Button
+          type="button"
+          variant="secondary"
+          aria-pressed={
+            draft.reasoningLevelValuesValue.length === 1 &&
+            draft.reasoningLevelValuesValue[0] === "none" &&
+            draft.reasoningLevelMapValue.trim() === "{}"
+          }
+          onClick={() =>
+            onDraftChange({
+              reasoningLevelValuesValue: [...NO_REASONING_OPTION_SPEC.values],
+              reasoningLevelMapValue: NO_REASONING_OPTION_SPEC.map,
+            })
+          }
+        >
+          {intl.formatMessage({ id: "settings.modelProvider.noReasoning" })}
+        </Button>
+        <p className="text-ui-caption text-foreground-subtle">
+          {intl.formatMessage({ id: "settings.modelProvider.noReasoningHelp" })}
+        </p>
+      </div>
       <div className="space-y-1">
         <div className="block text-ui-base text-foreground-subtle">
           {intl.formatMessage({ id: "settings.modelProvider.reasoningLevelsOrdered" })}

@@ -50,6 +50,8 @@ export async function generateCoDesignImages(input: {
   }
 }
 export async function reviseCoDesignElement(input: {
+  onRetry?: () => void;
+  onUsage?: (usage: { inputTokens: number; outputTokens: number }) => void;
   html: string;
   elementId: string;
   note: string;
@@ -71,6 +73,8 @@ export async function reviseCoDesignElement(input: {
     signal: input.signal,
     reasoning: input.reasoning,
     requireComplete: true,
+    onRetry: input.onRetry,
+    onUsage: input.onUsage,
     onAttempt: () => {
       output = "";
       input.onOutput("");

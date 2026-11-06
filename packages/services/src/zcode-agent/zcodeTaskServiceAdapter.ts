@@ -381,6 +381,7 @@ export function createZCodeTaskServiceAdapter(
       queryId?: string;
       messageId?: string;
       content: string;
+      epilogueStart?: number;
       heldQueueDisposition?: "clearQueueAndSend" | "keepQueueAndSend";
       attachments?: ZCodePromptAttachment[];
       toolDenylist?: string[];
@@ -453,6 +454,9 @@ export function createZCodeTaskServiceAdapter(
             type: "sendText",
             payload: {
               text: params.content,
+              ...(params.epilogueStart !== undefined
+                ? { epilogueStart: params.epilogueStart }
+                : {}),
               heldQueueDisposition: params.heldQueueDisposition ?? "keepQueueAndSend",
               ...(params.modelSelection ? { modelSelection: params.modelSelection } : {}),
               ...(params.modelExecution ? { modelExecution: params.modelExecution } : {}),
@@ -1947,6 +1951,7 @@ export function createZCodeTaskServiceAdapter(
         queryId: params.queryId,
         messageId: params.messageId,
         content: params.content,
+        epilogueStart: params.epilogueStart,
         heldQueueDisposition: params.heldQueueDisposition,
         attachments: params.attachments,
         ...turnAttributionOf(params),

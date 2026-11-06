@@ -24,15 +24,18 @@ export async function detectSystemProxy(
   run: CommandRunner,
   env: Record<string, string | undefined>,
 ): Promise<SystemProxy | undefined> {
-  if (platform === "darwin") return parseMacosScutilProxy(await run("scutil", ["--proxy"]));
+  if (platform === "darwin")
+    return parseMacosScutilProxy(await run("scutil", ["--proxy"])) ?? proxyFromEnv(env);
   if (platform === "win32") {
     const root = env.SystemRoot || env.WINDIR;
     const reg = root ? `${root}\\System32\\reg.exe` : "reg";
-    return parseWindowsInternetSettings(
-      await run(reg, [
-        "query",
-        "HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Internet Settings",
-      ]),
+    return (
+      parseWindowsInternetSettings(
+        await run(reg, [
+          "query",
+          "HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Internet Settings",
+        ]),
+      ) ?? proxyFromEnv(env)
     );
   }
   return (
@@ -56,16 +59,20 @@ export function parseMacosScutilProxy(text: string | undefined): SystemProxy | u
     if (!host || !port || !/^\d+$/.test(port)) return undefined;
     return `${scheme}://${host}:${port}`;
   };
-  const https = values.get("HTTPSEnable") === "1" ? endpoint("HTTPSProxy", "HTTPSPort", "http") : undefined;
-  const http = values.get("HTTPEnable") === "1" ? endpoint("HTTPProxy", "HTTPPort", "http") : undefined;
-  const socks = values.get("SOCKSEnable") === "1" ? endpoint("SOCKSProxy", "SOCKSPort", "socks5") : undefined;
+  const https =
+    values.get("HTTPSEnable") === "1" ? endpoint("HTTPSProxy", "HTTPSPort", "http") : undefined;
+  const http =
+    values.get("HTTPEnable") === "1" ? endpoint("HTTPProxy", "HTTPPort", "http") : undefined;
+  const socks =
+    values.get("SOCKSEnable") === "1" ? endpoint("SOCKSProxy", "SOCKSPort", "socks5") : undefined;
   const proxyUrl = https ?? http ?? socks;
   if (!proxyUrl) return undefined;
-  const exceptions = [...text.matchAll(/ExceptionsList : <array> \{([\s\S]*?)\n\s*\}/g)]
-    .flatMap((match) => {
+  const exceptions = [...text.matchAll(/ExceptionsList : <array> \{([\s\S]*?)\n\s*\}/g)].flatMap(
+    (match) => {
       const body = match[1] ?? "";
       return [...body.matchAll(/\d+\s*:\s*(\S+)/g)].flatMap((item) => (item[1] ? [item[1]] : []));
-    });
+    },
+  );
   return { proxyUrl, noProxy: exceptions.length > 0 ? exceptions.join(",") : undefined };
 }
 
@@ -88,16 +95,20 @@ export function parseWindowsInternetSettings(text: string | undefined): SystemPr
   return { proxyUrl, noProxy: noProxy || undefined };
 }
 
-export function parseGnomeProxy(values: {
-  mode?: string;
-  httpHost?: string;
-  httpPort?: string;
-  httpsHost?: string;
-  httpsPort?: string;
-  socksHost?: string;
-  socksPort?: string;
-  ignoreHosts?: string;
-} | undefined): SystemProxy | undefined {
+export function parseGnomeProxy(
+  values:
+    | {
+        mode?: string;
+        httpHost?: string;
+        httpPort?: string;
+        httpsHost?: string;
+        httpsPort?: string;
+        socksHost?: string;
+        socksPort?: string;
+        ignoreHosts?: string;
+      }
+    | undefined,
+): SystemProxy | undefined {
   if (!values || unquote(values.mode) !== "manual") return undefined;
   const https = gnomeEndpoint(values.httpsHost, values.httpsPort, "http");
   const http = gnomeEndpoint(values.httpHost, values.httpPort, "http");
@@ -136,7 +147,8 @@ export function parseKdeProxy(text: string | undefined): SystemProxy | undefined
 }
 
 function windowsProxyUrl(server: string): string | undefined {
-  if (!server.includes("=")) return asProxyUrl(server.includes("://") ? server : `http://${server}`);
+  if (!server.includes("="))
+    return asProxyUrl(server.includes("://") ? server : `http://${server}`);
   const entries = new Map<string, string>();
   for (const part of server.split(";")) {
     const index = part.indexOf("=");
@@ -221,7 +233,14 @@ async function readSystemdUserEnvironment(
 }
 
 function proxyFromEnv(env: Record<string, string | undefined>): SystemProxy | undefined {
-  const proxyUrl = ["all_proxy", "ALL_PROXY", "https_proxy", "HTTPS_PROXY", "http_proxy", "HTTP_PROXY"]
+  const proxyUrl = [
+    "all_proxy",
+    "ALL_PROXY",
+    "https_proxy",
+    "HTTPS_PROXY",
+    "http_proxy",
+    "HTTP_PROXY",
+  ]
     .map((key) => asProxyUrl(env[key]))
     .find((value): value is string => Boolean(value));
   if (!proxyUrl) return undefined;

@@ -1,3 +1,7 @@
+import { useComposerWorkspaceNavigation } from "@/hooks/useComposerWorkspaceNavigation.js";
+import { WorkCoderWorkspace } from "@/v4/composer/workcoder/WorkCoderWorkspace.js";
+import { ResearchProbePanel } from "@/v4/composer/workcoder/ResearchProbePanel.js";
+import { useResearchProbe } from "@/hooks/useResearchProbe.js";
 /* oxlint-disable eslint(max-lines) -- composer 集中收口输入区 wiring（附件/草稿/历史/mention），拆分会打散收口粒度。 */
 import { getLocalTtftObserver } from "@/v4/telemetry/localTtftObserver.js";
 /**
@@ -595,8 +599,13 @@ function ConversationComposerImpl({
     requestedDelivery?: "startNow" | "queue" | "guide";
   } | null>(null);
   const [sendTooltipOpen, setSendTooltipOpen] = useState(false);
-  const [workspaceOpen, setWorkspaceOpen] = useState(false);
-  const [studioOpen, setStudioOpen] = useState(false);
+  const navigation = useComposerWorkspaceNavigation();
+  const { workcoderVisited } = navigation;
+  const workcoderOpen = navigation.entry === "workcoder";
+  const probesOpen = navigation.entry === "probes";
+  useResearchProbe(workspacePath, workspaceIdentity, remoteSessionId);
+  const workspaceOpen = navigation.entry === "workspace";
+  const studioOpen = navigation.entry === "studio";
   // submit 经 ref 读取最新文本/pending，避免回调随每次输入变更引用。
   const textRef = useRef("");
   const contentRevisionRef = useRef(0);
@@ -2205,8 +2214,7 @@ function ConversationComposerImpl({
               : "border-transparent",
           )}
           onClick={() => {
-            setWorkspaceOpen((open) => !open);
-            setStudioOpen(false);
+            navigation.toggle("workspace");
           }}
         >
           {intl.formatMessage({ id: "chat.workspace.toggle" })}
@@ -2220,8 +2228,7 @@ function ConversationComposerImpl({
             studioOpen ? "border-foreground bg-foreground text-background" : "border-transparent",
           )}
           onClick={() => {
-            setStudioOpen((open) => !open);
-            setWorkspaceOpen(false);
+            navigation.toggle("studio");
           }}
         >
           {intl.formatMessage({ id: "chat.studio.toggle" })}
@@ -2260,6 +2267,7 @@ function ConversationComposerImpl({
   // 只在视觉和可访问树中隐藏，避免权限/问答卡片出现时丢失草稿和编辑器内部状态。
   return (
     // 外层 bottom dock 负责 sticky 与横向主列宽度；composer 自身组织错误提示与输入壳。
+    // sticky 会覆盖滚动消息，入口栏和面板间距也必须有不透明底色，避免输出透出重叠。
     // centered（居中草稿布局，m5）：收窄 max-w-2xl（旧
     // getChatViewComposerWidthClassName 的 draft 档），由宿主的居中容器摆位。
     // 有 contextHeader（草稿态）时，内层输入 surface 套旧 ChatViewComposer 同款卡：
@@ -2273,10 +2281,42 @@ function ConversationComposerImpl({
       aria-hidden={isBlockedByInteraction ? true : undefined}
       style={isBlockedByInteraction ? { display: "none" } : undefined}
       className={cn(
-        "chat-composer-region z-20 w-full shrink-0 @container/composer",
+        "chat-composer-region z-20 w-full shrink-0 bg-background pt-2 @container/composer",
         centered && "max-w-2xl",
       )}
     >
+      <nav
+        aria-label={intl.formatMessage({ id: "chat.workcoder.entries" })}
+        className="mb-2 flex flex-wrap items-center gap-2"
+        data-testid="composer-workspace-entries"
+      >
+        <Button
+          type="button"
+          variant={navigation.entry === "conversation" ? "secondary" : "ghost"}
+          aria-pressed={navigation.entry === "conversation"}
+          onClick={() => navigation.select("conversation")}
+        >
+          {intl.formatMessage({ id: "chat.workcoder.conversation" })}
+        </Button>
+        <Button
+          type="button"
+          variant={workcoderOpen ? "secondary" : "ghost"}
+          aria-pressed={workcoderOpen}
+          onClick={() => {
+            navigation.select("workcoder");
+          }}
+        >
+          WorkCoder
+        </Button>
+        <Button
+          type="button"
+          variant={probesOpen ? "secondary" : "ghost"}
+          aria-pressed={probesOpen}
+          onClick={() => navigation.toggle("probes")}
+        >
+          {intl.formatMessage({ id: "chat.probes.title" })}
+        </Button>
+      </nav>
       {/* 旧 ChatViewComposer 同款隐藏 file input（web/无 native picker 平台回退）。 */}
       <input
         ref={attachmentsApi.attachmentInputRef}
@@ -2299,18 +2339,40 @@ function ConversationComposerImpl({
         </div>
       ) : null}
       {/* 辅助面板曾直接撑高底部 dock，小窗口会顶进 macOS 标题栏；限制高度并在面板内滚动。 */}
-      {workspaceOpen || studioOpen ? (
+      {workspaceOpen || studioOpen || workcoderVisited || probesOpen ? (
         <div
           data-testid="composer-guided-panel"
+          hidden={!workspaceOpen && !studioOpen && !workcoderOpen && !probesOpen}
           className="mb-3 max-h-[min(60dvh,calc(100dvh-14rem))] min-h-0 overflow-y-auto overscroll-contain rounded-2xl max-sm:max-h-[min(48dvh,calc(100dvh-21rem))]"
         >
-          {workspaceOpen ? <WorkspaceAgentBoard modelSelectionView={modelSelectionView} /> : null}
-          {studioOpen ? <StudioPanel modelSelectionView={modelSelectionView} /> : null}
+          {probesOpen ? <ResearchProbePanel scope={workspaceKey} /> : null}
+          {workcoderVisited ? (
+            <div hidden={!workcoderOpen}>
+              <WorkCoderWorkspace
+                key={workspaceKey}
+                workspacePath={workspacePath}
+                workspaceIdentity={workspaceIdentity}
+                remoteSessionId={remoteSessionId}
+                modelSelectionView={modelSelectionView}
+                onStarted={navigation.completeWorkcoder}
+              />
+            </div>
+          ) : null}
+          {workspaceOpen ? (
+            <WorkspaceAgentBoard
+              modelSelectionView={modelSelectionView}
+              probeScope={workspaceKey}
+            />
+          ) : null}
+          {studioOpen ? (
+            <StudioPanel modelSelectionView={modelSelectionView} probeScope={workspaceKey} />
+          ) : null}
         </div>
       ) : null}
       <div
         className={cn(
           "chat-composer-input-surface w-full",
+          (workcoderOpen || probesOpen) && "hidden",
           contextHeader && "rounded-2xl bg-surface shadow-xl/5",
         )}
       >

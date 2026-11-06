@@ -12,7 +12,13 @@ export function resolveEffort(effort: string, efforts: readonly string[]): strin
 }
 
 /** GPT-6 Astra 不接受 minimal 和 none，Sol 不接受 minimal。传了会得到 400。 */
-export function supportedEfforts(modelId: string, efforts: readonly string[]): readonly string[] {
+export function supportedEfforts(
+  modelId: string,
+  efforts: readonly string[],
+  map?: string,
+): readonly string[] {
+  // 显式空参数映射可用于任意模型，不会把 none 作为 provider 的 reasoning_effort 发送。
+  if (map?.trim() === "{}") return efforts;
   const blocked = /gpt-6-astra/iu.test(modelId)
     ? new Set(["minimal", "none"])
     : /gpt-6-sol/iu.test(modelId)
@@ -22,17 +28,28 @@ export function supportedEfforts(modelId: string, efforts: readonly string[]): r
 }
 
 export function modelEfforts(view: ModelSelectionView | null, modelId: string): readonly string[] {
-  const model = view?.providers.flatMap((provider) => provider.models).find((item) => item.modelId === modelId);
-  return supportedEfforts(modelId, model?.config.optionSpecs.reasoningLevel?.values ?? []);
+  const model = view?.providers
+    .flatMap((provider) => provider.models)
+    .find((item) => item.modelId === modelId);
+  return supportedEfforts(
+    modelId,
+    model?.config.optionSpecs.reasoningLevel?.values ?? [],
+    model?.config.optionSpecs.reasoningLevel?.map,
+  );
 }
 
 /** 和主界面的档位映射一致：Claude 用思考预算，Gemini 3 用 thinking_level，其余用 reasoning_effort。 */
-export function reasoningBody(modelId: string, effort: string): Record<string, unknown> | undefined {
-  const level = /gpt-6-astra/iu.test(modelId) && (effort === "minimal" || effort === "none")
-    ? "medium"
-    : /gpt-6-sol/iu.test(modelId) && effort === "minimal"
+export function reasoningBody(
+  modelId: string,
+  effort: string,
+): Record<string, unknown> | undefined {
+  if (["none", "off", "disabled"].includes(effort)) return undefined;
+  const level =
+    /gpt-6-astra/iu.test(modelId) && (effort === "minimal" || effort === "none")
       ? "medium"
-      : effort;
+      : /gpt-6-sol/iu.test(modelId) && effort === "minimal"
+        ? "medium"
+        : effort;
   if (!level) return undefined;
   if (/claude|anthropic\//iu.test(modelId)) {
     const budget = level === "low" || level === "minimal" ? 4000 : level === "high" ? 24000 : 10000;

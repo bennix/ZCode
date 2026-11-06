@@ -11,6 +11,7 @@ import { runWithSessionResidencyFinalization } from "../../zcode-protocol/sessio
 import type { V4CommandCoreHost, V4SessionRecordView } from "./types.js";
 
 interface StartPromptTurnParamsBase {
+  epilogueStart?: SendInputOptions["epilogueStart"];
   content: string;
   /** v4 锚点：inputId=queryId=commandId（权威数据 sourceCommandId 对账）。 */
   inputId: string;
@@ -124,6 +125,7 @@ export async function startPromptTurn(
           ? { browserAmbientContext: params.browserAmbientContext }
           : {}),
         inputId: params.inputId,
+        ...(params.epilogueStart === undefined ? {} : { epilogueStart: params.epilogueStart, requireIdle: true }),
         ...(params.inputPresentation ? { inputPresentation: params.inputPresentation } : {}),
         ...turnBackgroundAttributionOf({
           automationId: activeAutomationId,

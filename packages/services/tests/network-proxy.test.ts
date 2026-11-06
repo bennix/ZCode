@@ -67,7 +67,9 @@ test("Windows and GNOME proxy settings are read from their own formats", () => {
   assert.equal(windows?.proxyUrl, "http://127.0.0.1:7897");
   assert.equal(windows?.noProxy, "localhost");
   assert.equal(
-    parseWindowsInternetSettings("ProxyEnable    REG_DWORD    0x0\nProxyServer    REG_SZ    127.0.0.1:7890"),
+    parseWindowsInternetSettings(
+      "ProxyEnable    REG_DWORD    0x0\nProxyServer    REG_SZ    127.0.0.1:7890",
+    ),
     undefined,
   );
   assert.equal(
@@ -115,10 +117,18 @@ test("Windows and Linux discovery read their own system settings", async () => {
 
 test("direct switches back, automatic uses discovery, manual keeps the typed address", async () => {
   const detect = async () => ({ proxyUrl: "socks5://127.0.0.1:1080" });
-  assert.equal((await resolveEffectiveAppProxy({ mode: "direct", httpProxy: "http://127.0.0.1:7897" }, detect)).httpProxy, undefined);
-  assert.equal((await resolveEffectiveAppProxy({ mode: "auto" }, detect)).httpProxy, "socks5://127.0.0.1:1080");
   assert.equal(
-    (await resolveEffectiveAppProxy({ mode: "manual", httpProxy: "http://127.0.0.1:7897" }, detect)).httpProxy,
+    (await resolveEffectiveAppProxy({ mode: "direct", httpProxy: "http://127.0.0.1:7897" }, detect))
+      .httpProxy,
+    undefined,
+  );
+  assert.equal(
+    (await resolveEffectiveAppProxy({ mode: "auto" }, detect)).httpProxy,
+    "socks5://127.0.0.1:1080",
+  );
+  assert.equal(
+    (await resolveEffectiveAppProxy({ mode: "manual", httpProxy: "http://127.0.0.1:7897" }, detect))
+      .httpProxy,
     "http://127.0.0.1:7897",
   );
 });
@@ -139,7 +149,34 @@ test("SOCKS5 handshake reaches the requested host", async () => {
   await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
   const address = server.address();
   assert.ok(address && typeof address === "object");
-  const socket = await connectSocks(new URL(`socks5://127.0.0.1:${address.port}`), "example.com", 443);
+  const socket = await connectSocks(
+    new URL(`socks5://127.0.0.1:${address.port}`),
+    "example.com",
+    443,
+  );
   socket.destroy();
-  await new Promise<void>((resolve, reject) => server.close((error) => (error ? reject(error) : resolve())));
+  await new Promise<void>((resolve, reject) =>
+    server.close((error) => (error ? reject(error) : resolve())),
+  );
+});
+
+test("macOS and Windows automatic discovery fall back to configured environment proxies", async () => {
+  for (const platform of ["darwin", "win32"] as const) {
+    assert.deepEqual(
+      await detectSystemProxy(platform, async () => undefined, {
+        HTTPS_PROXY: "http://127.0.0.1:23456",
+        NO_PROXY: "localhost,127.0.0.1",
+      }),
+      { proxyUrl: "http://127.0.0.1:23456", noProxy: "localhost,127.0.0.1" },
+    );
+  }
+});
+
+test("configured system proxies remain authoritative over environment proxies", async () => {
+  const found = await detectSystemProxy(
+    "darwin",
+    async () => "HTTPSEnable : 1\nHTTPSProxy : 127.0.0.1\nHTTPSPort : 24567",
+    { HTTPS_PROXY: "http://127.0.0.1:23456" },
+  );
+  assert.equal(found?.proxyUrl, "http://127.0.0.1:24567");
 });

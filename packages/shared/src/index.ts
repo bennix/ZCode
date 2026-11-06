@@ -321,3 +321,4 @@ export * from "./codeWorkbench.js";
 
 export * from "./studio-video.js";
 export * from "./studio-codesign.js";
+export { splitLegacyWorkCoderInput } from "./workcoder-input-presentation.js";

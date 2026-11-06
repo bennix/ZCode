@@ -1,3 +1,4 @@
+import { startProbe } from "@/store/researchProbeStore.js";
 import { GuidedSteps } from "./GuidedSteps.js";
 /* oxlint-disable eslint(max-lines) -- 工作区同时承载名单、白板、附件和流式输出。 */
 /**
@@ -100,7 +101,11 @@ function modelChoices(view: ModelSelectionView | null): readonly ModelChoice[] {
         key: `${provider.providerId}\n${model.modelId}`,
         modelId: model.modelId,
         label: model.modelId,
-        efforts: supportedEfforts(model.modelId, model.config.optionSpecs.reasoningLevel.values),
+        efforts: supportedEfforts(
+          model.modelId,
+          model.config.optionSpecs.reasoningLevel.values,
+          model.config.optionSpecs.reasoningLevel.map,
+        ),
       })),
   );
 }
@@ -227,8 +232,10 @@ function readApiKey(view: ModelSelectionView | null): string {
 
 export function WorkspaceAgentBoard({
   modelSelectionView,
+  probeScope = "",
 }: {
   modelSelectionView: ModelSelectionView | null;
+  probeScope?: string;
 }) {
   const { intl } = useZCodeIntl();
   const platform = usePlatform();
@@ -327,6 +334,7 @@ export function WorkspaceAgentBoard({
       type: "image_url",
       image_url: { url: image.url },
     }));
+    const finishProbe = startProbe(probeScope, "guided-task", "board.run");
     const spoken: string[] = [];
     try {
       const searchContext = await collectDuckDuckGoContext({
@@ -399,10 +407,13 @@ export function WorkspaceAgentBoard({
           setOutputs((current) => ({ ...current, judge: judgeText }));
         },
       });
+      finishProbe("success");
     } catch (runError) {
+      finishProbe(controller.signal.aborted ? "cancelled" : "failed");
       if (controller.signal.aborted) return;
       setError(runError instanceof Error ? runError.message : String(runError));
     } finally {
+      finishProbe("cancelled");
       if (abortRef.current === controller) {
         setRunning(false);
         setSearchStatus(null);
@@ -435,6 +446,7 @@ export function WorkspaceAgentBoard({
         </p>
       ) : null}
       <GuidedSteps
+        probeScope={probeScope}
         steps={["chat.guide.task", "chat.guide.team", "chat.guide.results"]}
         current={step}
         onChange={setStep}

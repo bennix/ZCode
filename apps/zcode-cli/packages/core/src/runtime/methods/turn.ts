@@ -111,6 +111,7 @@ export async function executeTurnCommand(
   const turnId = startReservation?.turnId ?? createTurnId();
   const queryId = options?.queryId ?? (options?.inputId as QueryId | undefined) ?? createQueryId();
   const displayInput = options?.displayInput ?? input;
+  const titleInput = options?.epilogueStart === undefined ? displayInput : displayInput.slice(0, options.epilogueStart);
   const turnTraceContext =
     startReservation?.traceContext ??
     createChildTraceContext(options?.traceContext ?? this.rootTraceContext, {
@@ -282,7 +283,7 @@ export async function executeTurnCommand(
 
       turnMachine = new TurnMachineImpl(turnMachine.start());
       phaseStartedAt = startTurnPhase("session_persistence");
-      await this.ensureSessionPersisted(displayInput, turnTraceContext);
+      await this.ensureSessionPersisted(titleInput, turnTraceContext);
       // execution-scoped 临时 Provider（例如闲时任务）拥有本轮自己的模型，不改写
       // Session Selection；普通 Submission 才在真正开跑时应用其原子选择。
       const submissionModel = await applySubmissionExecutionState(
@@ -536,7 +537,7 @@ export async function executeTurnCommand(
           // generated title 永远没有机会发起。首条 query 持久化后即可异步生成，避免被主链路取消拖死。
           const titleGenerationStarted = maybeStartSessionTitleGeneration.call(
             this,
-            displayInput,
+            titleInput,
             userMessageId,
             turnTraceContext,
             {
@@ -727,7 +728,7 @@ export async function executeTurnCommand(
           // 若在主 turn 前生成标题，会先占用鉴权刷新窗口，导致真正的用户消息失败。
           maybeStartDeferredSessionTitleGeneration.call(
             this,
-            displayInput,
+            titleInput,
             userMessageId,
             turnTraceContext,
           );

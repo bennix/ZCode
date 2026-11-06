@@ -22,13 +22,18 @@ try {
     if (msg.type() === "error") console.error(msg.text());
   });
   page.on("pageerror", (error) => console.error(error.message));
-  await page.goto(new URL("packages/ui/tests/studio-creation-fixture.html", server.resolvedUrls.local[0]).href);
+  await page.goto(
+    new URL("packages/ui/tests/studio-creation-fixture.html", server.resolvedUrls.local[0]).href,
+  );
   await page.evaluate(async () => {
     await import("/packages/ui/src/styles.css");
     const { React, createRoot } = await import("/packages/ui/tests/studio-react-entry.js");
     const { ZCodeIntlProvider } = await import("/packages/ui/src/i18n/IntlProvider.tsx");
     const { PlatformProvider } = await import("/packages/ui/src/hooks/usePlatform.tsx");
     const { ServiceProvider } = await import("/packages/ui/src/hooks/useServices.tsx");
+    const probes = await import("/packages/ui/src/store/researchProbeStore.ts");
+    probes.useResearchProbeStore.getState().toggle("codesign-test", "local-edit", true);
+    globalThis.probeRecords = () => probes.readProbeScope("codesign-test").records;
     const { StudioPanel } = await import("/packages/ui/src/v4/composer/studio/StudioPanel.tsx");
     const { readStudioMediaLibrary } =
       await import("/packages/ui/src/v4/composer/studio/studioMediaStore.ts");
@@ -109,7 +114,10 @@ try {
           React.createElement(
             ServiceProvider,
             { services: { settingService: { get: async () => settings, update: async () => {} } } },
-            React.createElement(StudioPanel, { modelSelectionView: view }),
+            React.createElement(StudioPanel, {
+              modelSelectionView: view,
+              probeScope: "codesign-test",
+            }),
           ),
         ),
       ),
@@ -163,13 +171,14 @@ try {
   await page.evaluate(() => {
     globalThis.fetch = async (_url, options) => {
       const request = JSON.parse(options.body);
+      globalThis.localEditRequest = request;
       const supplied = JSON.parse(request.messages[1].content);
       const content = JSON.stringify({
         elementId: supplied.elementId,
         html: "<h1>Updated title</h1>",
       });
       return new Response(
-        `data: ${JSON.stringify({ choices: [{ delta: { content }, finish_reason: "stop" }] })}\n\n`,
+        `data: ${JSON.stringify({ choices: [{ delta: { content }, finish_reason: "stop" }] })}\n\ndata: ${JSON.stringify({ choices: [], usage: { prompt_tokens: 120, completion_tokens: 30 } })}\n\ndata: [DONE]\n\n`,
       );
     };
   });
@@ -301,6 +310,20 @@ try {
   assert.equal(results.commits.length, 1);
   assert.equal(results.commits[0].state.images[0].id, "two");
   assert.equal(results.cancelledCommits, 0);
+  const editProbes = await page.evaluate(() => globalThis.probeRecords());
+  assert.ok(
+    editProbes.some(
+      (record) => record.operation === "design.local-edit" && record.status === "success",
+    ),
+  );
+  const usage = editProbes.find((record) => record.operation === "design.local-edit");
+  assert.equal(usage.inputTokens, 120);
+  assert.equal(usage.outputTokens, 30);
+  assert.equal(usage.usageCoverage, "complete");
+  assert.equal(
+    (await page.evaluate(() => globalThis.localEditRequest)).stream_options.include_usage,
+    true,
+  );
   await page.setViewportSize({ width: 1280, height: 900 });
   assert.ok(await page.getByTestId("studio-codesign-controls").isVisible());
   console.log(

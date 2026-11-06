@@ -121,3 +121,6 @@ export type ModelPropertiesData = z.infer<typeof completeModelPropertiesDataSche
 export type EnumOptionSpecData = z.infer<typeof completeEnumOptionSpecDataSchema>;
 export type LimitOptionSpecData = z.infer<typeof completeLimitOptionSpecDataSchema>;
 export type ModelOptionSpecsData = z.infer<typeof completeModelOptionSpecsDataSchema>;
+
+/** 显式无需思考的模型选项：保留类型化选择，映射为空请求参数。 */
+export const NO_REASONING_OPTION_SPEC = { values: ["none"], map: "{}" } as const;

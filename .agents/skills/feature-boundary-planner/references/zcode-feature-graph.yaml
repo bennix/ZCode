@@ -25,6 +25,32 @@ rules:
     - invariant-only
     - evidence-only
 nodes:
+  - id: capability.workcoder
+    kind: capability
+    label: WorkCoder guided coding workspace
+    aliases: [WorkCoder, 三层模型协作, 顾问模型]
+    codeSeeds:
+      - file: packages/ui/src/v4/composer/workcoder/WorkCoderWorkspace.tsx
+        symbol: WorkCoderWorkspace
+      - file: packages/services/src/workcoder/workcoder.ts
+        symbol: prepareWorkCoderTask
+    invariants:
+      - Role model bindings live in immutable workspace Agent profiles; existing runtime owns execution.
+      - Advisor checkpoints are Agent instructions; they are not runtime-enforced gates.
+  - id: capability.research-probes
+    kind: capability
+    label: Local thesis research probes
+    aliases: [研究探针, 实验数据, benchmark export]
+    codeSeeds:
+      - file: packages/ui/src/store/researchProbeStore.ts
+        symbol: useResearchProbeStore
+      - file: packages/ui/src/hooks/useResearchProbe.ts
+        symbol: useResearchProbe
+      - file: packages/ui/src/v4/composer/workcoder/ResearchProbePanel.tsx
+        symbol: ResearchProbePanel
+    invariants:
+      - Window-local observations are distinct from authoritative runtime state.
+      - Missing usage is unknown; desktop live telemetry does not imply replayable coverage.
   - id: capability.model-selection
     kind: capability
     label: Model selection
@@ -598,3 +624,13 @@ edges:
     type: emits-model-selection-for
     rank: must-inspect
     condition: Applied runtime model selection is projected through ModelSelected events.
+  - from: capability.workcoder
+    to: service.subagents
+    type: prepares-model-bound-profiles
+    rank: must-inspect
+    condition: Fresh tasks load immutable model-bound read-only profiles before first admission.
+  - from: capability.workcoder
+    to: service.runtime-submission-execution
+    type: submits-through-existing-task-runtime
+    rank: must-inspect
+    condition: createTask v4Create and task sendPrompt preserve existing command admission.

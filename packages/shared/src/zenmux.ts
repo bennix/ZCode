@@ -145,6 +145,11 @@ export class ZenMuxChatError extends Error {
 
 const RETRYABLE_CHAT_STATUS = new Set([408, 429, 500, 502, 503, 504]);
 
+export interface ZenMuxChatUsage {
+  inputTokens: number;
+  outputTokens: number;
+}
+
 /** 流式 chat completions。不传 temperature。reasoning 只放调用方按模型能力准备好的字段。 */
 export async function streamZenMuxChatCompletion(input: {
   apiKey: string;
@@ -156,6 +161,7 @@ export async function streamZenMuxChatCompletion(input: {
   requireComplete?: boolean;
   signal?: AbortSignal;
   onDelta: (text: string) => void;
+  onUsage?: (usage: ZenMuxChatUsage) => void;
   fetchImpl?: typeof fetch;
 }): Promise<void> {
   const key = input.apiKey.trim();
@@ -171,6 +177,7 @@ export async function streamZenMuxChatCompletion(input: {
       model: input.model,
       messages: input.messages,
       stream: true,
+      ...(input.onUsage ? { stream_options: { include_usage: true } } : {}),
       ...(input.maxTokens ? { max_tokens: input.maxTokens } : {}),
       ...input.reasoning,
     }),
@@ -198,7 +205,10 @@ export async function streamZenMuxChatCompletion(input: {
   const decoder = new TextDecoder();
   let buffer = "";
   let completed = false;
+  let ended = false;
+  let usage: ZenMuxChatUsage | undefined;
   type Chunk = {
+    usage?: { prompt_tokens?: unknown; completion_tokens?: unknown };
     error?: { message?: string; type?: string; code?: string; status?: number };
     choices?: Array<{ finish_reason?: string | null; delta?: { content?: string | null; reasoning?: string | null } }>;
   };
@@ -206,11 +216,17 @@ export async function streamZenMuxChatCompletion(input: {
     const trimmed = line.trim();
     if (!trimmed.startsWith("data:")) return;
     const data = trimmed.slice(5).trim();
-    if (data === "[DONE]") { completed = true; return; }
+    if (data === "[DONE]") { completed = true; ended = true; return; }
     if (!data) return;
     let parsed: Chunk;
     try { parsed = JSON.parse(data) as Chunk; } catch { return; }
     if (!parsed || typeof parsed !== "object") return;
+    const inputTokens = parsed.usage?.prompt_tokens;
+    const outputTokens = parsed.usage?.completion_tokens;
+    if (typeof inputTokens === "number" && Number.isFinite(inputTokens) && inputTokens >= 0 &&
+        typeof outputTokens === "number" && Number.isFinite(outputTokens) && outputTokens >= 0) {
+      usage = { inputTokens, outputTokens };
+    }
     if (parsed.error) {
       const error = parsed.error;
       const retryable = RETRYABLE_CHAT_STATUS.has(error.status ?? 0)
@@ -224,7 +240,8 @@ export async function streamZenMuxChatCompletion(input: {
     if (choice?.finish_reason) completed = true;
   };
   try {
-    while (!completed) {
+    // usage 尾帧通常晚于 finish_reason；只有订阅者需要继续读取，避免漏报实际用量。
+    while (!completed || (input.onUsage && !ended)) {
       const { done, value } = await reader.read().catch((error: unknown) => {
         if (input.signal?.aborted) throw error;
         throw new ZenMuxChatError(error instanceof Error ? error.message : "Network error", true);
@@ -235,7 +252,7 @@ export async function streamZenMuxChatCompletion(input: {
       buffer = lines.pop() ?? "";
       for (const line of lines) {
         consume(line);
-        if (completed) break;
+        if (ended || (completed && !input.onUsage)) break;
       }
     }
     // PPT 不能把无结束标记的断流当作成功，否则半张页面会进入草稿。
@@ -243,6 +260,7 @@ export async function streamZenMuxChatCompletion(input: {
   } finally {
     void reader.cancel().catch(() => {});
     reader.releaseLock();
+    if (usage) input.onUsage?.(usage);
   }
 }
 

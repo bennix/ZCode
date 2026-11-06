@@ -309,3 +309,17 @@ export type {
   FeedbackTicketType,
 } from "@zcode/shared";
 export { IClientConfigService } from "./client-config/clientConfig.js";
+export {
+  WORKCODER_MODELS,
+  prepareWorkCoderTask,
+  sendWorkCoderTask,
+  workCoderPrompt,
+} from "./workcoder/workcoder.js";
+export type {
+  WorkCoderRole,
+  WorkCoderModels,
+  WorkCoderTarget,
+  WorkCoderLaunch,
+  WorkCoderRunOptions,
+} from "./workcoder/workcoder.js";
+export { ensureWorkCoderResearchModel } from "./workcoder/workcoderModelSetup.js";

@@ -1,3 +1,4 @@
+import { splitLegacyWorkCoderInput } from "@zcode/shared";
 import { useState } from "react";
 import { ChevronDownIcon, ChevronRightIcon } from "lucide-react";
 import { useZCodeIntl } from "@/i18n/IntlProvider.js";
@@ -16,6 +17,10 @@ export function splitUserInputEpilogue(
   text: string,
   epilogueStart: number | undefined,
 ): { body: string; epilogue?: string } {
+  if (epilogueStart === undefined) {
+    const legacy = splitLegacyWorkCoderInput(text);
+    if (legacy) return { body: legacy.task, epilogue: legacy.instructions };
+  }
   if (epilogueStart === undefined || epilogueStart < 0 || epilogueStart > text.length) {
     return { body: text };
   }

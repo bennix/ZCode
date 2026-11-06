@@ -239,7 +239,7 @@ export interface IZCodeTaskService {
     v4Create?: boolean;
   }): Promise<ZCodeTaskCreateResult>;
 
-  guideTask(params: {taskId:string;traceId:TraceId;content:string}):Promise<void>;
+  guideTask(params: { taskId: string; traceId: TraceId; content: string }): Promise<void>;
 
   /** 发送 prompt 到指定 task */
   sendPrompt(
@@ -250,6 +250,7 @@ export interface IZCodeTaskService {
       queryId?: string;
       messageId?: string;
       content: string;
+      epilogueStart?: number;
       attachments?: ZCodePromptAttachment[];
       clientId?: string;
       clientLabel?: string;

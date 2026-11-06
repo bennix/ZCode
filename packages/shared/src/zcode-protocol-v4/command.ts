@@ -86,6 +86,8 @@ export const commandPayloadSchemas = {
   sendText: z
     .object({
       text: z.string(),
+      // 引擎附加说明的 UTF-16 边界；复用 Core 的 epilogue 持久化与呈现。
+      epilogueStart: z.number().int().nonnegative().optional(),
       attachments: z.array(attachmentRefSchema).optional(),
       // Desktop Cmd/Ctrl+Enter 只覆盖本次 busy input，不改 session followupMode。
       // startNow 由 CLI 原子抢占当前 turn，不经过 queue admission。
@@ -116,6 +118,12 @@ export const commandPayloadSchemas = {
       toolDisallowlist: z.array(z.string().min(1)).optional(),
     })
     .superRefine((payload, context) => {
+      if (payload.epilogueStart !== undefined && payload.epilogueStart > payload.text.length)
+        context.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "epilogueStart exceeds text length",
+          path: ["epilogueStart"],
+        });
       if (payload.automationId && payload.offPeakTaskId) {
         context.addIssue({
           code: z.ZodIssueCode.custom,
@@ -169,7 +177,11 @@ export const commandPayloadSchemas = {
     feedback: z.enum(["like", "dislike"]).nullable(),
   }),
   sendQueuedNow: z.object({ queueItemId: z.string() }),
-  editQueueItem: z.object({ queueItemId: z.string(), newText: z.string(), delivery: z.literal("guide").optional() }),
+  editQueueItem: z.object({
+    queueItemId: z.string(),
+    newText: z.string(),
+    delivery: z.literal("guide").optional(),
+  }),
   // beforeQueueItemId = null → 移到队尾。
   reorderQueueItem: z.object({
     queueItemId: z.string(),

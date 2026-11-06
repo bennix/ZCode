@@ -357,8 +357,10 @@ function ModelPick({
 
 export function StudioPanel({
   modelSelectionView,
+  probeScope = "",
 }: {
   modelSelectionView: ModelSelectionView | null;
+  probeScope?: string;
 }) {
   const { intl } = useZCodeIntl();
   const platform = usePlatform();
@@ -1369,6 +1371,7 @@ export function StudioPanel({
           </label>
         </details>
         <StudioDesignWorkspace
+          probeScope={probeScope}
           coDesign={coDesignOpen}
           sourceImageUrl={imageUrl}
           apiKey={apiKey}
