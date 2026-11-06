@@ -1,9 +1,9 @@
 import assert from "node:assert/strict";
 import { spawn } from "node:child_process";
-import { mkdtemp, rm } from "node:fs/promises";
+import { access, mkdtemp, rm } from "node:fs/promises";
 import { createServer } from "node:net";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { join, resolve } from "node:path";
 import { test } from "node:test";
 import { chromium } from "playwright-core";
 
@@ -19,10 +19,12 @@ async function freePort() {
 test("packaged first-use Studio and Agent board show task before advanced settings", async () => {
   const executable = process.env.ZENCODE_PACKAGED_APP_PATH?.trim();
   assert.ok(executable, "ZENCODE_PACKAGED_APP_PATH must point to a packaged desktop executable");
+  const executablePath = resolve(executable);
+  await access(executablePath);
   const root = await mkdtemp(join(tmpdir(), "zencode-guided-packaged-e2e-"));
   const port = await freePort();
   const child = spawn(
-    executable,
+    executablePath,
     [
       `--remote-debugging-port=${port}`,
       ...(process.env.ZENCODE_TEST_DISABLE_SANDBOX === "1" ? ["--no-sandbox"] : []),
@@ -57,6 +59,9 @@ test("packaged first-use Studio and Agent board show task before advanced settin
     // 根因：CDP 端口先于首个窗口可用；等待真正的页面，避免首次启动被误判为失败。
     const page = context?.pages()[0] ?? (await context?.waitForEvent("page", { timeout: 30_000 }));
     assert.ok(page, "packaged desktop window did not open");
+    await page
+      .getByRole("heading", { name: /^(?:欢迎来到 ZenCode|Welcome to ZenCode)$/u })
+      .waitFor();
     // 宿主可能使用英文系统语言；隔离 profile 显式选中文，不能把语言差异误判为启动失败。
     await page.addInitScript(() => localStorage.setItem("zcode-locale-preference", "zh-CN"));
     await page.reload({ waitUntil: "domcontentloaded" });
