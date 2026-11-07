@@ -184,3 +184,5 @@ sequenceDiagram
 ### 3.14.39 发布验收
 
 产品源码 b7dcbab0e721c7680a8ddaa985e7886434e32af1；Windows 构建 42314298093、Linux 构建 42314302191 全部成功。Linux 独立安装验收 42316373650、Windows 独立安装验收 42316727448 均通过；资产暂存 42316744817 与 Windows 更新清单 42316762358 成功。Mac DMG 公证 e1712619-4a0d-490f-b68f-68c4d1b0d9f9、ZIP 公证 a4795cc2-936e-416a-97da-b6ee4c1e3124 均 Accepted，装订、挂载 App 严格签名和 Gatekeeper 检查通过；五个 Mac 资产已核对 GitHub SHA-256。40 个发布文件全部齐全后公开为 Latest；六个正式安装包验收摘要已同步新资产，随后从正式 Release 下载复验。公证客户端直连失败时使用本机代理与加速端点上传，不降低签名、公证或 TLS 验证。
+
+正式下载复验 42317922257 的 Windows x64/ARM64 与 Linux 两架构 DEB/RPM 六项全部成功。Mac DMG 匿名下载的大小、SHA-256 和装订校验通过。Landing Page 部署 42317839119 成功并通过线上双语/响应式/七个下载链接检查。本地 release-artifacts 只保留 ZenCode-3.14.39-mac-arm64.dmg；完整证据见 desktop-release-audit-2026-11-06.json。

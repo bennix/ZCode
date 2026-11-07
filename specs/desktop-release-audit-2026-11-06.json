@@ -1,7 +1,7 @@
 {
   "date": "2026-11-06",
   "version": "3.14.39",
-  "status": "published",
+  "status": "draft",
   "source": "b7dcbab0e721c7680a8ddaa985e7886434e32af1",
   "release": "https://github.com/bennix/ZCode/releases/tag/v3.14.39",
   "runs": {
@@ -11,6 +11,7 @@
     "installedWindows": 42316727448,
     "assetStaging": 42316744817,
     "windowsMetadata": 42316762358,
+    "publishedInstalled": 42317922257,
     "landingDeploy": 42317839119
   },
   "checks": {
@@ -40,7 +41,13 @@
     "windowsMetadata": "same successful build run, uploaded and SHA256 verified",
     "allAssets": "40 complete assets; 7 installers, 2 update manifests, blockmaps and remote runtime components",
     "installedWindows": "independent x64/ARM64 candidate installer checks passed",
-    "allCandidateInstalled": "passed"
+    "allCandidateInstalled": "passed",
+    "publicMacDownload": "anonymous download SHA256/size matched; stapler validate passed",
+    "localArtifacts": "release-artifacts retains only the latest 3.14.39 notarized DMG",
+    "landingLive": "GitHub Pages succeeded; live 390/1440px bilingual/persistence/seven exact downloads/no overflow passed",
+    "publishedInstalled": "Windows x64/ARM64 and Linux x64/ARM64 DEB/RPM public download and install checks all passed",
+    "allDownloads": "six Windows/Linux public installers verified and installed; anonymous Mac DMG SHA256/size and staple verified",
+    "canonicalLanding": "canonical URL serves WorkCoder copy and seven exact 3.14.39 installer links"
   },
   "landingCheckout": "/tmp/zcode-landing-31439",
   "nativeMacSource": {
@@ -258,7 +265,5 @@
       "size": 319925168
     }
   ],
-  "releaseState": "published as Latest",
-  "landingCommit": "ab0e6868795d658dfee8446c749afffd58bbb392",
-  "landingURL": "https://bennix.github.io/ZenMuxDev/"
+  "localLatest": "/Users/nellertcai/Zcode/release-artifacts/ZenCode-3.14.39-mac-arm64.dmg"
 }
