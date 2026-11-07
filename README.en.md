@@ -18,16 +18,19 @@ ZenCode is an AI coding workspace with desktop, browser, and terminal interfaces
 
 Download the macOS DMG, Windows installer, or Linux packages from the [latest GitHub release](https://github.com/bennix/ZCode/releases/latest). The release page lists only platforms whose builds and checks have completed. Source development instructions follow below.
 
-The current stable release is **3.14.38**. The macOS Apple Silicon DMG is notarized by Apple; Windows and Linux x64/ARM64 packages passed build and installation checks. Choose the package for your device:
+The current stable release is **3.14.39**. The macOS Apple Silicon DMG is notarized by Apple; Windows and Linux x64/ARM64 packages passed build and installation checks. Choose the package for your device:
 
 | Platform            | Package                                                                                                                                                                                                 |
 | ------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| macOS Apple Silicon | [Notarized DMG](https://github.com/bennix/ZCode/releases/latest/download/ZenCode-3.14.38-mac-arm64.dmg)                                                                                                   |
-| Windows x64 / ARM64 | [x64](https://github.com/bennix/ZCode/releases/latest/download/ZenCode-3.14.38-win-x64.exe) · [ARM64](https://github.com/bennix/ZCode/releases/latest/download/ZenCode-3.14.38-win-arm64.exe)             |
-| Linux x64           | [DEB](https://github.com/bennix/ZCode/releases/latest/download/ZenCode-3.14.38-linux-amd64.deb) · [RPM](https://github.com/bennix/ZCode/releases/latest/download/ZenCode-3.14.38-linux-x86_64.rpm)    |
-| Linux ARM64         | [DEB](https://github.com/bennix/ZCode/releases/latest/download/ZenCode-3.14.38-linux-arm64.deb) · [RPM](https://github.com/bennix/ZCode/releases/latest/download/ZenCode-3.14.38-linux-aarch64.rpm)   |
+| macOS Apple Silicon | [Notarized DMG](https://github.com/bennix/ZCode/releases/latest/download/ZenCode-3.14.39-mac-arm64.dmg)                                                                                                   |
+| Windows x64 / ARM64 | [x64](https://github.com/bennix/ZCode/releases/latest/download/ZenCode-3.14.39-win-x64.exe) · [ARM64](https://github.com/bennix/ZCode/releases/latest/download/ZenCode-3.14.39-win-arm64.exe)             |
+| Linux x64           | [DEB](https://github.com/bennix/ZCode/releases/latest/download/ZenCode-3.14.39-linux-amd64.deb) · [RPM](https://github.com/bennix/ZCode/releases/latest/download/ZenCode-3.14.39-linux-x86_64.rpm)    |
+| Linux ARM64         | [DEB](https://github.com/bennix/ZCode/releases/latest/download/ZenCode-3.14.39-linux-arm64.deb) · [RPM](https://github.com/bennix/ZCode/releases/latest/download/ZenCode-3.14.39-linux-aarch64.rpm)   |
 
 ## Product capabilities
+
+- **WorkCoder collaboration**: Assign separate coding, read-only research and checkpoint advisor models inside ZenCode. Choose a working directory and optional automatic approval, then guide the running task in the regular conversation. Conversation, WorkCoder and probes use mutually exclusive views. Project Hook trust is retained for the approved declaration digest.
+- **Optional research probes**: Off by default, with charts and JSON/CSV export. The desktop local live link can observe Agent usage; remote and Web modes record local UI actions only. Missing token values stay unknown.
 
 - **AI coding workspace**: Work on coding tasks from the desktop IDE, browser workspace, or terminal, with workspace context such as files, diffs, terminal output, and previews.
 - **Multi-agent workspace**: Organize and track multiple agent tasks and their progress. The current model dispatcher selects an execution model; it does not automatically split one task into child agents.

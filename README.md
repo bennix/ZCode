@@ -18,16 +18,19 @@ ZenCode 是 AI 编程工作台，提供桌面应用、浏览器界面和终端 A
 
 从 [GitHub 最新发行版](https://github.com/bennix/ZCode/releases/latest) 下载 macOS DMG、Windows 安装程序或 Linux 软件包。下载页只展示已完成构建与验证的平台；源码开发步骤见下文。
 
-当前正式版为 **3.14.38**。macOS Apple Silicon DMG 已通过 Apple 公证；Windows 与 Linux x64/ARM64 安装包均通过构建和安装验收。按设备选择对应安装包：
+当前正式版为 **3.14.39**。macOS Apple Silicon DMG 已通过 Apple 公证；Windows 与 Linux x64/ARM64 安装包均通过构建和安装验收。按设备选择对应安装包：
 
 | 系统                | 安装包                                                                                                                                                                                                  |
 | ------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| macOS Apple Silicon | [已公证 DMG](https://github.com/bennix/ZCode/releases/latest/download/ZenCode-3.14.38-mac-arm64.dmg)                                                                                                   |
-| Windows x64 / ARM64 | [x64](https://github.com/bennix/ZCode/releases/latest/download/ZenCode-3.14.38-win-x64.exe) · [ARM64](https://github.com/bennix/ZCode/releases/latest/download/ZenCode-3.14.38-win-arm64.exe)             |
-| Linux x64           | [DEB](https://github.com/bennix/ZCode/releases/latest/download/ZenCode-3.14.38-linux-amd64.deb) · [RPM](https://github.com/bennix/ZCode/releases/latest/download/ZenCode-3.14.38-linux-x86_64.rpm)    |
-| Linux ARM64         | [DEB](https://github.com/bennix/ZCode/releases/latest/download/ZenCode-3.14.38-linux-arm64.deb) · [RPM](https://github.com/bennix/ZCode/releases/latest/download/ZenCode-3.14.38-linux-aarch64.rpm)   |
+| macOS Apple Silicon | [已公证 DMG](https://github.com/bennix/ZCode/releases/latest/download/ZenCode-3.14.39-mac-arm64.dmg)                                                                                                   |
+| Windows x64 / ARM64 | [x64](https://github.com/bennix/ZCode/releases/latest/download/ZenCode-3.14.39-win-x64.exe) · [ARM64](https://github.com/bennix/ZCode/releases/latest/download/ZenCode-3.14.39-win-arm64.exe)             |
+| Linux x64           | [DEB](https://github.com/bennix/ZCode/releases/latest/download/ZenCode-3.14.39-linux-amd64.deb) · [RPM](https://github.com/bennix/ZCode/releases/latest/download/ZenCode-3.14.39-linux-x86_64.rpm)    |
+| Linux ARM64         | [DEB](https://github.com/bennix/ZCode/releases/latest/download/ZenCode-3.14.39-linux-arm64.deb) · [RPM](https://github.com/bennix/ZCode/releases/latest/download/ZenCode-3.14.39-linux-aarch64.rpm)   |
 
 ## 产品能力
+
+- **WorkCoder 协作编程**：在 ZenCode 内为编码、只读研究和关键节点顾问分别选择模型；启动前选择工作目录及可选自动批准，启动后回到普通对话继续引导。普通对话、WorkCoder 和研究探针互斥切换。项目 Hook 按当前声明摘要授权并保留信任。
+- **可选研究探针**：默认关闭，提供图表与 JSON/CSV 导出；桌面本地实时链路可观察 Agent 用量，远程与 Web 仅记录本机 UI 操作，缺失 Token 保持未知。
 
 - **AI 编程工作台**：在桌面 IDE、浏览器工作区或终端中处理代码任务，查看文件、Diff、终端和预览等工作区信息。
 - **多 Agent 工作区**：组织并跟踪多个 Agent 任务，查看任务进度；Agent 调度按当前实现选择执行模型，不会擅自把一个任务拆成多个子 Agent。

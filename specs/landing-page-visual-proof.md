@@ -48,3 +48,7 @@ The existing v3.14.35 download URLs continue to resolve to the rebuilt installer
 - 验收包含 390/1440px 的双语切换、首屏和更新卡片可读、七个下载入口精确匹配新 Release、无横向溢出及 GitHub Pages 线上部署。
 
 3.14.38 已公开为 Latest。Landing Page 已由 `bennix/ZenMuxDev` 的 `03b0ebb4a0de18aa1868d54ce98f70291f6e88aa` 部署成功，线上 390/1440px 的中英文切换、语言持久化、七个 3.14.38 下载路径、原有媒体和无横向溢出检查通过。源码问答与链接统一指向实际发行仓库 `bennix/ZCode`。
+
+## 3.14.39 WorkCoder 介绍（2026-11-06）
+
+页面新增集成 WorkCoder 三角色协作、任务前选择目录、可选自动批准、启动后普通对话引导与默认关闭的研究探针（图表、JSON/CSV 导出）。保留原有媒体、历史版本与 Mac 下载重点；不承诺模型调用效果或 Token 节省。390/1440px 本地双语、语言持久化、七个精确下载地址及无横向溢出检查通过。3.14.39 完成跨平台安装验收并公开后，页面提交 ab0e6868795d658dfee8446c749afffd58bbb392 已推送，GitHub Pages 部署 42317839119 正在完成。
