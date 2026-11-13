@@ -1,7 +1,7 @@
 {
   "date": "2026-11-13",
   "version": "3.14.40",
-  "status": "published-verifying-downloads",
+  "status": "published-verified",
   "source": "74f95f6890641d786c560759ba1f9ffe1665df4c",
   "release": "https://github.com/bennix/ZCode/releases/tag/v3.14.40",
   "runs": {
@@ -9,7 +9,9 @@
     "linuxBuild": 43412495911,
     "candidateInstalledVerify": 43415772475,
     "stageAssets": 43415778130,
-    "stageWindowsMetadata": 43415784829
+    "stageWindowsMetadata": 43415784829,
+    "publishedInstalledVerify": 43417347455,
+    "landingDeployment": 43418460948
   },
   "checks": {
     "packagedGuidedWorkspace": true,
@@ -24,7 +26,15 @@
     "coreLintErrors": 0,
     "coreLintWarnings": 12,
     "allAssetDigestsVerified": true,
-    "candidateInstalledVerify": true
+    "candidateInstalledVerify": true,
+    "publicMacAnonymousDownload": true,
+    "publicMacManifestByteMatch": true,
+    "publicLandingSevenDownloads": true,
+    "publicLandingBilingualCopy": true,
+    "landingPerLocaleDictionary": true,
+    "publishedInstalledVerify": true,
+    "landingDeployment": true,
+    "publicLandingPerLocaleDictionary": true
   },
   "notarization": {
     "dmg": {
@@ -241,5 +251,6 @@
       "size": 319922948,
       "digest": "sha256:138a6344753f4e1fc8db703f3a782906a43ab4508803fefe80198ab56d36587d"
     }
-  ]
+  ],
+  "landingCommit": "37eb42ec72bcbd1b86c37c3673a847953b935ae2"
 }

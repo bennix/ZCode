@@ -194,3 +194,5 @@ sequenceDiagram
 3.14.40 构建源码为 `74f95f6890641d786c560759ba1f9ffe1665df4c`。Windows 构建 `43412489519`、Linux 构建 `43412495911`，独立安装验收 `43415772475` 均成功。资产暂存 `43415778130`、Windows 更新清单 `43415784829` 成功，40 个文件已核对摘要。DMG 公证 `c8485572-7a12-4566-80b4-1fae6399a6eb`、ZIP 公证 `05518fd3-76a4-4ca3-8dde-3985534e87fa` 均 Accepted。DMG 装订、挂载 App 严格签名与 Gatekeeper 检查通过。Mac 打包版引导入口、更新与 Computer Use 设置三项 E2E 通过。公开为 Latest 后执行正式下载复验。
 
 本地 `release-artifacts/ZenCode-3.14.40-mac-arm64.dmg` 的 SHA-256 为 `78536b4154e5b34595bbf7b2931a82fa5a8e5a6fd466b597a3929ed2620ec05f`，旧 3.14.39 DMG 已删除。
+
+正式下载复验 `43417347455` 的 Windows x64/ARM64 与 Linux 两架构 DEB/RPM 六项全部成功。Mac DMG 匿名下载的大小和摘要与本地已装订文件一致，正式 latest-mac.yml 逐字节匹配。最终 Landing Page 部署 `43418460948` 成功，线上逐语言词典和七个下载地址通过检查。完整记录见 `desktop-release-audit-2026-11-13.json`。
