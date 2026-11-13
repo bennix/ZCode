@@ -1,3 +1,4 @@
+import { resolveTitleModelSelection } from "../helpers/title-model-selection.js";
 import { SessionEventType, traceContextToLogContext } from "../deps.js";
 import type {
   MessageId,
@@ -160,8 +161,7 @@ function shouldAttemptSessionTitleGeneration(
 function shouldDeferSessionTitleForRuntimeHeaders(runtime: AgentRuntimeInternal): boolean {
   const runtimeHeadersPort = runtime.providerRuntimeHeadersPort;
   if (!runtimeHeadersPort) return false;
-  const selection =
-    runtime.config.titleGeneration?.modelSelection ?? runtime.getSessionModelSelection();
+  const selection = resolveTitleModelSelection(runtime.config, runtime.getSessionModelSelection());
   if (!selection) return true;
   return (
     runtimeHeadersPort.shouldRefreshBeforeModelRequest?.({

@@ -158,3 +158,23 @@ function positiveInt(value: number | undefined): number | undefined {
   if (value === undefined || !Number.isFinite(value) || value < 0) return undefined;
   return Math.floor(value);
 }
+
+export function resolveRuntimeCompactConfig(
+  config: AutoCompactPolicyConfig | undefined,
+  modelContextWindow: number | undefined,
+): AutoCompactPolicyConfig {
+  // 所有任务在请求前统一维护历史，避免大容量模型反复携带过量旧工具输出。
+  // 每次按当前模型解析，切换模型后不会保留过大的维护窗口。
+  return {
+    ...config,
+    contextWindow: Math.min(
+      positiveInt(config?.contextWindow) ?? 128_000,
+      positiveInt(modelContextWindow) ?? DEFAULT_COMPACT_CONTEXT_WINDOW,
+    ),
+    microcompact: {
+      enabled: true,
+      keepRecentToolResults: 5,
+      ...config?.microcompact,
+    },
+  };
+}

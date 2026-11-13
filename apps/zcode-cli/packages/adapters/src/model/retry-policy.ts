@@ -10,7 +10,8 @@ export type ResolvedAiSdkModelRetryOptions = Required<AiSdkModelRetryOptions>;
 
 type EnvRecord = Record<string, string | undefined>;
 
-const DEFAULT_MAX_RETRIES = 10;
+// 默认十次重试会让不可达线路持续等待数分钟；普通任务缩为两次，显式配置仍优先。
+const DEFAULT_MAX_RETRIES = 2;
 const DEFAULT_RETRY_BASE_DELAY_MS = 2_000;
 const DEFAULT_RETRY_BACKOFF_FACTOR = 2;
 const DEFAULT_RETRY_MAX_DELAY_MS = 60_000;

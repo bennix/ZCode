@@ -168,6 +168,8 @@ nodes:
         symbol: SubagentsSection
       - file: apps/zcode-cli/packages/core/src/tool/handlers/agent.ts
         symbol: agentHandler
+      - file: apps/zcode-cli/packages/core/src/subagent/context-budget.ts
+        symbol: resolveSubagentCompactConfig
   - id: state.subagent-form-draft
     kind: state-owner
     label: Subagent form draft
@@ -207,6 +209,10 @@ nodes:
     codeSeeds:
       - file: apps/zcode-cli/packages/bootstrap/src/zcode-protocol-v4/v4-gateway.ts
         symbol: ConversationV4Gateway
+      - file: apps/zcode-cli/packages/core/src/compact/policy.ts
+        symbol: resolveRuntimeCompactConfig
+      - file: apps/zcode-cli/packages/core/src/runtime/helpers/title-model-selection.ts
+        symbol: resolveTitleModelSelection
       - file: apps/zcode-cli/packages/bootstrap/src/zcode-protocol-v4/commands/handlers/session-flow.ts
         symbol: sendText
   - id: state.conversation-projection

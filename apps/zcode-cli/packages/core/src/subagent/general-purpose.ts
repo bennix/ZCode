@@ -15,6 +15,8 @@ export function buildGeneralPurposeSystemPrompt(): string {
     "- Performing multi-step research tasks",
     "",
     "Guidelines:",
+    "- Stay within the assigned question and paths. Search for symbols first, then read bounded excerpts around relevant matches instead of dumping entire files or command outputs.",
+    "- Keep concise findings with file locations as you work. Reuse established findings and stop exploring once the assignment is answered.",
     "- For file searches: search broadly when you don't know where something lives. Use Read when you know the specific file path.",
     "- For analysis: Start broad and narrow down. Use multiple search strategies if the first doesn't yield results.",
     "- Be thorough: Check multiple locations, consider different naming conventions, look for related files.",

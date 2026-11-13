@@ -48,17 +48,13 @@ const GET_WORKFLOW_RUN_TIMEOUT_MS = 10_000;
 const GET_WORKFLOW_RUN_RESULT_BUDGET_BYTES = 400_000;
 const GET_WORKFLOW_RUN_PERSIST_THRESHOLD_CHARS = 100_000;
 
+// 精简每轮发送的重复说明，保留状态与恢复约束。
 const GET_WORKFLOW_RUN_DESCRIPTION = [
-  "Returns the current state of one dynamic-workflow run: progress, token usage and the tail of its log() narration while it runs; the final result once it completed; the structured failure if it errored or was stopped.",
-  "",
   WORKFLOW_RUN_INTROSPECTION_STEERING,
-  "",
-  "- Takes run_id — from CreateWorkflow's or AmendWorkflow's result, from a completion notification, or from ListWorkflowRuns.",
-  "- This is an instant snapshot and never waits. To block until a run THIS session started finishes, use TaskOutput instead: that is the waiting tool. GetWorkflowRun is the right tool when you must not wait, or when the run belongs to another session (TaskOutput cannot see those).",
-  "- The `artifacts` section lists what the run published for the user — files, documents and live dashboards that are ALREADY shown to them as cards. Refer to one by its title; do not paste its contents back. The one marked `primary` is the deliverable: point the user to it first.",
-  "- Three terminal states: `completed`; `errored` (the script itself failed — not resumable, amend it); `stopped` with a stop reason — `user` (cancelled on purpose: resume only when the user asks), `model` (your own TaskStop), `provider` (a provider-side error such as an expired sign-in, a model missing from the plan or a quota cap — the `<error>` block names the cause and the fix; resolve it with the user, then resume), `interrupted` (the process that owned the run exited — continuing it is usually what the user wants), `superseded` (an AmendWorkflow replaced it; `<superseded_by>` names the successor — read that run instead, never resume this one).",
-  "- A stopped run (other than a superseded one) can be continued with ResumeWorkflowRun — no rebuild needed, same run ID, same script.",
-  "- ANY run — completed, stopped, errored, or still running — can instead be revised with AmendWorkflow: pass its run ID and the corrected script, and the finished work is imported as cache. When the script itself errored, that is the move — fix the script and keep the work that already succeeded, rather than rewriting from scratch.",
+  "Read an instant snapshot by run_id from CreateWorkflow, AmendWorkflow, notifications or ListWorkflowRuns. Includes progress, usage, log tail, results and failure. Use TaskOutput to wait for a run started by this session. Cross-session runs use this snapshot tool.",
+  "Artifacts are already shown as user cards. Refer by title, primary deliverable first, without pasting contents.",
+  "Completed runs have results. Errored scripts require AmendWorkflow. Stopped runs can use ResumeWorkflowRun except superseded runs: read superseded_by instead, never resume the predecessor. Resume user-stopped runs only on user request. Resolve provider errors described in error with the user before resuming. Interrupted means the owning process exited. Model stop means TaskStop.",
+  "AmendWorkflow revises any run with corrected script and imports finished work as cache, stopping an active predecessor first.",
 ].join("\n");
 
 const getWorkflowRunHandler: ToolHandler = async (input, context) => {
@@ -173,9 +169,7 @@ const getWorkflowRunHandler: ToolHandler = async (input, context) => {
                   ? {}
                   : { contentType: artifact.contentType }),
                 ...(latest?.bytes === undefined ? {} : { bytes: latest.bytes }),
-                ...(artifact.sourcePath === undefined
-                  ? {}
-                  : { sourcePath: artifact.sourcePath }),
+                ...(artifact.sourcePath === undefined ? {} : { sourcePath: artifact.sourcePath }),
                 itemCount: artifact.itemCount,
                 ...(artifact.primary === true ? { primary: true as const } : {}),
               };
@@ -242,7 +236,8 @@ export const getWorkflowRunToolEntry: ToolEntry = {
   cancellation: {
     supported: false,
     cleanup: "none",
-    userVisibleMessage: "GetWorkflowRun reads the run journal synchronously and cannot be cancelled",
+    userVisibleMessage:
+      "GetWorkflowRun reads the run journal synchronously and cannot be cancelled",
   },
   trace: {
     required: true,

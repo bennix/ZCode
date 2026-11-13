@@ -29,17 +29,12 @@ const LIST_WORKFLOW_RUNS_TIMEOUT_MS = 10_000;
 /** 照 CreateWorkflow：列表刻意轻（单行 SQL 可答），24k 足够 50 行还留着余量。 */
 const LIST_WORKFLOW_RUNS_MODEL_BYTES = 24_000;
 
+// 精简每轮发送的重复说明，保留状态与恢复约束。
 const LIST_WORKFLOW_RUNS_DESCRIPTION = [
-  "Lists this project's dynamic-workflow runs (the session's working directory is the project key), most recently updated first. Includes runs started by other sessions — the run journal is per-project, not per-session.",
-  "",
   WORKFLOW_RUN_INTROSPECTION_STEERING,
-  "",
-  "- Each row gives the run ID, its label, lifecycle status, whether this session started it, tokens spent, and timestamps.",
-  '- `possibly_interrupted="true"` means this session cannot confirm the run is still alive: it may be a leftover from a process that exited, or a sibling session\'s run still in flight. It is an annotation, not a verdict — do not report it as a failure.',
-  "- Pass a run ID to GetWorkflowRun for progress detail, the log tail, the final result, or the failure.",
-  "- Three terminal states: `completed`; `errored` (the script itself failed); `stopped` with `stop_reason` — `user` (cancelled on purpose: resume only when the user asks), `model` (your own TaskStop), `provider` (a provider-side error stopped it: read GetWorkflowRun for the cause, resolve it with the user, then resume), `interrupted` (the owning process exited: continuing it is usually what the user wants), `superseded` (an AmendWorkflow replaced it; `superseded_by` names the live successor — never resume a superseded run).",
-  "- Any stopped run other than a superseded one can be continued with ResumeWorkflowRun — no rebuild needed, same run ID, same script. An errored run cannot.",
-  "- ANY run here — completed, stopped, errored, or still running — can instead be revised with AmendWorkflow: pass its run ID and the corrected script; the new run imports the old one's finished work as a warm cache (and stops it first if it is still running). A run whose script errored is the case to reach for it — fix the script instead of rewriting the workflow from scratch. `resumed_from` on a row names the run it was amended from.",
+  "List current-project workflow runs across sessions, newest updated first. Rows include ID, label, status, ownership, tokens and timestamps. possibly_interrupted is uncertainty, not confirmed failure. Use GetWorkflowRun for detail.",
+  "Completed runs have results. Errored scripts require AmendWorkflow. Stopped runs can use ResumeWorkflowRun except superseded runs: follow superseded_by instead. Resume user-stopped runs only on user request. Resolve provider errors with the user before resuming. Interrupted means the owning process exited. Model stop means TaskStop.",
+  "AmendWorkflow can revise any run using corrected script and finished-work cache, stopping an active predecessor first. resumed_from identifies the amended predecessor.",
 ].join("\n");
 
 const listWorkflowRunsHandler: ToolHandler = async (input, context) => {
@@ -183,7 +178,8 @@ export const listWorkflowRunsToolEntry: ToolEntry = {
   cancellation: {
     supported: false,
     cleanup: "none",
-    userVisibleMessage: "ListWorkflowRuns reads the run journal synchronously and cannot be cancelled",
+    userVisibleMessage:
+      "ListWorkflowRuns reads the run journal synchronously and cannot be cancelled",
   },
   trace: {
     required: true,

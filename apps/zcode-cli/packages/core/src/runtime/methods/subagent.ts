@@ -47,6 +47,7 @@ import { getSessionShellEnvironment } from "./session-shell-environment.js";
 import { deriveChildClientPorts } from "../helpers/child-client-ports.js";
 import { createCoordinatorResponsePort } from "../../subagent/coordinator-response.js";
 import { isStaleBranchRuntimeTaskEvent } from "./runtime-command-generation.js";
+import { resolveSubagentCompactConfig } from "../../subagent/context-budget.js";
 import { loadPersistentAgentMemory } from "../../subagent/persistent-memory.js";
 import {
   createOfficialCuaPolicy,
@@ -248,6 +249,10 @@ export function createDefaultSubagentPort(
           // finally 清理，快照不会成为可恢复的 session 配置。
           modelSelection: cloneModelSelection(childSelection),
           modelContextBudgetStrategy: this.config.modelContextBudgetStrategy,
+          compact: resolveSubagentCompactConfig(
+            this.config.compact,
+            childModel.properties.contextWindow,
+          ),
           workingDirectory: request.workingDirectory,
           // 执行模型只由 child Active Model 投影进 Context；envInfo 不保存第二份模型事实。
           envInfo: childRuntimeEnvInfo,

@@ -1,3 +1,4 @@
+import { resolveRuntimeCompactConfig } from "../../compact/policy.js";
 import {
   CompactPhase,
   CompactReason,
@@ -191,8 +192,7 @@ export async function autoCompactIfNeeded(
   throwIfTurnAborted(abortSignal);
 
   const config: AutoCompactPolicyConfig = {
-    contextWindow: context.model.properties.contextWindow,
-    ...this.config.compact,
+    ...resolveRuntimeCompactConfig(this.config.compact, context.model.properties.contextWindow),
     maxOutputTokens: resolveNormalRequestMaxOutputTokens({
       modelMaxOutputTokens: context.model.optionSpecs.maxOutputTokens.max,
     }),

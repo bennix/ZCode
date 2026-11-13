@@ -111,7 +111,8 @@ function buildAgentProviderDescription(
     "Reach for this when the task matches an available agent type, when you have independent work to run in parallel, or when answering would mean reading across several files — delegate it and you keep the conclusion, not the file dumps. For a single-fact lookup where you already know the file, symbol, or value, search directly. Once you've delegated a search, don't also run it yourself — wait for the result.",
     "",
     "- The agent's final message is returned to you as the tool result; it is not shown to the user — relay what matters.",
-    "- A new Agent call starts fresh, so the prompt must be self-contained.",
+    "- A new Agent call starts fresh, so the prompt must be self-contained. Include the specific question, relevant paths, and expected concise result rather than the full conversation.",
+    "- Use Explore for read-only repository lookup when available. Reserve general-purpose for complex analysis or implementation. Give parallel agents non-overlapping scopes and request bounded excerpts.",
     "- `run_in_background: true` runs the agent asynchronously; you'll be notified when it completes.",
     "- When you launch multiple agents for independent work, send them in a single message with multiple tool uses so they run concurrently.",
     // 只保留「用户点名工作流」这一种情形：工作流一律由用户显式请求触发，与系统提示词其余
