@@ -200,3 +200,5 @@ sequenceDiagram
 ## 3.14.41 候选（2026-11-16）
 
 纳入按需加载的专业工作与工程六阶段向导、ZenMux 模型成本档位、Chrome DevTools 内置插件及 TokenEconomizer 优化。同一源码提交构建 Mac arm64、Windows x64/arm64 和 Linux x64/arm64 DEB/RPM。Mac 必须通过签名、公证、装订和 Gatekeeper；候选安装验收通过后公开 Release。仅在新 DMG 校验成功并存入 release-artifacts 后清理本地旧 ZenCode DMG，失败时保留上一版。
+
+3.14.41 候选构建发现 Windows ARM runner 的 PowerShell 5 继承了 PowerShell 7 模块路径，Expand-Archive 调用不兼容的三参数 .NET API 后未正确失败。原生 ZIP 解包改为直接调用 .NET ZipFile 两参数 API，并设置 ErrorActionPreference=Stop；解包目录仍为本次构建独立临时目录。所有架构重新使用修正后的同一提交构建。

@@ -45,7 +45,9 @@ export function extractPrebuiltArchive({ archivePath, archiveExt, extractDir, cw
         "-ExecutionPolicy",
         "Bypass",
         "-Command",
-        `Expand-Archive -LiteralPath '${archivePath.replaceAll("'", "''")}' -DestinationPath '${extractDir.replaceAll("'", "''")}' -Force`,
+        // Windows runner 的 PS7 模块路径会污染 powershell.exe（PS5）的 Expand-Archive。
+        // 直接使用两个版本共有的 .NET API，并将解包错误设为终止错误，避免假成功。
+        `$ErrorActionPreference = 'Stop'; Add-Type -AssemblyName System.IO.Compression.FileSystem; [System.IO.Compression.ZipFile]::ExtractToDirectory('${archivePath.replaceAll("'", "''")}', '${extractDir.replaceAll("'", "''")}')`,
       ]);
       return;
     }
