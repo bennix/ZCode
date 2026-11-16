@@ -202,3 +202,7 @@ sequenceDiagram
 纳入按需加载的专业工作与工程六阶段向导、ZenMux 模型成本档位、Chrome DevTools 内置插件及 TokenEconomizer 优化。同一源码提交构建 Mac arm64、Windows x64/arm64 和 Linux x64/arm64 DEB/RPM。Mac 必须通过签名、公证、装订和 Gatekeeper；候选安装验收通过后公开 Release。仅在新 DMG 校验成功并存入 release-artifacts 后清理本地旧 ZenCode DMG，失败时保留上一版。
 
 3.14.41 候选构建发现 Windows ARM runner 的 PowerShell 5 继承了 PowerShell 7 模块路径，Expand-Archive 调用不兼容的三参数 .NET API 后未正确失败。原生 ZIP 解包改为直接调用 .NET ZipFile 两参数 API，并设置 ErrorActionPreference=Stop；解包目录仍为本次构建独立临时目录。所有架构重新使用修正后的同一提交构建。
+
+### 3.14.41 发布验收
+
+源码及 tag 为 `fd3486211d9f177454ec9339beae0514a3f4fe9f`。Windows 构建 `43858515747`、Linux 构建 `43858514669`、Linux 独立安装 `43861525162` 和 Windows 独立安装 `43862105198` 全部成功。40 个发布资产已完成摘要校验。DMG 公证 `c2c5a111-50e0-4182-a6f4-6865f5835774` 与 ZIP 公证 `7566490d-4d34-4fed-9995-e077e92f477c` 均 Accepted；DMG 装订、挂载 App 深度严格签名及 Gatekeeper 检查通过。已公开 Latest，正式下载复验 `43863904757` 正在运行。本地只保留 release-artifacts 下最新公证 DMG，六个旧 DMG 和重复构建副本已清理。
