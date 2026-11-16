@@ -54,10 +54,10 @@ jobs:
         include:
           - runner: windows-latest
             arch: x64
-            sha256: 138a6344753f4e1fc8db703f3a782906a43ab4508803fefe80198ab56d36587d
+            sha256: 46eadf89d8a81cc806a2c3c340b23669149205a9bdda7e9b574913a966c74618
           - runner: windows-11-arm
             arch: arm64
-            sha256: 7973ecac5afda9488141767e306f548175062e00f0a3460f4b4295108112fb3c
+            sha256: fabf0a3c00f4c9ffad5733af0973cb7e129eb536a89b12d3ebc517bb79a15ed9
     runs-on: ${{ matrix.runner }}
     timeout-minutes: 90
     steps:
@@ -164,10 +164,10 @@ jobs:
         include:
           - runner: ubuntu-24.04
             arch: amd64
-            sha256: eac83273da292e4ca2558f5614bcdf189735c850e094ec2c91b3a8fd3c0d2899
+            sha256: 7cc7db1561de7f6371a0ffd52254d78869fe7026e9685b2469d6911506492f19
           - runner: ubuntu-24.04-arm
             arch: arm64
-            sha256: 17bfeda939649e742b3a0a52fefb4b4380fdc5019e91c4a829367c05c91ba960
+            sha256: 9cc7e1a63a32cac8c38edb3467c1bee1bc13fb6e1051f5bfb63fd424dd230bda
     runs-on: ${{ matrix.runner }}
     timeout-minutes: 90
     steps:
@@ -229,10 +229,10 @@ jobs:
         include:
           - runner: ubuntu-24.04
             arch: x86_64
-            sha256: 21a5259c53cc1030a24ec7bd9063995281dacb4a6bc70495dba4f2f5e41bb8dd
+            sha256: 763faf0e662b55308413ec323a0ba9df2e65b1f8ae3c35326686cf130fcb2671
           - runner: ubuntu-24.04-arm
             arch: aarch64
-            sha256: feb73140d1353ba9afdd07077398f6397d6a17c9fc67fbbb9957ce41f424f78b
+            sha256: b96a481fb22a5d6578930a46540c78bf1f8ea11eb92d3a145843d6b5a58883fb
     runs-on: ${{ matrix.runner }}
     timeout-minutes: 90
     steps:
