@@ -144,8 +144,7 @@ const officialPluginPackages = [
     requiredSeedPaths: [
       ".zcode-plugin/plugin.json",
       "README.md",
-  "LICENSE",
-  "ZENCode-NOTICE.md",
+      // CUA 没有专业插件的独立许可/适配文件，不能将通用复制项当作其必需资产。
       "docs/computer-use.md",
       "scripts/computer-use-client.mjs",
       "skills/computer-use/SKILL.md",

@@ -44,3 +44,23 @@ test("DevTools package is version pinned, offline at runtime, telemetry disabled
   }
   assert.match(await readFile(`${root}/commands/ship.md`, "utf8"), /knowledge-engineering:shipping-and-launch/);
 });
+
+test("desktop plugin seed requirements reference real source assets", async () => {
+ const { default: ts } = await import("typescript");
+ const source = ts.createSourceFile("assets.mjs", await readFile("packages/desktop/scripts/prepare-agent-node-bundle.mjs", "utf8"), ts.ScriptTarget.Latest, true, ts.ScriptKind.JS);
+ const checks = [];
+ const visit = (node) => {
+  if (ts.isObjectLiteralExpression(node)) {
+   const property = (name) => node.properties.find((item) => ts.isPropertyAssignment(item) && item.name.getText(source) === name)?.initializer;
+   const root = property("relativePath");
+   const seeds = property("requiredSeedPaths");
+   if (root && ts.isStringLiteral(root) && seeds && ts.isArrayLiteralExpression(seeds)) {
+    for (const seed of seeds.elements) if (ts.isStringLiteral(seed)) checks.push(access(`${root.text}/${seed.text}`));
+   }
+  }
+  ts.forEachChild(node, visit);
+ };
+ visit(source);
+ assert.ok(checks.length > 0);
+ await Promise.all(checks);
+});
