@@ -205,4 +205,6 @@ sequenceDiagram
 
 ### 3.14.41 发布验收
 
-源码及 tag 为 `fd3486211d9f177454ec9339beae0514a3f4fe9f`。Windows 构建 `43858515747`、Linux 构建 `43858514669`、Linux 独立安装 `43861525162` 和 Windows 独立安装 `43862105198` 全部成功。40 个发布资产已完成摘要校验。DMG 公证 `c2c5a111-50e0-4182-a6f4-6865f5835774` 与 ZIP 公证 `7566490d-4d34-4fed-9995-e077e92f477c` 均 Accepted；DMG 装订、挂载 App 深度严格签名及 Gatekeeper 检查通过。已公开 Latest，正式下载复验 `43863904757` 正在运行。本地只保留 release-artifacts 下最新公证 DMG，六个旧 DMG 和重复构建副本已清理。
+源码及 tag 为 `fd3486211d9f177454ec9339beae0514a3f4fe9f`。Windows 构建 `43858515747`、Linux 构建 `43858514669`、Linux 独立安装 `43861525162` 和 Windows 独立安装 `43862105198` 全部成功。40 个发布资产已完成摘要校验。DMG 公证 `c2c5a111-50e0-4182-a6f4-6865f5835774` 与 ZIP 公证 `7566490d-4d34-4fed-9995-e077e92f477c` 均 Accepted；DMG 装订、挂载 App 深度严格签名及 Gatekeeper 检查通过。已公开 Latest，正式下载复验 `43863904757` 的六项 Windows/Linux 安装检查全部成功。本地只保留 release-artifacts 下最新公证 DMG，六个旧 DMG 和重复构建副本已清理。
+
+Mac 正式 DMG 匿名下载摘要及装订校验通过，latest-mac.yml 与本地最终清单逐字节一致。Landing Page 部署 `43863910568` 成功，线上内容与经过双语、响应式和七个下载链接检查的源码一致。完整证据见 `desktop-release-audit-2026-11-16.json`。

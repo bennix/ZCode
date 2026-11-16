@@ -1,7 +1,7 @@
 {
   "date": "2026-11-16",
   "version": "3.14.41",
-  "status": "published-public-verification-running",
+  "status": "published-and-verified",
   "source": "fd3486211d9f177454ec9339beae0514a3f4fe9f",
   "release": "https://github.com/bennix/ZCode/releases/tag/v3.14.41",
   "runs": {
@@ -25,7 +25,14 @@
     "macDeepSignature": true,
     "macGatekeeper": "Notarized Developer ID",
     "macStapler": true,
-    "assetCount": 40
+    "assetCount": 40,
+    "publicMacDigest": true,
+    "publicMacStapler": true,
+    "publicMacUpdateMetadata": true,
+    "landingDeployment": true,
+    "landingMatchesVerifiedSource": true,
+    "localDmgCount": 1,
+    "publicInstalledAllSix": true
   },
   "notarization": {
     "dmg": {
