@@ -196,3 +196,7 @@ sequenceDiagram
 本地 `release-artifacts/ZenCode-3.14.40-mac-arm64.dmg` 的 SHA-256 为 `78536b4154e5b34595bbf7b2931a82fa5a8e5a6fd466b597a3929ed2620ec05f`，旧 3.14.39 DMG 已删除。
 
 正式下载复验 `43417347455` 的 Windows x64/ARM64 与 Linux 两架构 DEB/RPM 六项全部成功。Mac DMG 匿名下载的大小和摘要与本地已装订文件一致，正式 latest-mac.yml 逐字节匹配。最终 Landing Page 部署 `43418460948` 成功，线上逐语言词典和七个下载地址通过检查。完整记录见 `desktop-release-audit-2026-11-13.json`。
+
+## 3.14.41 候选（2026-11-16）
+
+纳入按需加载的专业工作与工程六阶段向导、ZenMux 模型成本档位、Chrome DevTools 内置插件及 TokenEconomizer 优化。同一源码提交构建 Mac arm64、Windows x64/arm64 和 Linux x64/arm64 DEB/RPM。Mac 必须通过签名、公证、装订和 Gatekeeper；候选安装验收通过后公开 Release。仅在新 DMG 校验成功并存入 release-artifacts 后清理本地旧 ZenCode DMG，失败时保留上一版。

@@ -3,6 +3,7 @@ import { useState } from "react";
 export type ComposerWorkspaceEntry =
   | "conversation"
   | "workcoder"
+  | "knowledge"
   | "probes"
   | "workspace"
   | "studio";

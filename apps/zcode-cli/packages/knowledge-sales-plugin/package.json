@@ -1,0 +1,7 @@
+{
+  "name": "@zcode/knowledge-sales-plugin",
+  "version": "2.1.0",
+  "private": true,
+  "type": "module",
+  "license": "Apache-2.0"
+}

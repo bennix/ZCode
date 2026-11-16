@@ -302,6 +302,12 @@ importers:
         specifier: ^5.9.0
         version: 5.9.3
 
+  apps/zcode-cli/packages/chrome-devtools-plugin:
+    dependencies:
+      chrome-devtools-mcp:
+        specifier: 1.13.0
+        version: 1.13.0
+
   apps/zcode-cli/packages/cli:
     dependencies:
       '@zcode/adapters':
@@ -471,6 +477,30 @@ importers:
       '@zcode/contracts':
         specifier: workspace:*
         version: link:../contracts
+
+  apps/zcode-cli/packages/knowledge-bio-research-plugin: {}
+
+  apps/zcode-cli/packages/knowledge-cowork-plugin-management-plugin: {}
+
+  apps/zcode-cli/packages/knowledge-customer-support-plugin: {}
+
+  apps/zcode-cli/packages/knowledge-data-plugin: {}
+
+  apps/zcode-cli/packages/knowledge-engineering-plugin: {}
+
+  apps/zcode-cli/packages/knowledge-enterprise-search-plugin: {}
+
+  apps/zcode-cli/packages/knowledge-finance-plugin: {}
+
+  apps/zcode-cli/packages/knowledge-legal-plugin: {}
+
+  apps/zcode-cli/packages/knowledge-marketing-plugin: {}
+
+  apps/zcode-cli/packages/knowledge-product-management-plugin: {}
+
+  apps/zcode-cli/packages/knowledge-productivity-plugin: {}
+
+  apps/zcode-cli/packages/knowledge-sales-plugin: {}
 
   apps/zcode-cli/packages/node-repl-host:
     dependencies:
@@ -5663,6 +5693,19 @@ packages:
   chownr@3.0.0:
     resolution: {integrity: sha512-+IxzY9BZOQd/XuYPRmrvEVjF/nqj5kgT4kEq7VofrDoM1MxoRjEWkrCC3EtLi59TVawxTAn+orJwFQcrqEN1+g==}
     engines: {node: '>=18'}
+
+  chrome-devtools-mcp@1.13.0:
+    resolution: {integrity: sha512-Yf4qhS0+2oo7c+gOySMDHQt4ZL/yKXG2Mxxzjk0gcArINtcQ3tLiQVzAW6g2nsyQzAGhkcLwWWBAtlx3Bg+Spg==}
+    engines: {node: ^20.19.0 || ^22.12.0 || >=23}
+    hasBin: true
+    peerDependencies:
+      '@blackwell-systems/gcf': ^2.2.2
+      '@toon-format/toon': ^4.1.0
+    peerDependenciesMeta:
+      '@blackwell-systems/gcf':
+        optional: true
+      '@toon-format/toon':
+        optional: true
 
   chromium-pickle-js@0.2.0:
     resolution: {integrity: sha512-1R5Fho+jBq0DDydt+/vHWj5KJNJCKdARKOCwZUen84I5BreWoLqRLANH1U87eJy1tiASPtMnGqJJq0ZsLoRPOw==}
@@ -14262,6 +14305,8 @@ snapshots:
       readdirp: 5.0.0
 
   chownr@3.0.0: {}
+
+  chrome-devtools-mcp@1.13.0: {}
 
   chromium-pickle-js@0.2.0: {}
 

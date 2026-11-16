@@ -1,0 +1,13 @@
+{
+  "name": "@zcode/chrome-devtools-plugin",
+  "version": "1.13.0",
+  "private": true,
+  "type": "module",
+  "license": "Apache-2.0",
+  "scripts": {
+    "build": "node scripts/build.mjs"
+  },
+  "dependencies": {
+    "chrome-devtools-mcp": "1.13.0"
+  }
+}

@@ -1,3 +1,4 @@
+import { knowledgePluginAssets } from "../../../../../scripts/knowledge-plugin-assets.mjs";
 import { createHash } from "node:crypto";
 import { mkdir, readdir, readFile, rm, stat, writeFile } from "node:fs/promises";
 import { existsSync } from "node:fs";
@@ -18,6 +19,8 @@ const browserUseRequiredRuntimePaths = [
 ];
 
 export const officialSeaPlugins = [
+  ...knowledgePluginAssets.map((plugin) => ({ ...plugin, marketplace: "zcode-plugins-official", rootPath: plugin.stagedPath })),
+  { marketplace: "zcode-plugins-official", name: "chrome-devtools", packageName: "@zcode/chrome-devtools-plugin", version: "1.13.0", rootPath: "packages/chrome-devtools-plugin", requiresRuntime: true, requiredRuntimePaths: ["dist/mcp/server.js", "dist/vendor/out/Default/gen/src/bin/chrome-devtools-mcp.js", "dist/vendor/out/Default/gen/src/bin/chrome-devtools.js"] },
   {
     // node_repl 宿主：Browser Use 与 Computer Use 共用的运行时产物，自己不是面向用户的插件
     // （无 skill、无市场 listing）。它必须始终随发布物嵌入，否则任一能力启用时都没有宿主可跑。
@@ -187,6 +190,8 @@ const includedTopLevelPaths = new Set([
   ".mcp.json",
   ".zcode-plugin",
   "README.md",
+  "LICENSE",
+  "ZENCode-NOTICE.md",
   // SEA 资源采集曾只允许 skills/commands，导致 document-skills 的 judge 子代理未进入可执行文件。
   "agents",
   "commands",
@@ -197,6 +202,7 @@ const includedTopLevelPaths = new Set([
   "package.json",
   "scripts",
   "skills",
+  "references",
   "templates",
 ]);
 

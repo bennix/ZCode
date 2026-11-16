@@ -1,0 +1,12 @@
+{
+  "name": "knowledge-engineering",
+  "version": "0.6.16",
+  "description": "Guided engineering lifecycle: requirements, planning, implementation, verification, review and shipping. 25 skills with on-demand meta routing.",
+  "author": {
+    "name": "Addy Osmani"
+  },
+  "license": "MIT",
+  "skills": "skills",
+  "commands": "commands",
+  "agents": "agents"
+}

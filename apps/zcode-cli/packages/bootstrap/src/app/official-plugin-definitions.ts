@@ -1,3 +1,4 @@
+import { KNOWLEDGE_PLUGIN_DEFINITIONS } from "./knowledge-plugin-definitions.js";
 import { ZCODE_OFFICIAL_PLUGIN_MARKETPLACE } from "@zcode/contracts";
 
 // 内置插件的商店信息 seed（原样写入官方 marketplace.json 的条目 raw，键名与 CDN 目录
@@ -95,6 +96,21 @@ const OFFICIAL_ZCODE_GUIDE_REQUIRED_SEED_PATHS = [
 ] as const;
 
 export const OFFICIAL_PLUGIN_DEFINITIONS: readonly OfficialPluginDefinition[] = [
+  ...KNOWLEDGE_PLUGIN_DEFINITIONS,
+  {
+    name: "chrome-devtools", version: "1.13.0",
+    listing: {
+      author: { name: "Chrome DevTools", url: "https://github.com/ChromeDevTools/chrome-devtools-mcp" },
+      category: "developer-tools", displayName: "Chrome DevTools",
+      displayName_i18n: { "zh-CN": "Chrome 开发者工具" },
+      description_i18n: { "zh-CN": "分析 Chrome 性能、网络、内存与无障碍问题，提供官方 MCP、CLI 和专业技能。" },
+      examplePrompts: ["Analyze performance and accessibility of my local web application"],
+      examplePrompts_i18n: { "zh-CN": ["分析我的本地网页性能和无障碍问题，先确认目标地址"] },
+    },
+    rootCandidates: ["packages/chrome-devtools-plugin", "../chrome-devtools-plugin", "../../chrome-devtools-plugin", "../../../chrome-devtools-plugin"],
+    requiredSeedPaths: [".zcode-plugin/plugin.json", "dist/mcp/server.js", "scripts/server.mjs", "scripts/cli.mjs", "dist/vendor/out/Default/gen/src/bin/chrome-devtools-mcp.js", "dist/vendor/out/Default/gen/src/bin/chrome-devtools.js", "skills/chrome-devtools/SKILL.md", "LICENSE"],
+    runtimeTopLevelPaths: ["LICENSE"],
+  },
   {
     // 无 listing：宿主不进市场、不对用户露出。它必须始终可用，因为 node_repl 的注册门禁
     // 是「Browser Use 或 Computer Use 任一启用」，宿主自己不参与那个判断。

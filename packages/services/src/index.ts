@@ -323,3 +323,4 @@ export type {
   WorkCoderRunOptions,
 } from "./workcoder/workcoder.js";
 export { ensureWorkCoderResearchModel } from "./workcoder/workcoderModelSetup.js";
+export { loadZenMuxModelTiers, parseZenMuxModelTiers, type ModelCostTier, type ZenMuxTierModel } from "./model-provider/zenmuxModelTiers.js";

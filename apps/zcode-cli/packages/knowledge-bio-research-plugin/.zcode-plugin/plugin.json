@@ -1,0 +1,10 @@
+{
+  "version": "1.2.0",
+  "description": "Connect to preclinical research tools and databases (literature search, genomics analysis, target prioritization) to accelerate early-stage life sciences R&D",
+  "author": {
+    "name": "Anthropic"
+  },
+  "name": "knowledge-bio-research",
+  "license": "Apache-2.0",
+  "skills": "skills"
+}

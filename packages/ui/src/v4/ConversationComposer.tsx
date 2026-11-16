@@ -1,3 +1,4 @@
+import { KnowledgeWorkspace } from "@/v4/composer/knowledge/KnowledgeWorkspace.js";
 import { useComposerWorkspaceNavigation } from "@/hooks/useComposerWorkspaceNavigation.js";
 import { WorkCoderWorkspace } from "@/v4/composer/workcoder/WorkCoderWorkspace.js";
 import { ResearchProbePanel } from "@/v4/composer/workcoder/ResearchProbePanel.js";
@@ -602,6 +603,7 @@ function ConversationComposerImpl({
   const navigation = useComposerWorkspaceNavigation();
   const { workcoderVisited } = navigation;
   const workcoderOpen = navigation.entry === "workcoder";
+  const knowledgeOpen = navigation.entry === "knowledge";
   const probesOpen = navigation.entry === "probes";
   useResearchProbe(workspacePath, workspaceIdentity, remoteSessionId);
   const workspaceOpen = navigation.entry === "workspace";
@@ -2308,6 +2310,9 @@ function ConversationComposerImpl({
         >
           WorkCoder
         </Button>
+        <Button type="button" variant={knowledgeOpen ? "secondary" : "ghost"} aria-pressed={knowledgeOpen} onClick={() => navigation.select("knowledge")}>
+          {intl.formatMessage({ id: "chat.knowledge.title" })}
+        </Button>
         <Button
           type="button"
           variant={probesOpen ? "secondary" : "ghost"}
@@ -2339,12 +2344,19 @@ function ConversationComposerImpl({
         </div>
       ) : null}
       {/* 辅助面板曾直接撑高底部 dock，小窗口会顶进 macOS 标题栏；限制高度并在面板内滚动。 */}
-      {workspaceOpen || studioOpen || workcoderVisited || probesOpen ? (
+      {workspaceOpen || studioOpen || workcoderVisited || probesOpen || knowledgeOpen ? (
         <div
           data-testid="composer-guided-panel"
-          hidden={!workspaceOpen && !studioOpen && !workcoderOpen && !probesOpen}
+          hidden={!workspaceOpen && !studioOpen && !workcoderOpen && !probesOpen && !knowledgeOpen}
           className="mb-3 max-h-[min(60dvh,calc(100dvh-14rem))] min-h-0 overflow-y-auto overscroll-contain rounded-2xl max-sm:max-h-[min(48dvh,calc(100dvh-21rem))]"
         >
+          {knowledgeOpen ? <KnowledgeWorkspace key={workspaceKey} workspacePath={workspacePath} workspaceIdentity={workspaceIdentity} remoteSessionId={remoteSessionId} modelSelectionView={modelSelectionView} onReady={(draft, selected) => {
+            const next = [textRef.current.trim(), draft].filter(Boolean).join("\n\n");
+            inputApiRef.current?.setTextWithPluginMentions(next);
+            updateText(next);
+            if (selected) onSelectModel(selected.provider, selected.model, null);
+            navigation.select("conversation");
+          }} /> : null}
           {probesOpen ? <ResearchProbePanel scope={workspaceKey} /> : null}
           {workcoderVisited ? (
             <div hidden={!workcoderOpen}>
@@ -2372,7 +2384,7 @@ function ConversationComposerImpl({
       <div
         className={cn(
           "chat-composer-input-surface w-full",
-          (workcoderOpen || probesOpen) && "hidden",
+          (workcoderOpen || probesOpen || knowledgeOpen) && "hidden",
           contextHeader && "rounded-2xl bg-surface shadow-xl/5",
         )}
       >

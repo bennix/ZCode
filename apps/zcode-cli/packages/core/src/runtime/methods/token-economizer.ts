@@ -1,9 +1,10 @@
+import { discoveryEntry, DISCOVER_TOOLS } from "../../token-economizer/discovery.js";
 import { SessionEventType } from "../deps.js";
 import type { ModelToolCall, TraceContext, ToolExecutionResult } from "../deps.js";
 import type { AgentRuntimeInternal } from "../internal.js";
 import type { RegularTurnLoopState } from "./turn-loop-state.js";
 import { TokenEconomizerSession, economizerOptions } from "../../token-economizer/session.js";
-import { digest, observeFailure } from "../../token-economizer/policy.js";
+import { digest, observeFailure, operationSignature } from "../../token-economizer/policy.js";
 import { systemReminderAttachmentEntry } from "../../agent/message-history.js";
 import { commitTurnRequestEntries } from "./turn-output-token-continuation.js";
 import { isErrorForToolResult } from "../helpers/tool-result.js";
@@ -31,6 +32,13 @@ export async function prepareTokenEconomizer(
   } catch {
     // 节流证据不是任务执行的前置条件；磁盘异常不应中止会话，也不输出包含用户路径的异常。
     runtime.logger?.warn("TokenEconomizer evidence unavailable; continuing without prior evidence");
+  }
+  if (session.hasDeferredCandidates()) {
+    if (!runtime.registry.get(DISCOVER_TOOLS)) {
+      runtime.registry.register(discoveryEntry((query) => session.discover(query)));
+      // compact 预检可能已缓存工具目录；注册恢复入口后必须走原有失效路径，否则永远不会裁剪。
+      runtime.invalidateToolCache();
+    } else session.options.toolprune = false;
   }
   const reminder = session.environmentReminder();
   if (reminder)
@@ -71,9 +79,17 @@ export async function observeTokenEconomizerResults(
       [record.stderr, record.stdout, typeof result.output === "string" ? result.output : ""]
         .filter((part) => typeof part === "string")
         .join("\n");
+    const cancelled = /cancel|abort|permissiondenied/i.test(result.error?.type ?? "");
     if (
+      settled &&
+      !cancelled &&
       session.options.loopguard &&
-      observeFailure(guard, failed, digest(`${result.toolName}:${errorText.slice(0, 16_384)}`))
+      observeFailure(
+        guard,
+        failed,
+        digest(errorText.slice(0, 16_384)),
+        operationSignature(result.toolName, call?.input),
+      )
     )
       nudge = result;
   }
@@ -88,7 +104,7 @@ export async function observeTokenEconomizerResults(
   commitTurnRequestEntries(runtime, state.turnRequestState, [
     systemReminderAttachmentEntry(
       "model_anomaly",
-      "TokenEconomizer: repeated identical failures persist without a successful tool result. Reconsider the hypothesis, inspect the failing expectation, and verify a materially different approach before repeating work. Do not stop solely because of this reminder; keep existing permissions and task requirements.",
+      "TokenEconomizer: repeated identical failures persist for the same operation. Reconsider the hypothesis, inspect the failing expectation, and verify a materially different approach before repeating work. Do not stop solely because of this reminder; keep existing permissions and task requirements.",
     ),
   ]);
   const event = runtime.createEvent(
@@ -97,7 +113,7 @@ export async function observeTokenEconomizerResults(
       category: "repeated_tool_call",
       severity: "warning",
       observedCount: guard.failures.length,
-      threshold: 6,
+      threshold: 3,
       toolName: nudge.toolName,
       warningInjected: true,
     },
@@ -115,5 +131,5 @@ export async function saveTokenEconomizer(runtime: AgentRuntimeInternal): Promis
   } catch {
     runtime.logger?.warn("TokenEconomizer summary could not be saved; task continues");
   }
-  runtime.logger?.debug("TokenEconomizer session statistics", { ...session.stats });
+  runtime.logger?.info("TokenEconomizer session statistics", { ...session.stats });
 }

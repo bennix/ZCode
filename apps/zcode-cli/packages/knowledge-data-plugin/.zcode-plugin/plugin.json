@@ -1,0 +1,10 @@
+{
+  "version": "1.1.0",
+  "description": "Write SQL, explore datasets, and generate insights faster. Build visualizations and dashboards, and turn raw data into clear stories for stakeholders.",
+  "author": {
+    "name": "Anthropic"
+  },
+  "name": "knowledge-data",
+  "license": "Apache-2.0",
+  "skills": "skills"
+}

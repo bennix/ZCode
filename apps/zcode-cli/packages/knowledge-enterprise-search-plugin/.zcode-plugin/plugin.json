@@ -1,0 +1,10 @@
+{
+  "version": "1.3.0",
+  "description": "Search across all of your company's tools in one place. Find anything across email, chat, documents, and wikis without switching between apps.",
+  "author": {
+    "name": "Anthropic"
+  },
+  "name": "knowledge-enterprise-search",
+  "license": "Apache-2.0",
+  "skills": "skills"
+}

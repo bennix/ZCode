@@ -1,0 +1,22 @@
+{
+  "name": "chrome-devtools",
+  "version": "1.13.0",
+  "description": "Chrome performance, network, accessibility and memory analysis with the official Chrome DevTools MCP and CLI. Requires Chrome.",
+  "author": {
+    "name": "Chrome DevTools"
+  },
+  "license": "Apache-2.0",
+  "skills": "skills",
+  "mcpServers": {
+    "chrome-devtools": {
+      "command": "node",
+      "args": [
+        "${CLAUDE_PLUGIN_ROOT}/dist/mcp/server.js"
+      ],
+      "env": {
+        "CHROME_DEVTOOLS_MCP_NO_USAGE_STATISTICS": "1",
+        "CHROME_DEVTOOLS_MCP_NO_UPDATE_CHECKS": "1"
+      }
+    }
+  }
+}

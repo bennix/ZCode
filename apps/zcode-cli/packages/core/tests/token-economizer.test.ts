@@ -54,7 +54,7 @@ test("description projection preserves unique paragraphs and code blocks", () =>
 test("loop guard only nudges repeated failures once and ignores successful polling", () => {
   const state = { total: 0, failures: [] as string[], nudged: false };
   for (let i = 0; i < 30; i++) assert.equal(observeFailure(state, false, "same"), false);
-  for (let i = 0; i < 5; i++) assert.equal(observeFailure(state, true, "same"), false);
+  for (let i = 0; i < 2; i++) assert.equal(observeFailure(state, true, "same"), false);
   assert.equal(observeFailure(state, true, "same"), true);
   for (let i = 0; i < 20; i++) assert.equal(observeFailure(state, true, "same"), false);
   const changing = { total: 20, failures: [] as string[], nudged: false };
@@ -97,4 +97,18 @@ test("resaving an old session cannot make stale environment evidence newer than 
     ),
     [],
   );
+});
+
+test("unrelated success does not hide a loop, but changed arguments and actual recovery do", () => {
+  const state = { total: 0, failures: [] as string[], nudged: false };
+  assert.equal(observeFailure(state, true, "error", "build"), false);
+  assert.equal(observeFailure(state, false, "", "read"), false);
+  assert.equal(observeFailure(state, true, "error", "build"), false);
+  assert.equal(observeFailure(state, true, "error", "different-build"), false);
+  assert.equal(observeFailure(state, true, "error", "build"), true);
+  const recovered = { total: 0, failures: [] as string[], nudged: false };
+  observeFailure(recovered, true, "error", "build");
+  observeFailure(recovered, true, "error", "build");
+  observeFailure(recovered, false, "", "build");
+  assert.equal(observeFailure(recovered, true, "error", "build"), false);
 });

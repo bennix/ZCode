@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import { knowledgePluginAssets } from "./knowledge-plugin-assets.mjs";
 /* eslint-disable max-lines */
 
 import { access, cp, mkdir } from "node:fs/promises";
@@ -105,6 +106,15 @@ const browserUseRequiredRuntimePaths = [
   "skills/web-gui-tester/SKILL.md",
 ];
 const remoteOfficialPluginPackages = [
+  ...knowledgePluginAssets,
+  {
+    packageName: "@zcode/chrome-devtools-plugin",
+    relativePath: "apps/zcode-cli/packages/chrome-devtools-plugin",
+    requiresRuntime: true,
+    requiredRuntimePaths: ["dist/mcp/server.js", "dist/vendor/out/Default/gen/src/bin/chrome-devtools-mcp.js", "dist/vendor/out/Default/gen/src/bin/chrome-devtools.js"],
+    runtimeBuildScript: "scripts/build.mjs",
+    stagedPath: "packages/chrome-devtools-plugin",
+  },
   // 44b25ed46c「remove bundled plugins except browser use and cua」删掉了其余
   // 内置插件源码，但漏改这份清单，bootstrap:with-remote 在 staging 第一个 manifest 就抛
   // missing。此处与 packages/desktop/scripts/prepare-agent-node-bundle.mjs 的桌面 seed
@@ -152,6 +162,8 @@ const remoteOfficialPluginTopLevelPaths = new Set([
   ".mcp.json",
   ".zcode-plugin",
   "README.md",
+  "LICENSE",
+  "ZENCode-NOTICE.md",
   // 生产远程预构建有独立顶层白名单，遗漏 agents 会在上传前永久裁掉子代理。
   "agents",
   "commands",
@@ -162,6 +174,7 @@ const remoteOfficialPluginTopLevelPaths = new Set([
   "package.json",
   "scripts",
   "skills",
+  "references",
   "templates",
 ]);
 const excludedOfficialPluginAssetNames = new Set([

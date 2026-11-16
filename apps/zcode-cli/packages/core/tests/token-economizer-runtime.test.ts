@@ -13,7 +13,7 @@ import type { ModelToolContract } from "@zcode/contracts";
 const name = "mcp__economizer_fixture__read";
 const paragraph = "Read a fixture item without changing files. Preserve permissions.";
 const description = `${paragraph}\n\n${paragraph}\n\nAsk before sharing data externally.`;
-function fixture(root: string, id: string, failures = 0) {
+function fixture(root: string, id: string, failures = 0, deferred = false) {
   const requests: Array<{ messages: unknown[]; tools: ModelToolContract[] }> = [];
   const events: Array<{ type: string; payload?: Record<string, unknown> }> = [];
   const model = {
@@ -36,9 +36,11 @@ function fixture(root: string, id: string, failures = 0) {
         finishReason: requests.length <= failures ? "tool_calls" : "stop",
         usage: { inputTokens: 10, outputTokens: 5 },
         toolCalls:
-          requests.length <= failures
-            ? [{ id: `call-${requests.length}`, name, input: { attempt: requests.length } }]
-            : [],
+          deferred && id === "discover-current" && requests.length === 1
+            ? [{ id: "discover", name: "DiscoverTools", input: { query: "fixture" } }]
+            : requests.length <= failures
+              ? [{ id: `call-${requests.length}`, name, input: { attempt: 1 } }]
+              : [],
       };
     },
   };
@@ -71,7 +73,7 @@ function fixture(root: string, id: string, failures = 0) {
     metadata: {
       ...zencodeMarkProgressToolEntry.metadata,
       name,
-      description,
+      description: deferred ? "Read fixture details. ".repeat(150) : description,
       mcpPresentation: { serverName: "fixture", toolName: "read" },
     },
     inputSchema: { type: "object", properties: { attempt: { type: "number" } } },
@@ -117,7 +119,7 @@ test("real tool failures produce one model-visible nudge and the normal replayab
     );
     assert.equal(
       current.events.filter(
-        (event) => event.type === "model_anomaly_warning" && event.payload?.threshold === 6,
+        (event) => event.type === "model_anomaly_warning" && event.payload?.threshold === 3,
       ).length,
       1,
     );
@@ -214,4 +216,33 @@ test("each mechanism can be disabled independently", async () => {
   assert.equal(session.environmentReminder(), undefined);
   const tool = { name, description, inputSchema: { type: "object" as const } };
   assert.equal(session.projectTools([tool], "turn", () => true)[0], tool);
+});
+
+test("runtime discovery restores deferred MCP schema on the next model request", async () => {
+  const root = await mkdtemp(join(tmpdir(), "economizer-runtime-discovery-"));
+  try {
+    for (let i = 0; i < 5; i++)
+      await fixture(root, `discover-${i}`, 0, true).runtime.executeTurn("inspect");
+    const current = fixture(root, "discover-current", 0, true);
+    await current.runtime.executeTurn("inspect fixture");
+    assert.equal(current.requests.length, 2);
+    assert.equal(
+      current.requests[0].tools.some((tool) => tool.name === name),
+      false,
+    );
+    assert.equal(
+      current.requests[0].tools.some((tool) => tool.name === "DiscoverTools"),
+      true,
+    );
+    assert.equal(
+      current.requests[1].tools.some((tool) => tool.name === name),
+      true,
+    );
+    assert.equal(
+      current.requests[1].tools.find((tool) => tool.name === name)?.description,
+      "Read fixture details. ".repeat(150),
+    );
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
 });

@@ -85,18 +85,44 @@ export interface FailureState {
   total: number;
   failures: string[];
   nudged: boolean;
+  operations?: Map<string, { signature: string; count: number }>;
 }
-export function observeFailure(state: FailureState, failed: boolean, signature: string): boolean {
+
+/** 对象键顺序不影响操作身份；不丢弃参数，避免合并不同的合理探索。 */
+export function operationSignature(name: string, input: unknown): string {
+  const stable = (value: unknown): unknown => {
+    if (Array.isArray(value)) return value.map(stable);
+    if (value && typeof value === "object")
+      return Object.fromEntries(
+        Object.entries(value)
+          .sort(([a], [b]) => a.localeCompare(b))
+          .map(([key, item]) => [key, stable(item)]),
+      );
+    return value;
+  };
+  return digest(`${name}:${JSON.stringify(stable(input))}`);
+}
+
+export function observeFailure(
+  state: FailureState,
+  failed: boolean,
+  signature: string,
+  operation = "default",
+): boolean {
   state.total++;
+  const operations = (state.operations ??= new Map());
   if (!failed) {
-    state.failures = [];
+    operations.delete(operation);
     return false;
   }
   state.failures.push(signature);
   state.failures = state.failures.slice(-12);
-  if (state.nudged || state.total < 20 || state.failures.length < 6) return false;
-  const repeats = state.failures.filter((value) => value === signature).length;
-  if (repeats < 3) return false;
+  const previous = operations.get(operation);
+  const count = previous?.signature === signature ? previous.count + 1 : 1;
+  operations.delete(operation);
+  operations.set(operation, { signature, count });
+  if (operations.size > 128) operations.delete(operations.keys().next().value!);
+  if (state.nudged || count < 3) return false;
   state.nudged = true;
   return true;
 }

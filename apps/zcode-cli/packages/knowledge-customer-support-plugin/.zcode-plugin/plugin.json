@@ -1,0 +1,10 @@
+{
+  "version": "1.3.0",
+  "description": "Triage tickets, draft responses, escalate issues, and build your knowledge base. Research customer context and turn resolved issues into self-service content.",
+  "author": {
+    "name": "Anthropic"
+  },
+  "name": "knowledge-customer-support",
+  "license": "Apache-2.0",
+  "skills": "skills"
+}

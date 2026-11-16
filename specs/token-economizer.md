@@ -1,6 +1,28 @@
 # ZenCode 内置 TokenEconomizer
 
-## 产品规则
+## 2026-11-16 增强规则
+
+- 在已有环境经验、历史压缩、网络重试预算上增强，不新增付费 judge。
+- 长期未用的 MCP 工具延迟发送完整定义；常驻 `DiscoverTools` 用关键词发现并恢复，空查询恢复全部。只有发现工具通过原有可见性过滤时才裁剪；权限、schema、registry 不变。恢复只增加本会话可见工具，下一请求生效；工具目录变化重新校验当前可见集合。只在确有净字符减少时启用裁剪。
+- 三次相同失败即可提醒改变方法，不再等待二十次工具调用。签名包含规范化参数和错误；不同参数的探索不合并。成功只清理相同操作，避免无关成功掩盖卡住的操作。取消与后台启动不计失败。每 turn 最多一次提醒，继续使用既有 warning budget，不自动中止任务。
+- 统计区分请求次数、实际定义字符减少、延迟工具数、恢复工具数、经验命中与提醒次数；不声称计费 Token 节省。保存时输出不含路径/输入的汇总日志供测评。
+- `ZCODE_TOKEN_ECONOMIZER_TOOLPRUNE=off` 恢复完整定义；子会话维持原有隔离。
+
+```mermaid
+sequenceDiagram
+  participant R as CLI runtime
+  participant E as Economizer owner
+  participant M as Model
+  R->>E: 原有权限过滤后的工具集合
+  E-->>R: 常用工具 + DiscoverTools
+  R->>M: 请求
+  M->>R: DiscoverTools(query)
+  R->>E: 恢复当前可见候选（不执行）
+  E-->>M: 工具名称
+  R->>M: 下一请求携带恢复后的原始 schema
+```
+
+## 产品规则（初版，下述差异以增强规则为准）
 
 参考 microsoft/TokenEconomizer 的经验驱动节流机制，原生 TypeScript 实现，不要求用户安装 Python，不调用额外模型，不改变权限、选中模型、用户消息、原始工具结果或任务完成标准。参考版本：1deb887bb6816188e24580f8812e65288af5757c，Apache-2.0。不是上游插件的原样移植，也不承诺上游实验的节省百分比。
 
@@ -49,3 +71,7 @@ sequenceDiagram
 - 新增源码和测试的定向 oxlint 通过；全量 lint 仍因已有 settingService.ts 403 行超限失败（76 warnings），Core 全量 lint 仍有既有大文件 max-lines 错误。
 - 没有真实生产 Token/费用节省测量，不把合成测试或缩短字符数当作账单节省。
 - 本轮仅修改源码、测试与说明，未重建安装包或发布 Release。
+
+## 增强验证（2026-11-16）
+
+15 项定向测试通过，包括真实 AgentRuntime 的裁剪/发现/下轮恢复、重复失败提醒、证据隔离、关闭开关和冷恢复。目录注册后通过既有 invalidateToolCache 失效，修复 compact 预检提前缓存导致新工具不可见的问题。Core build/typecheck 通过，Core lint 12 warnings/0 errors。新增统计通过 runtime 汇总日志输出；研究探针现有实际 Token、导出和图表继续工作，未增加独立的节省金额估算，也没有声称生产账单降幅。

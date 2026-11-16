@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import { knowledgePluginAssets } from "../../../scripts/knowledge-plugin-assets.mjs";
 
 // 桌面打包态的 agent 运行时资产：把 agent 的 JS bundle（zcode.cjs）放进 bundled-agents/<platform>/glm，
 // 由 app 内置的 Electron Node runtime（ELECTRON_RUN_AS_NODE）执行，替代以前随包内置的独立 Node 二进制。
@@ -92,6 +93,15 @@ const browserUseRequiredRuntimePaths = [
   "skills/web-gui-tester/SKILL.md",
 ];
 const officialPluginPackages = [
+  ...knowledgePluginAssets,
+  {
+    packageName: "@zcode/chrome-devtools-plugin",
+    relativePath: "apps/zcode-cli/packages/chrome-devtools-plugin",
+    requiresRuntime: true,
+    requiredRuntimePaths: ["dist/mcp/server.js", "dist/vendor/out/Default/gen/src/bin/chrome-devtools-mcp.js", "dist/vendor/out/Default/gen/src/bin/chrome-devtools.js"],
+    runtimeBuildScript: "scripts/build.mjs",
+    stagedPath: "packages/chrome-devtools-plugin",
+  },
   {
     // browser-use 只携带自己的 client script 与 skill/docs；node_repl MCP runtime 归
     // @zcode/node-repl-host（见上方常量注释）。
@@ -134,6 +144,8 @@ const officialPluginPackages = [
     requiredSeedPaths: [
       ".zcode-plugin/plugin.json",
       "README.md",
+  "LICENSE",
+  "ZENCode-NOTICE.md",
       "docs/computer-use.md",
       "scripts/computer-use-client.mjs",
       "skills/computer-use/SKILL.md",
@@ -174,6 +186,8 @@ const includedOfficialPluginTopLevelPaths = new Set([
   ".mcp.json",
   ".zcode-plugin",
   "README.md",
+  "LICENSE",
+  "ZENCode-NOTICE.md",
   "LICENSE.maka-cu",
   "LICENSE.open-computer-use",
   "LICENSE.computer-use-linux",
@@ -189,6 +203,7 @@ const includedOfficialPluginTopLevelPaths = new Set([
   "package.json",
   "scripts",
   "skills",
+  "references",
   "templates",
 ]);
 const excludedOfficialPluginAssetNames = new Set([

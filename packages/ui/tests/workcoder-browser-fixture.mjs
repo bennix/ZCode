@@ -82,6 +82,7 @@ export async function mountWorkCoderFixture(locale) {
     providers: [
       {
         providerId: "synthetic",
+        templateId: "zenmux",
         models: models.map((modelId) => ({
           modelId,
           config: {

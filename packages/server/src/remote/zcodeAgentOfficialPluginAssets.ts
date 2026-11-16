@@ -2,12 +2,14 @@ import { posix } from "node:path";
 
 export const REMOTE_AGENT_OFFICIAL_PLUGIN_DIR_NAME = "packages";
 
-export const REMOTE_AGENT_OFFICIAL_PLUGIN_PACKAGE_NAMES = ["browser-use-plugin"] as const;
+export const REMOTE_AGENT_OFFICIAL_PLUGIN_PACKAGE_NAMES = ["browser-use-plugin", "chrome-devtools-plugin", "knowledge-engineering-plugin", "knowledge-sales-plugin", "knowledge-cowork-plugin-management-plugin", "knowledge-legal-plugin", "knowledge-customer-support-plugin", "knowledge-marketing-plugin", "knowledge-bio-research-plugin", "knowledge-data-plugin", "knowledge-enterprise-search-plugin", "knowledge-productivity-plugin", "knowledge-finance-plugin", "knowledge-product-management-plugin"] as const;
 
 export const REMOTE_AGENT_OFFICIAL_PLUGIN_INCLUDED_TOP_LEVEL_PATHS = [
   ".mcp.json",
   ".zcode-plugin",
   "README.md",
+  "LICENSE",
+  "ZENCode-NOTICE.md",
   // 开发态远程插件复制使用独立白名单，遗漏 agents 会只在远端丢失子代理。
   "agents",
   "commands",
@@ -20,10 +22,15 @@ export const REMOTE_AGENT_OFFICIAL_PLUGIN_INCLUDED_TOP_LEVEL_PATHS = [
   // 开发态 SSH 部署若漏掉 scripts，会出现 MCP server 已启动但浏览器绑定无法初始化的半成品状态。
   "scripts",
   "skills",
+  "references",
   "templates",
 ] as const;
 
 export const REMOTE_AGENT_OFFICIAL_PLUGIN_REQUIRED_RELATIVE_PATHS = [
+  "chrome-devtools-plugin/scripts/server.mjs",
+  "chrome-devtools-plugin/dist/mcp/server.js",
+  "chrome-devtools-plugin/dist/vendor/out/Default/gen/src/bin/chrome-devtools-mcp.js",
+  "chrome-devtools-plugin/skills/chrome-devtools/SKILL.md",
   ...REMOTE_AGENT_OFFICIAL_PLUGIN_PACKAGE_NAMES.map(
     (packageName) => `${packageName}/.zcode-plugin/plugin.json`,
   ),

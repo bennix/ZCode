@@ -24,6 +24,9 @@ try {
     });
     const errors = [];
     page.on("pageerror", (error) => errors.push(error.message));
+    await page.route("https://zenmux.ai/api/v1/models", (route) => route.fulfill({ json: { data: [
+      ["anthropic/claude-haiku-5.5", 0.1, 0.2], ["anthropic/claude-sonnet-5.5", 1, 4], ["anthropic/claude-opus-5.5", 5, 25],
+    ].map(([id, input, output]) => ({ id, output_modalities: ["text"], context_length: 128000, capabilities: { reasoning: true }, pricings: { prompt: [{ value: input, currency: "USD", unit: "perMTokens" }], completion: [{ value: output, currency: "USD", unit: "perMTokens" }] } })) } }));
     await page.goto(
       new URL("packages/ui/tests/studio-creation-fixture.html", server.resolvedUrls.local[0]).href,
     );
@@ -37,6 +40,7 @@ try {
       en ? "Read-only research Reasoning effort" : "只读研究 思考强度",
       { exact: true },
     );
+    await page.waitForFunction(() => document.querySelector('[data-testid="workcoder-role-main"] select')?.value.includes("sonnet"));
     assert.equal(await mainEffort.inputValue(), "low");
     assert.equal(await researchEffort.count(), 0);
     await page
@@ -215,32 +219,12 @@ try {
       }),
     );
     await page.getByTestId("workcoder-workspace").getByRole("status").waitFor();
-    assert.equal(await researchEffort.count(), 0);
-    await page
-      .getByTestId("workcoder-role-research")
-      .getByText(en ? "No reasoning" : "无需思考", { exact: true })
-      .waitFor();
+    assert.equal(await researchEffort.isDisabled(), true);
     await page.getByRole("button", { name: en ? "Next step" : "下一步", exact: true }).click();
-    assert.equal(
-      await page
-        .getByRole("textbox", { name: en ? "Describe task" : "描述任务", exact: true })
-        .inputValue(),
-      "Fix a nested React form and verify it.",
-    );
     await page.getByRole("button", { name: en ? "Next step" : "下一步", exact: true }).click();
-    await page
-      .getByRole("button", {
-        name: en ? "Configure and start WorkCoder task" : "配置并启动 WorkCoder 任务",
-        exact: true,
-      })
-      .click();
-    await page.waitForFunction(() => globalThis.sent.length === 3);
-    const added = await page.evaluate(() => globalThis.modelAdded);
-    assert.equal(added.modelId, "anthropic/claude-haiku-5.5");
-    assert.deepEqual(added.config.optionSpecs.reasoningLevel, { values: ["none"], map: "{}" });
-    await page
-      .getByRole("button", { name: en ? "1 Assign models" : "1 分配模型", exact: true })
-      .click();
+    assert.equal(await page.getByRole("button", { name: en ? "Start WorkCoder task" : "启动 WorkCoder 任务", exact: true }).isDisabled(), true);
+    assert.equal(await page.evaluate(() => globalThis.modelAdded), undefined, "missing models must not create a hardcoded provider model");
+    await page.getByRole("button", { name: en ? "1 Assign models" : "1 分配模型", exact: true }).click();
     await page.evaluate(() => globalThis.setCatalog(globalThis.fullView));
     await page.getByTestId("workcoder-workspace").getByRole("status").waitFor({ state: "hidden" });
     await page.screenshot({ path: `/tmp/workcoder-${locale}.png`, fullPage: true });

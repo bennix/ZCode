@@ -1,7 +1,7 @@
+import { useModelCostTiers } from "@/hooks/useModelCostTiers.js";
 import { usePlatform } from "@/hooks/usePlatform.js";
 import { useState } from "react";
 import {
-  WORKCODER_MODELS,
   type ModelSelectionView,
   type WorkCoderRole,
   type WorkCoderModels,
@@ -30,11 +30,14 @@ export function WorkCoderWorkspace({
     target.workspaceIdentity?.trim() || target.remoteSessionId
       ? target
       : { workspacePath: directory.trim() };
+  const { models: tierCatalog } = useModelCostTiers();
   const roles: WorkCoderRole[] = ["main", "research", "advisor"];
   const [step, setStep] = useState(0);
   const [task, setTask] = useState("");
   const [selections, setSelections] = useState<Record<WorkCoderRole, string>>({
-    ...WORKCODER_MODELS,
+    main: "",
+    research: "",
+    advisor: "",
   });
   const [efforts, setEfforts] = useState<Partial<Record<WorkCoderRole, string>>>({});
   const effortLabel = (value: string) => {
@@ -47,6 +50,10 @@ export function WorkCoderWorkspace({
         key: `${provider.providerId}\n${model.modelId}`,
         provider: provider.providerId,
         model: model.modelId,
+        tier:
+          provider.templateId === "zenmux"
+            ? tierCatalog.find((item) => item.id === model.modelId)
+            : undefined,
         efforts: supportedEfforts(
           model.modelId,
           model.config.optionSpecs.reasoningLevel.values,
@@ -58,7 +65,22 @@ export function WorkCoderWorkspace({
     roles.map((role) => [
       role,
       choices.find((choice) => choice.key === selections[role]) ??
-        choices.find((choice) => choice.model === selections[role]),
+        choices.find((choice) => choice.model === selections[role]) ??
+        (!selections[role]
+          ? choices
+              .filter(
+                (choice) =>
+                  choice.tier?.tier ===
+                    ({ main: "balanced", research: "light", advisor: "deep" } as const)[role] &&
+                  (role !== "advisor" || (choice.tier.reasoning && choice.tier.context >= 128000)),
+              )
+              .sort(
+                (a, b) =>
+                  a.tier!.inputPrice +
+                  a.tier!.outputPrice -
+                  (b.tier!.inputPrice + b.tier!.outputPrice),
+              )[0]
+          : undefined),
     ]),
   ) as Record<WorkCoderRole, (typeof choices)[number] | undefined>;
   const models = Object.fromEntries(
@@ -73,8 +95,7 @@ export function WorkCoderWorkspace({
               // 原因：固定 low 会拒绝仅支持 none/high 的模型；按当前 provider 的实际能力解析。
               options: {
                 reasoningLevel: resolveEffort(
-                  efforts[role] ??
-                    (role === "research" && /haiku/iu.test(selected.model) ? "none" : "low"),
+                  efforts[role] ?? (role === "research" ? "none" : "low"),
                   selected.efforts,
                 ),
               },
@@ -91,28 +112,9 @@ export function WorkCoderWorkspace({
         modelSelectionView,
       ),
   );
-  const ready = (role: WorkCoderRole) =>
-    models[role] &&
-    createComposerSubmissionConfig(
-      { mode: "build", planEnabled: false, modelSelection: models[role] },
-      modelSelectionView,
-    );
-  const canConfigureResearch =
-    !models.research &&
-    selections.research === WORKCODER_MODELS.research &&
-    ready("main") &&
-    ready("advisor");
   const launchModels: WorkCoderModels | null =
-    models.main && models.advisor
-      ? {
-          main: models.main,
-          advisor: models.advisor,
-          research: models.research ?? {
-            providerId: models.main.providerId,
-            modelId: WORKCODER_MODELS.research,
-            options: { reasoningLevel: "none" },
-          },
-        }
+    models.main && models.advisor && models.research
+      ? { main: models.main, advisor: models.advisor, research: models.research }
       : null;
   const { start, busy, retry, error } = useWorkCoder(actualTarget, onStarted);
   const selectDirectory = async () => {
@@ -143,11 +145,8 @@ export function WorkCoderWorkspace({
         <div className="grid gap-3 md:grid-cols-3">
           {roles.map((role) => {
             const noReasoning =
-              (selectedChoices[role]?.efforts.length === 1 &&
-                selectedChoices[role]?.efforts[0] === "none") ||
-              (role === "research" &&
-                !models[role] &&
-                selections[role] === WORKCODER_MODELS.research);
+              selectedChoices[role]?.efforts.length === 1 &&
+              selectedChoices[role]?.efforts[0] === "none";
             return (
               <div
                 data-testid={`workcoder-role-${role}`}
@@ -159,23 +158,19 @@ export function WorkCoderWorkspace({
                 <select
                   aria-label={t(role)}
                   className="w-full min-w-0 rounded-lg border border-input-border bg-input px-2 py-2 text-ui-base"
-                  value={
-                    choices.some((choice) => choice.key === selections[role])
-                      ? selections[role]
-                      : (choices.find((choice) => choice.model === selections[role])?.key ??
-                        selections[role])
-                  }
+                  value={selectedChoices[role]?.key ?? ""}
                   onChange={(event) => {
                     setSelections((current) => ({ ...current, [role]: event.target.value }));
                     setEfforts((current) => ({ ...current, [role]: undefined }));
                   }}
                 >
-                  {!models[role] ? (
-                    <option value={selections[role]}>{selections[role]}</option>
-                  ) : null}
+                  {!models[role] ? <option value="">{t("chooseModel")}</option> : null}
                   {choices.map((choice) => (
                     <option key={choice.key} value={choice.key}>
                       {choice.model} · {choice.provider}
+                      {choice.tier
+                        ? ` · ${intl.formatMessage({ id: `chat.knowledge.${choice.tier.tier}` })}`
+                        : ""}
                     </option>
                   ))}
                 </select>
@@ -273,11 +268,7 @@ export function WorkCoderWorkspace({
             {roles.map((role) => (
               <li key={role} className="break-all">
                 {t(role)} · {models[role]?.modelId ?? selections[role]} ·{" "}
-                {models[role]
-                  ? effortLabel(models[role].options.reasoningLevel)
-                  : role === "research" && canConfigureResearch
-                    ? t("noReasoningSetup")
-                    : t("chooseModel")}
+                {models[role] ? effortLabel(models[role].options.reasoningLevel) : t("chooseModel")}
               </li>
             ))}
           </ul>
@@ -287,9 +278,6 @@ export function WorkCoderWorkspace({
           <p className="break-all text-ui-caption">
             {t("directory")} · {actualTarget.workspacePath}
           </p>
-          {canConfigureResearch ? (
-            <p className="text-ui-caption text-foreground-subtle">{t("researchSetup")}</p>
-          ) : null}
           <p className="whitespace-pre-wrap break-words">{task}</p>
           {!valid ? (
             <Button
@@ -303,25 +291,14 @@ export function WorkCoderWorkspace({
           ) : null}
           <Button
             type="button"
-            disabled={
-              busy ||
-              (!retry &&
-                (!(valid || canConfigureResearch) || !task.trim() || !actualTarget.workspacePath))
-            }
+            disabled={busy || (!retry && (!valid || !task.trim() || !actualTarget.workspacePath))}
             onClick={() =>
               void start(launchModels, task, {
-                configureResearch: Boolean(canConfigureResearch),
                 autoApprove,
               })
             }
           >
-            {busy
-              ? t("starting")
-              : retry
-                ? t("retry")
-                : canConfigureResearch
-                  ? t("configureStart")
-                  : t("start")}
+            {busy ? t("starting") : retry ? t("retry") : t("start")}
           </Button>
         </div>
       ) : null}

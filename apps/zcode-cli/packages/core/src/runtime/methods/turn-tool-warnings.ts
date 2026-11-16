@@ -49,6 +49,9 @@ export async function handleToolCallAnomalyWarnings(
     state.events.push(warningEvent);
   }
 
+  // 同一轮已有结果驱动的失败提醒时，不再叠加仅按参数重复的提醒。
+  if (state.economizerFailures?.nudged) return;
+
   const repeatedWarnings = detectRepeatedToolCallWarnings(
     options.toolCalls,
     state,

@@ -50249,3 +50249,11 @@ This is an independent conservative adaptation, not a bundled copy of its Python
 plugin. No upstream source code is included. It uses fixed environment observations,
 lossless duplicate-description removal, and a bounded local failure reminder; it does
 not implement the upstream paid judge or claim the upstream benchmark savings.
+
+## Chrome DevTools MCP and knowledge-work plugins
+
+Chrome DevTools MCP 1.13.0 (https://github.com/ChromeDevTools/chrome-devtools-mcp), Apache-2.0, is bundled as a disabled-by-default plugin with its CLI, skills and LICENSE. ZenCode supplies launcher defaults disabling usage statistics and CrUX requests.
+
+Anthropic knowledge-work-plugins at e91a134584eb798bac7fb0379358006a2b63b965 (https://github.com/anthropics/knowledge-work-plugins), Apache-2.0: eleven domain plugins retain their LICENSE. ZenCode adapts manifests, adds a host-integration paragraph to skills and supplies connector configurations as templates only.
+
+Addy Osmani agent-skills 0.6.16 at 39b723ceebf81474d0557c1fecd01eddab585563 (https://github.com/addyosmani/agent-skills), MIT: 25 skills, nine Markdown commands, personas and shared references. ZenCode adds host guidance, changes the plugin namespace, removes persona model aliases and omits automatic hooks. The original LICENSE is retained.
