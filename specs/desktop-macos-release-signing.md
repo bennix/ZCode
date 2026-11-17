@@ -212,3 +212,9 @@ Mac 正式 DMG 匿名下载摘要及装订校验通过，latest-mac.yml 与本�
 ## 3.14.42 候选（2026-11-17）
 
 本版发布工作区视觉整理：侧栏结构面、任务选中态、紧凑可换行入口栏、输入区留白及统一气泡圆角。现有交互与状态所有者不变。同一源码提交构建 Mac arm64、Windows x64/arm64 与 Linux 双架构 DEB/RPM；签名、公证、装订及跨平台安装验收通过后才公开 Release 并更新官网。GitHub Release 为公开资产唯一所有者。失败时保留 3.14.41 Latest 和本地已公证 DMG；新版成功后只保留最新本地 DMG。
+
+### 3.14.42 发布验收
+
+源码 `c9e14cbf9472b39a3043591f83d93a9370687283`。Windows 构建 `44051863215`、Linux 构建 `44051871396`、Windows 独立安装 `44055729857`、Linux 四项独立安装 `44054815025` 均成功。DMG 公证 `3d149b37-6f12-4c57-ba37-8f7c8eb09c7c` 与 ZIP 公证 `2d43a15d-96c2-438c-9ec4-329a4dcfcdc4` 均 Accepted，DMG 装订、挂载 App 严格签名与 Gatekeeper 检查通过。ZIP 首次上传客户端发生 SIGBUS，重新上传通过；未降低公证门禁。Mac 三项打包测试通过，更新检查首次窗口提前关闭、在固定 Node 与代理环境重跑通过。40 个资产齐全，Mac/远程资源本地摘要与 GitHub 一致；Windows/Linux 暂存工作流核对摘要。公开 Latest 后执行正式下载复验。
+
+本地最新公证 DMG 的 SHA-256 为 `0faadc2c046e0ef58a1a805ddef4538e1df74b25d44498ac05176bec8e41ac8d`，旧 3.14.41 DMG 已删除。
