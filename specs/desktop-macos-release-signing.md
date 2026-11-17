@@ -208,3 +208,7 @@ sequenceDiagram
 源码及 tag 为 `fd3486211d9f177454ec9339beae0514a3f4fe9f`。Windows 构建 `43858515747`、Linux 构建 `43858514669`、Linux 独立安装 `43861525162` 和 Windows 独立安装 `43862105198` 全部成功。40 个发布资产已完成摘要校验。DMG 公证 `c2c5a111-50e0-4182-a6f4-6865f5835774` 与 ZIP 公证 `7566490d-4d34-4fed-9995-e077e92f477c` 均 Accepted；DMG 装订、挂载 App 深度严格签名及 Gatekeeper 检查通过。已公开 Latest，正式下载复验 `43863904757` 的六项 Windows/Linux 安装检查全部成功。本地只保留 release-artifacts 下最新公证 DMG，六个旧 DMG 和重复构建副本已清理。
 
 Mac 正式 DMG 匿名下载摘要及装订校验通过，latest-mac.yml 与本地最终清单逐字节一致。Landing Page 部署 `43863910568` 成功，线上内容与经过双语、响应式和七个下载链接检查的源码一致。完整证据见 `desktop-release-audit-2026-11-16.json`。
+
+## 3.14.42 候选（2026-11-17）
+
+本版发布工作区视觉整理：侧栏结构面、任务选中态、紧凑可换行入口栏、输入区留白及统一气泡圆角。现有交互与状态所有者不变。同一源码提交构建 Mac arm64、Windows x64/arm64 与 Linux 双架构 DEB/RPM；签名、公证、装订及跨平台安装验收通过后才公开 Release 并更新官网。GitHub Release 为公开资产唯一所有者。失败时保留 3.14.41 Latest 和本地已公证 DMG；新版成功后只保留最新本地 DMG。

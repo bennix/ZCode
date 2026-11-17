@@ -2289,7 +2289,7 @@ function ConversationComposerImpl({
     >
       <nav
         aria-label={intl.formatMessage({ id: "chat.workcoder.entries" })}
-        className="mb-2 flex flex-wrap items-center gap-2"
+        className="mb-3 flex w-fit max-w-full flex-wrap items-center gap-1 rounded-xl border border-border/60 bg-surface/60 p-1 [&>button]:rounded-lg [&>button]:text-ui-sm [&>button[aria-pressed=true]]:bg-background [&>button[aria-pressed=true]]:shadow-sm"
         data-testid="composer-workspace-entries"
       >
         <Button

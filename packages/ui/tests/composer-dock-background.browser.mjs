@@ -11,6 +11,10 @@ const { chromium } = createRequire(import.meta.url)("playwright-core");
 const source = await readFile("packages/ui/src/v4/ConversationComposer.tsx", "utf8");
 const rootClasses = source.match(/"(chat-composer-region[^"]+)"/u)?.[1];
 assert.ok(rootClasses);
+const navigationClasses = source.match(
+  /className="([^"]+)"\s+data-testid="composer-workspace-entries"/u,
+)?.[1];
+assert.ok(navigationClasses);
 const server = await createServer({
   configFile: false,
   cacheDir: join(tmpdir(), "composer-dock-background-vite"),
@@ -27,21 +31,24 @@ try {
     await page.goto(
       new URL("packages/ui/tests/studio-creation-fixture.html", server.resolvedUrls.local[0]).href,
     );
-    await page.evaluate(async (classes) => {
-      await import("/packages/ui/src/styles.css");
-      document.body.innerHTML = `<div id="viewport" style="height:600px;overflow:auto">
+    await page.evaluate(
+      async ({ classes, navigationClasses }) => {
+        await import("/packages/ui/src/styles.css");
+        document.body.innerHTML = `<div id="viewport" style="height:600px;overflow:auto">
         <div style="height:1200px">History output</div>
         <div style="position:sticky;bottom:0">
           <div id="composer" class="${classes}">
-            <nav style="height:40px"><button id="toggle">WorkCoder</button></nav>
+            <nav class="${navigationClasses}"><button aria-pressed="true">普通对话</button><button id="toggle" aria-pressed="false">WorkCoder</button><button>专业任务</button><button>研究探针</button></nav>
             <section id="guided" style="height:280px" hidden>Model assignment</section>
           </div>
         </div></div>`;
-      document.getElementById("toggle").onclick = () => {
-        const panel = document.getElementById("guided");
-        panel.hidden = !panel.hidden;
-      };
-    }, rootClasses);
+        document.getElementById("toggle").onclick = () => {
+          const panel = document.getElementById("guided");
+          panel.hidden = !panel.hidden;
+        };
+      },
+      { classes: rootClasses, navigationClasses },
+    );
     for (const dark of [false, true]) {
       await page.evaluate((dark) => document.documentElement.classList.toggle("dark", dark), dark);
       for (const scrollTop of [200, 600, 300]) {
@@ -60,11 +67,18 @@ try {
           return {
             alpha: ctx.getImageData(0, 0, 1, 1).data[3],
             containsNavigation: nav.top >= rect.top && nav.bottom <= rect.bottom,
+            fitsWidth: node.scrollWidth <= node.clientWidth,
+            selectedSurface: getComputedStyle(node.querySelector('[aria-pressed="true"]'))
+              .backgroundColor,
+            unselectedSurface: getComputedStyle(node.querySelector('[aria-pressed="false"]'))
+              .backgroundColor,
             visible: rect.top >= 0 && rect.bottom <= 600,
           };
         });
         assert.equal(state.alpha, 255, "sticky entry bar must obscure history beneath it");
         assert.equal(state.containsNavigation, true);
+        assert.equal(state.fitsWidth, true, "entry strip must wrap within the dock");
+        assert.notEqual(state.selectedSurface, state.unselectedSurface);
         assert.equal(state.visible, true);
       }
     }
