@@ -218,3 +218,5 @@ Mac 正式 DMG 匿名下载摘要及装订校验通过，latest-mac.yml 与本�
 源码 `c9e14cbf9472b39a3043591f83d93a9370687283`。Windows 构建 `44051863215`、Linux 构建 `44051871396`、Windows 独立安装 `44055729857`、Linux 四项独立安装 `44054815025` 均成功。DMG 公证 `3d149b37-6f12-4c57-ba37-8f7c8eb09c7c` 与 ZIP 公证 `2d43a15d-96c2-438c-9ec4-329a4dcfcdc4` 均 Accepted，DMG 装订、挂载 App 严格签名与 Gatekeeper 检查通过。ZIP 首次上传客户端发生 SIGBUS，重新上传通过；未降低公证门禁。Mac 三项打包测试通过，更新检查首次窗口提前关闭、在固定 Node 与代理环境重跑通过。40 个资产齐全，Mac/远程资源本地摘要与 GitHub 一致；Windows/Linux 暂存工作流核对摘要。公开 Latest 后执行正式下载复验。
 
 本地最新公证 DMG 的 SHA-256 为 `0faadc2c046e0ef58a1a805ddef4538e1df74b25d44498ac05176bec8e41ac8d`，旧 3.14.41 DMG 已删除。
+
+正式下载复验 `44057991472` 的 Windows x64/ARM64、Linux 双架构 DEB/RPM 六项全部成功。Mac 匿名正式下载摘要及装订验证通过，公开 latest-mac.yml 与本地最终文件逐字节一致。Landing Page 部署 `44058104285` 成功，线上 HTML 与双语/响应式验证后的源码一致。本地仅保留 release-artifacts 的一份最新公证 DMG。完整记录见 `desktop-release-audit-2026-11-17.json`。
