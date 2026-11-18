@@ -90,3 +90,14 @@ test("/image preserves the prompt and Bot help uses ZenCode branding", async () 
     assert.doesNotMatch(formatBotMessage(locale, "helpTitle"), /ZCode/);
   }
 });
+
+test("explicit image model overrides shared system default; unconfigured uses builtin default", async () => {
+  const { resolveWeixinImageModel } = await import("../src/bots/weixinImageGeneration.js");
+  assert.equal(resolveWeixinImageModel(undefined, "configured/image"), "configured/image");
+  assert.equal(resolveWeixinImageModel("chosen/image", "configured/image"), "chosen/image");
+  assert.deepEqual(resolveWeixinImageRequest("/image --model chosen/image 一只猫", false), {
+    kind: "generate",
+    model: "chosen/image",
+    prompt: "一只猫",
+  });
+});

@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { mkdtemp, writeFile, rm, symlink } from "node:fs/promises";
+import { mkdtemp, writeFile, readFile, realpath, rm, symlink } from "node:fs/promises";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 import {
@@ -115,6 +115,63 @@ test("reject missing recipients, escaping symlinks, directories and empty files"
       }),
       /没有可用/,
     );
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
+});
+
+test("generated image uses host model choice, saves artifact and sends photo only after authorization", async () => {
+  const root = await realpath(await mkdtemp(join(tmpdir(), "wx-generated-")));
+  try {
+    const calls: unknown[] = [];
+    const adapter = {
+      sendImage: async (_bot: unknown, msg: any, data: Uint8Array) => {
+        calls.push({ recipient: msg.providerUserId, bytes: data.length });
+      },
+    } as any;
+    const generator = async (prompt: string, model?: string) => {
+      calls.push({ prompt, model });
+      return { mimeType: "image/png", data: Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]) };
+    };
+    const result = await deliverWeixinFile(
+      repo,
+      adapter,
+      { workspacePath: root, action: "generate_image", prompt: "cat" },
+      generator,
+    );
+    assert.equal(result.sent, true);
+    assert.ok(result.path);
+    assert.deepEqual(calls[0], { prompt: "cat", model: undefined });
+    assert.deepEqual(calls[1], { recipient: "b@im.wechat", bytes: 8 });
+    assert.equal((await readFile(result.path!)).length, 8);
+    await assert.rejects(
+      deliverWeixinFile(
+        repo,
+        adapter,
+        {
+          workspacePath: root,
+          workspaceIdentity: "remote",
+          action: "generate_image",
+          prompt: "cat",
+        },
+        generator,
+      ),
+    );
+    assert.equal(calls.length, 2);
+    await assert.rejects(
+      deliverWeixinFile(
+        repo,
+        {
+          sendImage: async () => {
+            throw Error("uncertain");
+          },
+        } as any,
+        { workspacePath: root, action: "generate_image", prompt: "cat", model: "explicit/image" },
+        generator,
+      ),
+      /uncertain/,
+    );
+    assert.deepEqual(calls[2], { prompt: "cat", model: "explicit/image" });
   } finally {
     await rm(root, { recursive: true, force: true });
   }

@@ -533,7 +533,7 @@ export interface IZCodeTaskService {
   getTaskConfigOptions(params: { taskId: string }): Promise<ZCodeConfigOption[]>;
 
   /** 读取绑定 Session 的原模型选择；不从候选菜单反推，不做有效解析或写入。 */
-  getTaskModelSelection(params: { taskId: string }): Promise<ModelSelection | null>;
+  getTaskModelSelection(params: { taskId: string; workspacePath?: string; workspaceIdentity?: string }): Promise<ModelSelection | null>;
 
   /** 持久化用户对 assistant 回复的本地反馈；不会注入 provider 上下文。 */
   setAssistantMessageFeedback(params: {

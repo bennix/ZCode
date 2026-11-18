@@ -1,3 +1,5 @@
+import { WeixinModelSetting } from "@/BotsDialog/WeixinModelSetting.js";
+import { useModelSelectionServiceView } from "@/hooks/useModelSelectionView.js";
 import { WeixinAccessSetting } from "@/BotsDialog/WeixinAccessSetting.js";
 import { WeixinEchoSetting } from "@/BotsDialog/WeixinEchoSetting.js";
 /* eslint-disable max-lines -- BotsDialog 现在保留数据加载、保存和轮询编排；右侧卡片已拆到 BotsDialog/* 子组件，后续再继续下沉状态 hook。 */
@@ -99,7 +101,8 @@ export function BotsDialog({
   const { intl } = useZCodeIntl();
   const platform = usePlatform();
   const confirmDialog = useConfirmDialog();
-  const { botsService } = useServices();
+  const { botsService, modelSelectionService } = useServices();
+  const modelRead = useModelSelectionServiceView(modelSelectionService, open);
   const [config, setConfig] = useState<BotsConfigFile>(() => createEmptyConfig());
   const [workspaceRefs, setWorkspaceRefs] = useState<BotWorkspaceRef[]>([]);
   const [status, setStatus] = useState<BotServiceStatus | null>(null);
@@ -1257,6 +1260,11 @@ export function BotsDialog({
 
                 {selectedBot.provider === "weixin" ? (
                   <>
+                  <WeixinModelSetting
+                    selection={selectedBot.currentOptions.modelSelection}
+                    view={modelRead.state.status === "ready" ? modelRead.state.view : undefined}
+                    onChange={(modelSelection) => patchSelectedBot({ currentOptions: { ...selectedBot.currentOptions, modelSelection } })}
+                  />
                   <WeixinEchoSetting
                     enabled={selectedBot.weixinEchoMode === true}
                     onChange={(enabled) => patchSelectedBot({ weixinEchoMode: enabled })}

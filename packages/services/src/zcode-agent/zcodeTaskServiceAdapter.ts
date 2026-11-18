@@ -2638,7 +2638,10 @@ export function createZCodeTaskServiceAdapter(
     },
 
     async getTaskModelSelection(params): Promise<ModelSelection | null> {
-      const target = getTaskTarget(params.taskId);
+      // Bot 冷启动只有持久化的任务与工作区；只读模型不能依赖另一个请求填充内存 target。
+      const target = params.workspacePath
+        ? { taskId: params.taskId, workspacePath: params.workspacePath, workspaceIdentity: params.workspaceIdentity }
+        : getTaskTarget(params.taskId);
       const snapshot = await options.zcodeAgentService.readSession({
         workspacePath: target.workspacePath,
         workspaceIdentity: target.workspaceIdentity,

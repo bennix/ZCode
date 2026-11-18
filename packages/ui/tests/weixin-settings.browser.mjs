@@ -34,12 +34,38 @@ try {
     const { WeixinEchoSetting } = await import("/packages/ui/src/BotsDialog/WeixinEchoSetting.tsx");
     const { WeixinAccessSetting } =
       await import("/packages/ui/src/BotsDialog/WeixinAccessSetting.tsx");
+    const { WeixinModelSetting } =
+      await import("/packages/ui/src/BotsDialog/WeixinModelSetting.tsx");
     function Probe() {
+      const [selection, setSelection] = React.useState(undefined);
       const [users, setUsers] = React.useState(undefined);
       const [enabled, setEnabled] = React.useState(true);
       return React.createElement(
         ZCodeIntlProvider,
         { initialLocale: "zh-CN" },
+        React.createElement(WeixinModelSetting, {
+          selection,
+          onChange: (value) => {
+            setSelection(value);
+            window.weixinModel = value ?? null;
+          },
+          view: {
+            providers: [
+              {
+                providerId: "fixture",
+                providerName: "Fixture",
+                models: [
+                  {
+                    modelId: "text-model",
+                    config: {
+                      optionSpecs: { reasoningLevel: { values: ["none", "low", "high"] } },
+                    },
+                  },
+                ],
+              },
+            ],
+          },
+        }),
         React.createElement(WeixinEchoSetting, { enabled, onChange: setEnabled }),
         React.createElement(WeixinAccessSetting, {
           users,
@@ -79,6 +105,16 @@ try {
     document.body.innerHTML = '<div id="app"></div>';
     createRoot(document.getElementById("app")).render(React.createElement(Probe));
   });
+  const model = page.getByRole("combobox", { name: "微信默认模型", exact: true });
+  await model.selectOption(JSON.stringify(["fixture", "text-model"]));
+  await page.getByRole("combobox", { name: "微信默认思考强度" }).selectOption("low");
+  assert.deepEqual(await page.evaluate(() => window.weixinModel), {
+    providerId: "fixture",
+    modelId: "text-model",
+    options: { reasoningLevel: "low" },
+  });
+  await model.selectOption("");
+  assert.equal(await page.evaluate(() => window.weixinModel), null);
   const toggle = page.getByRole("switch", { name: "文字连通测试（Echo）" });
   await toggle.waitFor();
   assert.equal(await toggle.getAttribute("aria-checked"), "true");

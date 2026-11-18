@@ -2,7 +2,9 @@ import { z } from "zod";
 
 export const weixinFileRequestSchema = z
   .object({
-    action: z.enum(["list", "send"]),
+    action: z.enum(["list", "send", "generate_image"]),
+    prompt: z.string().trim().min(1).max(12000).optional(),
+    model: z.string().trim().min(1).max(256).optional(),
     path: z.string().trim().min(1).optional(),
     recipientId: z.string().min(1).optional(),
   })
@@ -11,6 +13,7 @@ export const weixinFileResultSchema = z
   .object({
     recipients: z.array(z.object({ id: z.string(), label: z.string() }).strict()),
     sent: z.boolean(),
+    path: z.string().optional(),
   })
   .strict();
 export type WeixinFileRequest = z.infer<typeof weixinFileRequestSchema>;

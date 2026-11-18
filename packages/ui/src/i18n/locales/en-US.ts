@@ -889,6 +889,12 @@ const enUS: Record<string, string> = {
   "bots.weixinAccess.invalid": "Enter user IDs ending in @im.wechat.",
   "bots.weixinAccess.save": "Save allowlist",
   "bots.weixinAccess.reset": "Scanning user only",
+  "bots.weixinModel.title": "Weixin default model",
+  "bots.weixinModel.description": "Used for new Weixin conversations and goals. Existing tasks keep their model. Only image generation uses the image model.",
+  "bots.weixinModel.follow": "Follow system default",
+  "bots.weixinModel.reasoning": "Weixin default reasoning",
+  "bots.weixinModel.reasoningHint": "Send /think to list supported levels; /think low changes the current task. Options depend on the model.",
+  "bots.weixinModel.modelDefault": "Model default",
   "bots.weixinEcho.title": "Text connectivity test (Echo)",
   "bots.weixinEcho.description":
     "Send ping for pong; other private text is echoed without AI. Enabled for new pairings. Stop other gateways using this account first.",

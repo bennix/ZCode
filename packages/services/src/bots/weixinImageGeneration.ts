@@ -1,6 +1,7 @@
 import { imageNetworkStage, withImageConnectRetry } from "./imageNetwork.js";
 import { Buffer } from "node:buffer";
 import {
+  DEFAULT_STUDIO_IMAGE_MODEL,
   buildStudioImageRequest,
   requireStudioImage,
   studioImageHttpError,
@@ -30,7 +31,9 @@ export function recentWeixinPhotos(
 export function resolveWeixinImageRequest(
   text: string,
   hasPhoto: boolean,
-): { kind: "help" | "generate"; prompt: string } | null {
+): { kind: "help" | "generate"; prompt: string; model?: string } | null {
+  const explicit = text.trim().match(/^\/image\s+--model\s+(\S+)\s+([\s\S]+)$/iu);
+  if (explicit) return { kind: "generate", model: explicit[1], prompt: explicit[2]! };
   const value = text.trim();
   // 修复：礼貌问句包含具体对象时也是生图请求；只有泛问能力才返回帮助。
   const request = value.replace(/^(?:你)?(?:能不能|能否|能够|可以|支持|会|能)\s*(?:帮我\s*)?/u, "");
@@ -130,4 +133,8 @@ export async function generateWeixinImage(input: {
   } finally {
     clearTimeout(timeout);
   }
+}
+
+export function resolveWeixinImageModel(requested?: string, systemDefault?: string): string {
+  return requested?.trim() || systemDefault?.trim() || DEFAULT_STUDIO_IMAGE_MODEL;
 }

@@ -815,6 +815,12 @@ const zhCN: Record<string, string> = {
   "bots.weixinAccess.invalid": "请输入以 @im.wechat 结尾的用户 ID。",
   "bots.weixinAccess.save": "保存白名单",
   "bots.weixinAccess.reset": "仅允许扫码用户",
+  "bots.weixinModel.title": "微信默认模型",
+  "bots.weixinModel.description": "用于微信新对话和长程任务；已有任务保持原模型。仅生图使用系统图像模型。",
+  "bots.weixinModel.follow": "跟随系统默认",
+  "bots.weixinModel.reasoning": "微信默认思考强度",
+  "bots.weixinModel.reasoningHint": "微信发送 /think 或 /思考 查看可用档位；/think low 修改当前任务。选项取决于模型。",
+  "bots.weixinModel.modelDefault": "模型默认",
   "bots.weixinEcho.title": "文字连通测试（Echo）",
   "bots.weixinEcho.description":
     "发送 ping 回复 pong；其他私聊文字原样返回，不调用 AI。新配对默认开启。测试前请停用同账号的其他 Gateway。",

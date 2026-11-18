@@ -17,3 +17,12 @@ test("unavailable host and uncertain network delivery are errors, never success 
   await assert.rejects(sendWeixinFileToolEntry.handler({action:"send",path:"report.pdf"}, {weixinFilePort: async()=>{calls++;throw Error("uncertain delivery");}} as any), /uncertain delivery/);
   assert.equal(calls, 1);
 });
+
+test("image generation forwards optional explicit model through the same approved host port", async () => {
+  const calls: unknown[]=[];
+  const context:any={weixinFilePort:async(request:unknown)=>{calls.push(request);return {recipients:[],sent:true,path:"/workspace/image.png"};}};
+  await sendWeixinFileToolEntry.handler({action:"generate_image",prompt:"cat"},context);
+  await sendWeixinFileToolEntry.handler({action:"generate_image",prompt:"cat",model:"chosen/image"},context);
+  assert.deepEqual(calls,[{action:"generate_image",prompt:"cat"},{action:"generate_image",prompt:"cat",model:"chosen/image"}]);
+  assert.equal(sendWeixinFileToolEntry.metadata.needsApproval,true);
+});

@@ -1,9 +1,10 @@
+import { createWeixinTaskGuide } from "./weixinTaskGuide.js";
+import { ensureWeixinWorkspace, getWeixinWorkspacePath, clearWeixinWorkspace } from "./weixinWorkspace.js";
 import { parseTaskContinuation, parseTaskGuidance } from "@zcode/shared";
 import { deliverWeixinFile } from "./weixinFileDelivery.js";
 import {parseWeixinIntent, weixinIntentPrompt} from "./weixinIntent.js";
 import {prepareWeixinArtifact, readWeixinArtifact, weixinArtifactInstruction} from "./weixinArtifact.js";
-import { generateWeixinImage, resolveWeixinImageRequest, recentWeixinPhotos } from "./weixinImageGeneration.js";
-import { DEFAULT_STUDIO_IMAGE_MODEL } from "@zcode/shared";
+import { generateWeixinImage, resolveWeixinImageRequest, recentWeixinPhotos, resolveWeixinImageModel } from "./weixinImageGeneration.js";
 import { isWeixinActorAllowed } from "./weixinAccess.js";
 import { resolveWeixinFileSelectionReply } from "./weixinFileSelection.js";
 /* eslint-disable max-lines -- Bots 服务仍复用原 RPC 文件名，先把鉴权、命令路由、ZCode Agent 桥接收口集中在同一服务内。 */
@@ -507,7 +508,8 @@ function formatSelectionFallback(selection: SelectionPrompt, locale?: Locale): s
   // Bugfix: 微信这类纯文本通道没有原生选项卡，之前把完整 slash command 和长路径展开，
   // workspace/remote identity 会把消息刷得很长。这里只展示编号，数字解析仍走 pending selection。
   if (selection.showCancel === false) {
-    return `${selection.title}\n${lines.join("\n")}\n\n${formatBotMessage(locale, "selectionTextHintNoCancel")}`;
+    const hint = selection.requiresToken ? "请回复箭头后的完整代码；旧代码无法回答新请求。" : formatBotMessage(locale, "selectionTextHintNoCancel");
+    return `${selection.title}\n${lines.join("\n")}\n\n${hint}`;
   }
   const cancelLabel = selection.cancelLabel ?? formatBotMessage(locale, "selectionCancelOption");
   const cancelLine = selection.requiresToken && selection.token
@@ -675,7 +677,7 @@ function delay(ms: number): Promise<void> {
 }
 
 const DEFAULT_BOT_ZCODE_PROVIDER: ZCodeProvider = ZCODE_AGENT_PROVIDER;
-// Bot 模式硬锁 yolo：所有 bot task 一律免交互权限，且禁止通过 /mode 切换运行模式。
+// 非微信渠道沿用既有 yolo；微信通过 build 保留运行时权限询问。
 const BOT_FORCED_MODE = "yolo";
 const BOT_TYPING_INTERVAL_MS = 4_000;
 const BOT_TASK_META_RETRY_DELAYS_MS = [80, 160, 320] as const;
@@ -697,6 +699,7 @@ export function createBotsService(
 ): IBotsService & { disposeAll(): void; disposeAllAndWait(): Promise<void> } {
   const runStartupBackgroundTasks = deps.runStartupBackgroundTasks !== false;
   const repo = new BotsRepo();
+  const weixinTaskGuide = createWeixinTaskGuide();
   const bindCodes = new Map<string, BindCodeRecord>();
   const automationDeliveryWarningAtByKey = new Map<string, number>();
   const streamSubscriptions = new Map<string, IDisposable>();
@@ -907,7 +910,9 @@ export function createBotsService(
       await writeContext(nextContext);
       return nextContext;
     }
-    const workspace = firstAllowedWorkspace(await listWorkspaceRefs(), bot);
+    const workspace = bot.provider === "weixin"
+      ? (isWorkspaceAllowed(getWeixinWorkspacePath(bot.id), bot.allowedWorkspaces) ? createWorkspaceRef(await ensureWeixinWorkspace(bot.id)) : null)
+      : firstAllowedWorkspace(await listWorkspaceRefs(), bot);
     if (!workspace) {
       return null;
     }
@@ -918,7 +923,7 @@ export function createBotsService(
       workspaceId: workspace.id,
       mode: "draft",
       activeTaskId: null,
-      draftOptions: await buildInitializedDraftOptions(workspace),
+      draftOptions: await buildInitializedDraftOptions({ ...workspace, botId: bot.id }),
       updatedAt: Date.now(),
     };
   }
@@ -1693,7 +1698,7 @@ export function createBotsService(
   }
 
   async function buildInitializedDraftOptions(
-    context: Pick<BotContextState, "workspacePath" | "workspaceIdentity">,
+    context: Pick<BotContextState, "workspacePath" | "workspaceIdentity"> & { botId?: string },
     provider?: ZCodeProvider,
   ): Promise<BotDraftOptions> {
     const requestedProvider = normalizeAgentProviderToZCodeAgent(
@@ -1705,13 +1710,21 @@ export function createBotsService(
       return { provider: requestedProvider };
     }
     const resolvedProvider = requestedProvider;
+    const bot = context.botId ? findBot(await repo.readConfig(), context.botId) : undefined;
     return {
       provider: resolvedProvider,
-      mode: BOT_FORCED_MODE,
+      mode: bot?.provider === "weixin" ? "build" : BOT_FORCED_MODE,
+      ...(bot?.provider === "weixin" && bot.currentOptions.modelSelection
+        ? { modelSelection: bot.currentOptions.modelSelection }
+        : {}),
     };
   }
 
   async function buildActiveTaskDraftOptions(context: BotContextState): Promise<BotDraftOptions> {
+    // 微信新对话应使用账号默认值，不能继承上一任务临时选择的模型。
+    if (findBot(await repo.readConfig(), context.botId)?.provider === "weixin") {
+      return buildInitializedDraftOptions(context);
+    }
     const activeTask = await readContextActiveTaskMeta(context);
     if (!context.activeTaskId || !activeTask?.provider) {
       return buildInitializedDraftOptions(context);
@@ -1720,8 +1733,8 @@ export function createBotsService(
       () => [],
     );
     const resolvedProvider = normalizeAgentProviderToZCodeAgent(activeTask.provider);
-    // Bot 硬锁 yolo：继承当前 task 时也强制 yolo，不沿用原 task 的 mode。
-    const forcedMode = resolveSupportedDraftMode(configOptions, BOT_FORCED_MODE, resolvedProvider);
+    const requestedMode = findBot(await repo.readConfig(), context.botId)?.provider === "weixin" ? "build" : BOT_FORCED_MODE;
+    const forcedMode = resolveSupportedDraftMode(configOptions, requestedMode, resolvedProvider);
     const currentModel = readCurrentActiveTaskModel(activeTask, configOptions);
     const parsedSelection = currentModel ? parseBotModelOptionValue(currentModel) : undefined;
     const reasoningLevel = readConfigSelectCurrentValue(configOptions, "thoughtLevel");
@@ -1743,6 +1756,10 @@ export function createBotsService(
       const normalizedDraftOptions = normalizeBotDraftOptions(context.draftOptions);
       if (normalizedDraftOptions.provider !== context.draftOptions.provider) {
         await writeContext({ ...context, draftOptions: normalizedDraftOptions });
+      }
+      if (!normalizedDraftOptions.modelSelection) {
+        const defaults = await buildInitializedDraftOptions(context);
+        return { ...normalizedDraftOptions, modelSelection: defaults.modelSelection };
       }
       return normalizedDraftOptions;
     }
@@ -1823,11 +1840,11 @@ export function createBotsService(
     const modeOption = configOptions.find(
       (option) => option.category === "mode" && option.type === "select",
     );
-    // Bot 硬锁 yolo：无论草稿/继承的 mode 是什么，建 task 时一律下发 yolo。
-    // 这是 mode 真正进入 agent session 的唯一咽喉，保证任何 bot task 都免交互权限。
+    // 修复：微信强制 yolo 会绕过覆盖/持续授权询问，新任务必须使用运行时 build 权限策略。
+    const requestedMode = findBot(await repo.readConfig(), context.botId)?.provider === "weixin" ? "build" : BOT_FORCED_MODE;
     const forcedDraftMode = resolveSupportedDraftMode(
       configOptions,
-      BOT_FORCED_MODE,
+      requestedMode,
       draftOptions.provider,
     );
     if (modeOption?.id && forcedDraftMode) {
@@ -1908,9 +1925,10 @@ export function createBotsService(
     if (selection.requiresToken) {
       const resolved = resolveWeixinFileSelectionReply(selection, value);
       if (resolved?.kind === "cancel") return { type: "selection.cancel" };
-      return resolved?.kind === "choice"
-        ? { type: "elicitation.respond", value: resolved.value }
-        : null;
+      if (resolved?.kind !== "choice") return /^[a-f0-9]{8}\s|^\d+$/u.test(value.trim()) ? { type: "unknown", name: "confirmation", raw: value } : null;
+      return selection.action === "permission.respond"
+        ? parseBotCommand(resolved.value.slice(selection.token!.length + 1))
+        : { type: "elicitation.respond", value: resolved.value };
     }
     if (!isSelectionIndexValue(value)) {
       // Bugfix: /task 等列表命令会留下 pending selection。
@@ -2284,6 +2302,11 @@ export function createBotsService(
       );
     }
 
+    for (const bot of (await repo.readConfig()).bots) {
+      if (bot.provider !== "weixin") continue;
+      const path = getWeixinWorkspacePath(bot.id);
+      workspaceByKey.set(path, { ...createWorkspaceRef(path), label: `微信 · ${bot.name}` });
+    }
     const value = [...workspaceByKey.values()];
     cachedWorkspaceRefsByKey.set(cacheKey, {
       expiresAt: nowMs + BOT_WORKSPACE_REFS_CACHE_TTL_MS,
@@ -3683,6 +3706,7 @@ export function createBotsService(
     let assistantParts: ZCodeAssistantMessagePart[] = [];
     let assistantReplyBuffer = "";
     let sentAnyAssistantReply = false;
+    let lastGoalNotice = "";
     const assistantPartToolIds = new Set<string>();
     const toolCalls = new Map<string, BotReplyToolCallState>();
     const sentToolCallReplyIds = new Set<string>();
@@ -3945,6 +3969,21 @@ export function createBotsService(
       if (shouldBroadcast) {
         await broadcastTaskStreamEvent(context, event);
       }
+      if (bot.provider === "weixin" && event.type === "task_run_started") {
+        // 长程目标会有多轮，旧消息与工具集合不能累积到下一轮重复回传。
+        await flushAssistantReplyBuffer(true);
+        assistantParts = []; assistantReplyBuffer = ""; sentAnyAssistantReply = false;
+        assistantPartToolIds.clear(); toolCalls.clear(); sentToolCallReplyIds.clear();
+        runningTasks.add(event.taskId); startTyping(bot, actor, event.taskId);
+      }
+      if (bot.provider === "weixin" && event.type === "session_info_update" && event.target?.target) {
+        const target = event.target.target;
+        const key = `${target.targetID}:${target.status}`;
+        if (key !== lastGoalNotice && ["paused", "budget_limited", "complete"].includes(target.status)) {
+          lastGoalNotice = key;
+          await sendOutbound(bot, createOutbound(actor, target.status === "complete" ? "长程目标已完成，可发送 /goal show 查看。" : target.status === "budget_limited" ? "长程目标已达到预算限制，请先检查预算；不会自动扩大额度。" : "长程目标已暂停。是否继续？发送 /goal resume 继续，或 /goal clear 结束目标。"));
+        }
+      }
       // Bugfix: 第三方默认回复需要随 AssistantMessageResponse 流式发送；
       // 但 /status Progress 仍然要独立缓存，避免受发送颗粒度影响。
       updateLiveStatusProgress(event);
@@ -4029,6 +4068,7 @@ export function createBotsService(
         const permissionOptions = sortBotPermissionOptions(event.options);
         const permissionSelection: SelectionPrompt = {
           id: `permission-${event.requestId}`,
+          ...(actor.provider === "weixin" ? { requiresToken: true, token: createHash("sha256").update(event.requestId).digest("hex").slice(0, 8) } : {}),
           title: formatBotPermissionRequestSummary(event, {
             locale,
             workspacePath: context.workspacePath,
@@ -4046,6 +4086,9 @@ export function createBotsService(
             };
           }),
         };
+        if (actor.provider === "weixin" && permissionOptions.some((option) => getBotPermissionOptionDisplayKind(option) === "allowOnce")) {
+          permissionSelection.options.push({ id: `/permission ${permissionSelection.token} yolo`, label: "本任务Yolo", description: "切换当前任务为 Yolo，后续自动批准；不修改其他任务或全局设置。" });
+        }
         // Bugfix: Telegram callback_data 只有 64 字节，真实 toolCallId/requestId 可能过长。
         // 因此按钮只回传短序号，真实 requestId/optionId 暂存在当前 bot context 中再解析。
         const pendingPermissionOptions = permissionOptions.map((option) => {
@@ -4058,8 +4101,11 @@ export function createBotsService(
             response: option.response,
           };
         });
-        Object.assign(context, { pendingPermissionOptions });
-        await writeContext({ ...context, pendingPermissionOptions });
+        // 权限事件可能晚于续问或文件发送；旧 stream 闭包不能覆盖当前交付记录。
+        const latest = await readContext(actor, bot);
+        if (!latest || latest.activeTaskId !== event.taskId) return;
+        Object.assign(context, latest, { pendingPermissionOptions });
+        await writeContext({ ...latest, pendingPermissionOptions });
         const [permissionReply] = await createSelectionReply(
           actor,
           permissionSelection,
@@ -4240,7 +4286,7 @@ export function createBotsService(
         if (replyMessages.length === 0 && !sentAnyAssistantReply) {
           await sendOutbound(
             bot,
-            createOutbound(actor, locale === "en-US" ? "Task completed." : "任务已完成。"),
+            createOutbound(actor, completedTask?.target?.status === "active" ? "本轮已结束，长程目标仍在推进。可用 /goal pause 暂停。" : locale === "en-US" ? "Task completed." : "任务已完成。"),
           );
           return;
         }
@@ -4827,7 +4873,11 @@ export function createBotsService(
       }
       lines.push(msg(locale, helpMessageByCommand[command]));
     }
-    if (bot.provider === "weixin") lines.push(msg(locale, "imageHelp"));
+    if (bot.provider === "weixin") {
+      lines.push(msg(locale, "imageHelp"));
+      lines.push("/think 或 /思考 查看当前模型可用思考档位；/think low 设置当前任务（以菜单实际支持为准）。默认模型和思考强度可在设置 → 微信控制中修改；/model 可手动切换当前任务模型。只有生图使用图像模型。");
+      lines.push("/wechat 专属工作目录；/goal 长程任务引导；/goal show|pause|resume|clear 管理目标；/clean 二次确认清空专属目录。");
+    }
     return lines.join("\n");
   }
 
@@ -4881,10 +4931,71 @@ export function createBotsService(
       });
   }
 
+  async function handleWeixinTaskGuide(message: BotInboundMessage): Promise<BotOutboundMessage[] | null> {
+    const actorKey = getActorContextKey(message.actor);
+    if (!weixinTaskGuide.accepts(actorKey, message.text) && !/^(?:确认启动|确认清空)\s/u.test(message.text.trim())) return null;
+    const auth = await withAuthorizedContext(message, "message");
+    if (!auth.ok) return auth.reply;
+    const scope = `${getWorkspaceKey(auth.context.workspacePath, auth.context.workspaceIdentity)}:${auth.context.activeTaskId ?? "draft"}`;
+    if (/^\/(?:clean|清空)$/u.test(message.text.trim()) && (auth.context.workspaceIdentity || auth.context.workspacePath !== getWeixinWorkspacePath(auth.bot.id))) return [createOutbound(message.actor, "只能清空微信专属目录，请先 /wechat 切换。")];
+    const result = weixinTaskGuide.handle(actorKey, scope, message.text);
+    if (!result) return null;
+    const reply = (text: string) => [createOutbound(message.actor, text)];
+    if (result.kind === "reply") return reply(result.text);
+    const service = await resolveZCodeTaskServiceForContext(auth.context);
+    if (result.kind === "workspace" || result.kind === "clean") {
+      if (!isUserCommandAllowed(auth.user, "workspace")) return reply(msg(auth.locale, "commandNotAllowed"));
+      if (await isContextActiveTaskRunning(auth.context)) return reply("请先 /stop 停止任务，再操作工作目录。");
+      const path = getWeixinWorkspacePath(auth.bot.id);
+      if (!isWorkspaceAllowed(path, auth.user.allowedWorkspaces)) return reply(msg(auth.locale, "workspaceOutOfScope"));
+      if (result.kind === "clean") {
+        if (auth.context.workspaceIdentity || auth.context.workspacePath !== path) return reply("只能清空微信专属目录，请先 /wechat 切换。");
+        // 不能仅用 Bot 的内存 running 集合判断：桌面启动的同目录任务也必须阻止清空。
+        const tasks = await service.listTasks({ workspacePath: path });
+        if (tasks.some((task) => task.status === "running" || task.target?.status === "active")) return reply("工作目录仍有运行任务，请停止后重新确认清空。");
+        await clearWeixinWorkspace(auth.bot.id, path);
+      } else await ensureWeixinWorkspace(auth.bot.id);
+      await writeDraftContext({ ...auth.context, workspacePath: path, workspaceIdentity: undefined, workspaceId: path, recentWeixinPhotos: undefined, pendingWeixinArtifact: undefined }, await buildInitializedDraftOptions({ workspacePath: path, botId: auth.bot.id }));
+      return reply(result.kind === "clean" ? "微信专属目录已清空，已进入新任务草稿。" : `已切换微信专属工作目录：${path}`);
+    }
+    if ((result.action === "set" || result.action === "replace") && await isContextActiveTaskRunning(auth.context)) return reply("任务正在执行，请先 /goal pause，再设置新目标。");
+    let context = auth.context;
+    if (!context.activeTaskId) {
+      if (result.action !== "set") return reply("还没有长程任务，发送 /goal 开始引导。");
+      const draft = await ensureDraftOptions(context);
+      const view = await readModelSelectionView(context, draft.modelSelection);
+      const selection = draft.modelSelection ? view?.effectiveSelection : view?.preferredSelection;
+      if (!selection || view?.selectionIssue) return reply("请先配置可用的任务模型。");
+      // goalSession 复用已初始化 session 的结构化命令，不经普通文本首发。
+      const task = await service.createTask({ workspacePath: context.workspacePath, workspaceIdentity: context.workspaceIdentity, provider: draft.provider, modelSelection: selection });
+      try { await applyDraftConfigOptions({ ...context, draftOptions: { ...draft, modelSelection: selection } }, task.taskId, generateTraceId(task.taskId)); }
+      catch (error) { await service.deleteTask({ taskId: task.taskId, workspacePath: context.workspacePath, workspaceIdentity: context.workspaceIdentity }); throw error; }
+      context = { ...context, mode: "task", activeTaskId: task.taskId, draftOptions: undefined };
+      await writeContext(context);
+      await broadcastTaskListChange(context, task.taskId, "created", { task });
+    }
+    const taskId = context.activeTaskId!;
+    await service.resumeTask({ taskId, workspacePath: context.workspacePath, workspaceIdentity: context.workspaceIdentity });
+    if (result.action === "set" || result.action === "replace") await service.setMode({ taskId, mode: result.mode ?? "build" });
+    await watchTaskStream(auth.bot, message.actor, context, auth.user);
+    const starts = ["set", "replace", "resume"].includes(result.action);
+    if (starts) runningTasks.add(taskId);
+    try {
+      const outcome = await service.goalSession({ taskId, workspacePath: context.workspacePath, workspaceIdentity: context.workspaceIdentity, inputId: generateTraceId(taskId), action: result.action, objective: result.objective ? `${result.objective}\n\n此任务从微信发起。按验收要求用 SendWeixinFile 回传交付文件；图片生成并回传使用 generate_image，未指定模型时省略 model，由系统默认模型生成。列出接收方后只选择 bot=${auth.bot.id}、用户=${message.actor.providerUserId} 的本次会话，不发给其他接收方。` : undefined });
+      if (starts && !outcome.startedTurn) runningTasks.delete(taskId);
+      return reply(outcome.response || "目标操作已提交。可用 /status 查看进度，/goal pause 暂停，/goal resume 继续。");
+    } catch (error) { if (starts) runningTasks.delete(taskId); throw error; }
+  }
+
   async function handleMessage(message: BotInboundMessage): Promise<BotOutboundMessage[]> {
     const auth = await withAuthorizedContext(message, "message");
     if (!auth.ok) {
       return auth.reply;
+    }
+    // 热重载/Host 切换会丢失内存菜单；持久化的待批准请求不能把裸数字送到意图模型。
+    if (message.actor.provider === "weixin" && /^(?:\d+|[a-f0-9]{8}\s+\S+)$/u.test(message.text.trim()) &&
+        auth.context.pendingPermissionOptions?.some((option) => !option.handledAt)) {
+      return [createOutbound(message.actor, "权限确认菜单需要恢复，请在桌面处理当前待批准请求。请勿重复发送数字；本条消息未提交给 AI。")];
     }
     let deletedTaskId: string | undefined;
     if (auth.context.mode === "task" && auth.context.activeTaskId) {
@@ -4912,12 +5023,31 @@ export function createBotsService(
       auth.context.activeTaskId &&
       (await isContextActiveTaskRunning(auth.context))
     ) {
-      if (message.attachments?.length) return [createOutbound(message.actor,"任务运行中可发送文字引导；带附件的新任务请在停止后发送。")];
+      if (message.attachments?.length) {
+        // 补充附件属于原任务输入，由既有 CommandInbox 串行接纳，不能当成新任务或生图请求。
+        let prepared: PreparedBotMessageContent;
+        try {
+          prepared = await prepareBotMessageContent(auth.bot, message, auth.locale);
+        } catch (error) {
+          return [createOutbound(message.actor, msg(auth.locale, "attachmentRejected", {
+            message: formatAttachmentRejectedReason(error, auth.locale),
+          }))];
+        }
+        sendPromptInBackground(auth.bot, message.actor, auth.context, auth.context.activeTaskId,
+          generateTraceId(auth.context.activeTaskId), prepared.content, prepared.zcodeAttachments,
+          resolveAutomationBotDeliveryTarget(message.actor));
+        return [createOutbound(message.actor, "补充附件正在提交给当前任务，将按任务队列处理；提交失败会另行提示。")];
+      }
       if (continuation && !continuation.guidance) return [createOutbound(message.actor, auth.locale === "en-US" ? "The task is already running." : "任务正在执行，无需重复继续。")];
       if (guidance && !guidance.guidance) return [createOutbound(message.actor, "用法：/guide 后面填写调整要求")];
       const service=await resolveZCodeTaskServiceForContext(auth.context);
       await service.guideTask({taskId:auth.context.activeTaskId,traceId:generateTraceId(auth.context.activeTaskId),content:guidance?.guidance ?? continuation?.guidance ?? message.text});
       return [createOutbound(message.actor,auth.locale==="en-US"?"Guidance accepted; it will apply at the next safe boundary.":"已收到引导，将在下一个安全处理点应用。")];
+    }
+    if (message.actor.provider === "weixin" && continuation && !continuation.guidance && auth.context.activeTaskId) {
+      const taskService = await resolveZCodeTaskServiceForContext(auth.context);
+      const snapshot = await taskService.getTaskSnapshot({ taskId: auth.context.activeTaskId, workspacePath: auth.context.workspacePath, workspaceIdentity: auth.context.workspaceIdentity });
+      if (snapshot?.meta.target?.status === "paused") return await handleWeixinTaskGuide({ ...message, text: "/goal resume" }) ?? [];
     }
     if (guidance) return [createOutbound(message.actor, auth.locale === "en-US" ? "The task is not running. Send /continue followed by your guidance to resume it." : "任务当前未运行。请发送“继续执行，调整要求”来恢复并应用引导。")];
     if (continuation && !auth.context.activeTaskId) return [createOutbound(message.actor, auth.locale === "en-US" ? "There is no bound task to continue. Select a task first." : "当前没有可继续的任务，请先选择任务。")];
@@ -4966,8 +5096,13 @@ export function createBotsService(
       if (!imageRequest && message.text.trim() && deps.generateIntentText && !auth.context.workspaceIdentity) {
         try {
           const taskService = await resolveZCodeTaskServiceForContext(auth.context);
+          // 恢复持久化的会话绑定后才能读取模型，否则新 Host 上只有 taskId、尚无 runtime target。
+          if (auth.context.activeTaskId) {
+            await taskService.resumeTask({ taskId: auth.context.activeTaskId,
+              workspacePath: auth.context.workspacePath, workspaceIdentity: auth.context.workspaceIdentity });
+          }
           const original = auth.context.activeTaskId
-            ? await taskService.getTaskModelSelection({taskId:auth.context.activeTaskId})
+            ? await taskService.getTaskModelSelection({taskId:auth.context.activeTaskId, workspacePath:auth.context.workspacePath, workspaceIdentity:auth.context.workspaceIdentity})
             : auth.context.draftOptions?.modelSelection;
           const view = await readModelSelectionView(auth.context, original ?? undefined);
           const selection = original ? view?.effectiveSelection : view?.preferredSelection;
@@ -4985,11 +5120,10 @@ export function createBotsService(
             await writeContext(auth.context);
             preparedMessage.content+=weixinArtifactInstruction(artifact.path,artifact.kind);
             await sendOutbound(auth.bot,createOutbound(message.actor,intent.kind==="pdf"?"正在生成 PDF，完成后将发送文件。":"正在绘制可视化图形，完成后将发送图片。"));
-          } else if (auth.context.pendingWeixinArtifact) {
-            auth.context={...auth.context,pendingWeixinArtifact:undefined};
-            await writeContext(auth.context);
           }
+          // 普通续问不能删除尚未送达的 PDF/图表记录，发送 ACK 才是交付完成边界。
         } catch(error) {
+          botsLogger.warn(undefined, "Weixin intent failed", error);
           return [createOutbound(message.actor,"微信意图处理失败："+(error instanceof Error?error.message:"未知错误"))];
         }
       }
@@ -5005,7 +5139,7 @@ export function createBotsService(
           return [createOutbound(message.actor, msg(auth.locale, "imageRemoteUnavailable"))];
         try {
           const settings = await deps.settingService?.get();
-          const model = settings?.studioMediaLibrary?.defaultImageId || DEFAULT_STUDIO_IMAGE_MODEL;
+          const model = resolveWeixinImageModel(imageRequest.model, settings?.studioMediaLibrary?.defaultImageId);
           const view = await readModelSelectionView(auth.context);
           const provider = view?.providers.find((item) => {
             try {
@@ -5193,6 +5327,8 @@ export function createBotsService(
     // 更不能重新套用 Bot 创建默认值。解析只确定本次输入，不在此改写 Session。
     const originalSelection = await zcodeTaskService.getTaskModelSelection({
       taskId: auth.context.activeTaskId,
+      workspacePath: auth.context.workspacePath,
+      workspaceIdentity: auth.context.workspaceIdentity,
     });
     const selectionView = originalSelection
       ? await readModelSelectionView(auth.context, originalSelection)
@@ -5402,7 +5538,18 @@ export function createBotsService(
   }
 
   service = {
-    deliverWeixinFile: (params) => deliverWeixinFile(repo, providers.weixin, params),
+    deliverWeixinFile: (params) => deliverWeixinFile(repo, providers.weixin, params, async (prompt, model) => {
+      const settings = await deps.settingService?.get();
+      const selectedModel = resolveWeixinImageModel(model, settings?.studioMediaLibrary?.defaultImageId);
+      const view = await readModelSelectionView(params);
+      const provider = view?.providers.find((item) => {
+        try { return new URL(item.config.api?.baseUrl ?? "").hostname === "zenmux.ai" && isApiKeyAccess(item.config.access); }
+        catch { return false; }
+      });
+      const access = provider?.config.access;
+      if (!access || !isApiKeyAccess(access) || !access.apiKey?.trim()) throw new Error("请先在系统设置中配置 ZenMux API Key");
+      return generateWeixinImage({ fetchImpl: deps.fetchImpl, apiKey: access.apiKey.trim(), model: selectedModel, prompt, images: [] });
+    }),
     async syncAppRuntimePreferences(preferences) {
       await deps.remoteWorkspaceService?.syncAppRuntimePreferences?.(preferences);
     },
@@ -5653,6 +5800,10 @@ export function createBotsService(
         }
         if (message.elicitationResponse) {
           return handleStructuredElicitationResponse(message, message.elicitationResponse);
+        }
+        if (actor.provider === "weixin") {
+          const guided = await handleWeixinTaskGuide(message);
+          if (guided) return guided;
         }
         const parsedCommand = parseBotCommand(message.text);
         const command =
@@ -6049,7 +6200,7 @@ export function createBotsService(
             if (!auth.ok) return auth.reply;
             if (command.type === "mode.list") {
               // Bot 硬锁 yolo：不提供模式选择。
-              return [createOutbound(message.actor, msg(auth.locale, "modeLocked"))];
+              return [createOutbound(message.actor, message.actor.provider === "weixin" ? "微信新任务默认正常权限模式；可在 /goal 确认或权限询问中显式选择本任务 Yolo。" : msg(auth.locale, "modeLocked"))];
             }
             if (await isContextActiveTaskRunning(auth.context)) {
               // Bugfix: task 运行中不展示模式/思考级别选择，避免和正在执行的上下文配置混淆。
@@ -6164,7 +6315,7 @@ export function createBotsService(
             if (!auth.ok) return auth.reply;
             if (command.type === "mode.set") {
               // Bot 硬锁 yolo：拒绝任何模式切换请求。
-              return [createOutbound(message.actor, msg(auth.locale, "modeLocked"))];
+              return [createOutbound(message.actor, message.actor.provider === "weixin" ? "微信新任务默认正常权限模式；可在 /goal 确认或权限询问中显式选择本任务 Yolo。" : msg(auth.locale, "modeLocked"))];
             }
             if (await isContextActiveTaskRunning(auth.context)) {
               return [createOutbound(message.actor, msg(auth.locale, "taskRunning"))];
@@ -6385,6 +6536,33 @@ export function createBotsService(
             if (!auth.ok) return auth.reply;
             if (!auth.context.activeTaskId)
               return [createOutbound(message.actor, msg(auth.locale, "noActiveTask"))];
+            const yoloMatch = command.value.match(/^([a-f0-9]{8}) yolo$/u);
+            if (message.actor.provider === "weixin" && yoloMatch) {
+              const selection = pendingSelectionsByContext.get(getActorContextKey(message.actor));
+              const option = auth.context.pendingPermissionOptions?.find((item) => item.command === "approve" && !item.handledAt);
+              if (!selection || selection.action !== "permission.respond" || selection.token !== yoloMatch[1] || !option || selection.id !== `permission-${option.requestId}`) return [createOutbound(message.actor, msg(auth.locale, "permissionExpired"))];
+              // 显式选择只切当前 session；“始终允许”仍由原请求 option 的范围控制。
+              const taskService = await resolveZCodeTaskServiceForContext(auth.context);
+              const submitted = await taskService.respondPermission({ taskId: auth.context.activeTaskId, requestId: option.requestId, optionId: option.optionId, response: option.response });
+              if (!submitted) return [createOutbound(message.actor, msg(auth.locale, "permissionHandled"))];
+              // 先取得原请求 ACK；过期/已被桌面处理的请求不得趁机改变任务模式。
+              await taskService.setMode({ taskId: auth.context.activeTaskId, mode: "yolo" });
+              // ACK 期间可能产生下一条权限请求；重新读取，避免旧快照覆盖新请求。
+              const current = await readContext(message.actor, auth.bot);
+              if (current?.activeTaskId === auth.context.activeTaskId) {
+                await writeContext({
+                  ...current,
+                  pendingPermissionOptions: current.pendingPermissionOptions?.map((item) =>
+                    item.requestId === option.requestId ? { ...item, handledAt: Date.now() } : item,
+                  ),
+                });
+              }
+              if (pendingSelectionsByContext.get(getActorContextKey(message.actor))?.id === selection.id) {
+                clearPendingSelection(message.actor);
+              }
+              await broadcastTaskListChange(auth.context, auth.context.activeTaskId, "permission_resolved", { requestId: option.requestId });
+              return [createOutbound(message.actor, "当前任务已切换 Yolo；其他任务与全局默认不变。")];
+            }
             const optionIndex = Number.parseInt(command.value, 10) - 1;
             const option = Number.isFinite(optionIndex)
               ? auth.context.pendingPermissionOptions?.[optionIndex]
@@ -6490,6 +6668,7 @@ export function createBotsService(
             });
             if (!submitted)
               return [createOutbound(message.actor, msg(auth.locale, "permissionHandled"))];
+            if (pendingSelectionsByContext.get(getActorContextKey(message.actor))?.id === `permission-${command.requestId}`) clearPendingSelection(message.actor);
             await broadcastTaskListChange(
               auth.context,
               auth.context.activeTaskId,
@@ -6521,6 +6700,7 @@ export function createBotsService(
             });
             if (!submitted)
               return [createOutbound(message.actor, msg(auth.locale, "permissionHandled"))];
+            if (pendingSelectionsByContext.get(getActorContextKey(message.actor))?.id === `permission-${command.requestId}`) clearPendingSelection(message.actor);
             await broadcastTaskListChange(
               auth.context,
               auth.context.activeTaskId,
@@ -6533,6 +6713,13 @@ export function createBotsService(
             return [createOutbound(message.actor, msg(auth.locale, "permissionDenied"))];
           }
           case "unknown":
+            if (message.actor.provider === "weixin" && command.name === "confirmation") {
+              // 数字不是内部命令：保留轮次校验，并给出可操作的当前菜单，不能降级为模型输入。
+              const selection = pendingSelectionsByContext.get(getActorContextKey(message.actor));
+              return [createOutbound(message.actor,
+                "请回复箭头后的完整确认码（轮次码 + 编号），不能只回复数字。过期代码不会批准新请求。" +
+                (selection ? `\n\n${formatSelectionFallback(selection, await readMessageLocale())}` : "请在桌面查看当前待批准请求。"))];
+            }
             return [
               createOutbound(
                 message.actor,

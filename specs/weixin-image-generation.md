@@ -1,7 +1,8 @@
 # Weixin image generation and photo editing
 
-Use the system Studio default image model, never the conversation text model or a
-separate Weixin override. Move the Studio media library to AppSettings (setting
+Use the system Studio default image model unless the user explicitly specifies a
+model for this request (/image --model or the validated generate_image tool action).
+Never use the conversation text model or persist a separate Weixin default. Move the Studio media library to AppSettings (setting
 service is the owner); renderer localStorage is only a one-time legacy import.
 Both Studio and Weixin resolve the same catalog and request builder.
 

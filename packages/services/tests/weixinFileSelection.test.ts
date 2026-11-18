@@ -26,3 +26,17 @@ test("Weixin file choices bind to the current request token", () => {
     assert.equal(resolveWeixinFileSelectionReply(selection as never, text), null);
   }
 });
+
+test("permission labels require the current token and retain the runtime option ID", () => {
+  const permission = {
+    ...selection,
+    action: "permission.respond",
+    options: [{ id: "/approve request-1 always", label: "始终允许" }],
+  };
+  assert.equal(resolveWeixinFileSelectionReply(permission as never, "始终允许"), null);
+  assert.equal(resolveWeixinFileSelectionReply(permission as never, "oldtoken 始终允许"), null);
+  assert.deepEqual(resolveWeixinFileSelectionReply(permission as never, "abc123def456 始终允许"), {
+    kind: "choice",
+    value: "abc123def456 /approve request-1 always",
+  });
+});
