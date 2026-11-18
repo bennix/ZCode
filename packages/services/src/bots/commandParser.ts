@@ -17,6 +17,10 @@ function splitCommand(text: string): { name: string; rest: string } | null {
 }
 
 export function parseBotCommand(text: string): BotCommand {
+  // 精确匹配管理问句，避免普通工作指令被误拦截或产生模型开销。
+  const question = text.trim().replace(/[？?。！!]+$/u, "");
+  if (["有哪些任务", "当前有哪些任务"].includes(question)) return { type: "task.list" };
+  if (["当前任务进度", "任务进展到哪里了"].includes(question)) return { type: "status" };
   const parsed = splitCommand(text);
   if (!parsed) {
     return text.trim() === "0" ? { type: "selection.cancel" } : { type: "message", text };
@@ -37,6 +41,8 @@ export function parseBotCommand(text: string): BotCommand {
     case "cancel":
     case "取消":
       return { type: "selection.cancel" };
+    case "progress":
+    case "进度":
     case "status":
     case "状态":
       return { type: "status" };
@@ -72,6 +78,9 @@ export function parseBotCommand(text: string): BotCommand {
     case "think":
     case "思考":
       return rest ? { type: "thoughtLevel.set", value: rest } : { type: "thoughtLevel.list" };
+    case "tasks":
+    case "任务":
+    case "切换任务":
     case "task":
       return rest ? { type: "task.set", value: rest } : { type: "task.list" };
     case "reply":

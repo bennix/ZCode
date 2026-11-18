@@ -44,6 +44,7 @@ test("Weixin end-to-end command routing uses goal API, explicit Yolo and two-ste
   });
   const task = {
     taskId: "task-1",
+    title: "Fixture task",
     workspacePath: getWeixinWorkspacePath("wx"),
     provider: ZCODE_AGENT_PROVIDER,
     status: "completed",
@@ -55,7 +56,7 @@ test("Weixin end-to-end command routing uses goal API, explicit Yolo and two-ste
       return { text: JSON.stringify({ kind: "chat", prompt: "follow up", useReference: false }) };
     },
     credentialService: { load: async () => null } as any,
-    settingService: { get: async () => ({ locale: "zh-CN", lastWorkspaceSession: [] }) } as any,
+    settingService: { get: async () => ({ locale: "zh-CN", lastWorkspaceSession: [{ kind: "local", workspacePath: join(base, "other-project") }] }) } as any,
     modelSelectionService: {
       getView: async (input: any) => ({
         effectiveSelection: input?.selection,
@@ -101,7 +102,7 @@ test("Weixin end-to-end command routing uses goal API, explicit Yolo and two-ste
         return task;
       },
       listDeletedTaskIds: async () => [],
-      getTaskSnapshot: async () => ({ meta: { ...task, status: busy ? "running" : "completed" } }),
+      getTaskSnapshot: async () => ({ messages: [], meta: { ...task, status: busy ? "running" : "completed" } }),
       getTaskModelSelection: async (params: any) => {
         assert.equal(params.workspacePath, task.workspacePath);
         assert.equal(loaded, true, "restore session before reading its model");
@@ -123,7 +124,7 @@ test("Weixin end-to-end command routing uses goal API, explicit Yolo and two-ste
         calls.push({ goal: p });
         return { response: "目标已提交", startedTurn: false };
       },
-      listTasks: async () => [{ ...task, status: busy ? "running" : "completed" }],
+      listTasks: async (input: any) => input.workspacePath === join(base, "other-project") ? [{ ...task, taskId: "other-task", title: "Other project task", workspacePath: input.workspacePath }] : [{ ...task, status: busy ? "running" : "completed" }],
       sendPrompt: async (input: any) => {
         calls.push({ prompt: input });
       },
@@ -142,6 +143,13 @@ test("Weixin end-to-end command routing uses goal API, explicit Yolo and two-ste
   try {
     const help = await service.handleInboundMessage(message("/help"));
     assert.match(help.map((item) => item.text).join("\n"), /\/think/);
+    assert.match(help.map((item) => item.text).join("\n"), /切换任务/);
+    const navigation = await service.handleInboundMessage(message("/任务"));
+    assert.match(JSON.stringify(navigation), /task-1/);
+    assert.match(JSON.stringify(navigation), /weixin/);
+    assert.match(JSON.stringify(navigation), /other-task/);
+    assert.match(JSON.stringify(navigation), /other-project/);
+    await service.handleInboundMessage(message("0"));
     const levels = await service.handleInboundMessage(message("/思考"));
     assert.match(JSON.stringify(levels), /high/);
     await service.handleInboundMessage(message("/think high"));
@@ -242,6 +250,12 @@ test("Weixin end-to-end command routing uses goal API, explicit Yolo and two-ste
     busy = false;
     loaded = false;
     const saved = await repo.readState();
+    const beforeQuery = calls.length;
+    const progress = await service.handleInboundMessage(message("/进度"));
+    assert.match(JSON.stringify(progress), /task-1/);
+    const listing = await service.handleInboundMessage(message("有哪些任务"));
+    assert.match(JSON.stringify(listing), /task-1/);
+    assert.equal(calls.length, beforeQuery, "navigation must not invoke model or mutate task");
     const pendingPdf = { path: join(task.workspacePath, "pending.pdf"), kind: "pdf" as const, status: "pending" as const };
     saved.bots.wx.pendingWeixinArtifact = pendingPdf;
     await repo.writeState(saved);

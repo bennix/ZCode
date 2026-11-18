@@ -1,3 +1,4 @@
+import { matchTaskTitles } from "./taskTitleMatching.js";
 import { createWeixinTaskGuide } from "./weixinTaskGuide.js";
 import { ensureWeixinWorkspace, getWeixinWorkspacePath, clearWeixinWorkspace } from "./weixinWorkspace.js";
 import { parseTaskContinuation, parseTaskGuidance } from "@zcode/shared";
@@ -2396,26 +2397,17 @@ export function createBotsService(
     user: BotConfig,
   ): Promise<BotTaskSelectionEntry[]> {
     const currentWorkspace = createWorkspaceRef(context.workspacePath, context.workspaceIdentity);
-    const currentWorkspaceKey = getWorkspaceKey(context.workspacePath, context.workspaceIdentity);
     const workspaceRefs = await listWorkspaceRefs({ currentWorkspace });
-    const allowedWorkspaces = filterAllowedWorkspaces(workspaceRefs, user.allowedWorkspaces);
-    const candidateWorkspaces = allowedWorkspaces.filter((workspace) => {
-      const workspaceKey = getWorkspaceKey(workspace.workspacePath, workspace.workspaceIdentity);
-      return (
-        workspaceKey === currentWorkspaceKey ||
-        (!context.workspaceIdentity && workspace.workspacePath === context.workspacePath)
-      );
-    });
-    const workspaces = candidateWorkspaces.length > 0 ? candidateWorkspaces : [currentWorkspace];
+    const workspaces = filterAllowedWorkspaces(workspaceRefs, user.allowedWorkspaces);
     const entries = (
       await Promise.all(
         workspaces.map(async (workspace) => {
-          const zcodeTaskService = await resolveZCodeTaskServiceForContext(workspace);
-          const tasks = await zcodeTaskService
-            .listTasks({
+          // 远端解析失败也应隔离到当前项目，不能阻断其他项目的任务导航。
+          const tasks = await resolveZCodeTaskServiceForContext(workspace)
+            .then((service) => service.listTasks({
               workspacePath: workspace.workspacePath,
               workspaceIdentity: workspace.workspaceIdentity,
-            })
+            }))
             .catch(() => []);
           return tasks.map((task) => ({
             task,
@@ -4875,6 +4867,7 @@ export function createBotsService(
     }
     if (bot.provider === "weixin") {
       lines.push(msg(locale, "imageHelp"));
+      lines.push("/任务（/tasks）列出可访问项目的任务和目录；按菜单选择或 /切换任务 <任务ID、名称或关键词> 切换任务及目录；多个匹配会列出候选。/进度（/status）查询当前任务状态、耗时和执行步骤；/项目 切换项目。运行中可查询，切换其他任务前请 /停止。也可直接问：有哪些任务、当前任务进度。");
       lines.push("/think 或 /思考 查看当前模型可用思考档位；/think low 设置当前任务（以菜单实际支持为准）。默认模型和思考强度可在设置 → 微信控制中修改；/model 可手动切换当前任务模型。只有生图使用图像模型。");
       lines.push("/wechat 专属工作目录；/goal 长程任务引导；/goal show|pause|resume|clear 管理目标；/clean 二次确认清空专属目录。");
     }
@@ -5366,20 +5359,18 @@ export function createBotsService(
     return continuation ? [createOutbound(message.actor, auth.locale === "en-US" ? "Continuation submitted with your guidance, if any." : "已提交继续执行，将沿用原任务，并应用本次附加的引导。")] : [];
   }
 
-  async function handleTaskList(message: BotInboundMessage): Promise<BotOutboundMessage[]> {
+  async function handleTaskList(message: BotInboundMessage, candidates?: BotTaskSelectionEntry[]): Promise<BotOutboundMessage[]> {
     const auth = await withAuthorizedContext(message, "task");
     if (!auth.ok) {
       return auth.reply;
     }
-    if (await isContextActiveTaskRunning(auth.context)) {
-      // Bugfix: 运行中展示 /task 列表会让用户继续点选其它 task，
-      // 即使后续切换被拒绝，也会留下误导性的 pending selection。
-      return [createOutbound(message.actor, msg(auth.locale, "taskRunning"))];
+    const taskEntries = candidates ?? await listContextTaskSelectionEntries(auth.context, auth.user);
+    // 查询不应覆盖运行中的权限或提问菜单；切换仍由 task.set 的运行保护负责。
+    if (await isContextActiveTaskRunning(auth.context) || auth.context.pendingPermissionOptions?.length || auth.context.pendingElicitation) {
+      return [createOutbound(message.actor, taskEntries.length
+        ? taskEntries.map(({ task, workspacePath }) => `${task.title} (${task.taskId}) · ${taskStatus(task)}\n${workspacePath}`).join("\n\n") + "\n\n/进度 查看当前进度；/停止 后用 /任务 切换。"
+        : msg(auth.locale, "noHistoryTasks"))];
     }
-    const taskEntries = (await listContextTaskSelectionEntries(auth.context, auth.user)).slice(
-      0,
-      10,
-    );
     const tasks = taskEntries.map((entry) => entry.task);
     const activeTask = auth.context.activeTaskId
       ? tasks.find((task) => task.taskId === auth.context.activeTaskId)
@@ -5389,12 +5380,12 @@ export function createBotsService(
       title: msg(auth.locale, "taskSelectTitle", {
         task: activeTask ? `${activeTask.title} (${activeTask.taskId})` : "draft",
       }),
-      currentId: auth.context.activeTaskId ?? undefined,
+      currentId: auth.context.activeTaskId ? `${getWorkspaceKey(auth.context.workspacePath, auth.context.workspaceIdentity)}::${auth.context.activeTaskId}` : undefined,
       action: "task.set",
       options: taskEntries.map((entry) => ({
-        id: entry.task.taskId,
+        id: `${getWorkspaceKey(entry.workspacePath, entry.workspaceIdentity)}::${entry.task.taskId}`,
         label: entry.task.title,
-        description: taskStatus(entry.task),
+        description: `${taskStatus(entry.task)} · ${entry.task.taskId} · ${entry.workspacePath}`,
       })),
     };
     if (taskEntries.length > 0) {
@@ -5402,7 +5393,7 @@ export function createBotsService(
       // 否则点击 /task 的序号后只剩 taskId，后续二次查询会退回 path-only 语义并提示 Task not found。
       pendingTaskSelectionsByContext.set(
         getActorContextKey(message.actor),
-        new Map(taskEntries.map((entry) => [entry.task.taskId, entry])),
+        new Map(taskEntries.map((entry) => [`${getWorkspaceKey(entry.workspacePath, entry.workspaceIdentity)}::${entry.task.taskId}`, entry])),
       );
     } else {
       pendingTaskSelectionsByContext.delete(getActorContextKey(message.actor));
@@ -5417,23 +5408,18 @@ export function createBotsService(
     context: BotContextState,
     user: BotConfig,
     value: string,
-  ): Promise<BotTaskSelectionEntry | null> {
+  ): Promise<BotTaskSelectionEntry | BotTaskSelectionEntry[] | null> {
     const pendingEntry = resolvePendingTaskSelectionEntry(message.actor, value);
-    if (pendingEntry) {
-      return pendingEntry;
-    }
     const entries = await listContextTaskSelectionEntries(context, user);
-    const selected = resolveOptionByValue(
-      entries.map((entry) => ({
-        id: entry.task.taskId,
-        label: entry.task.title,
-        entry,
-      })),
-      value,
-    );
-    if (selected) {
-      return selected.entry;
+    // 菜单不是授权凭据：点击时重新确认目标仍在可访问项目内。
+    if (pendingEntry) {
+      return entries.find((entry) => entry.task.taskId === pendingEntry.task.taskId &&
+        getWorkspaceKey(entry.workspacePath, entry.workspaceIdentity) === getWorkspaceKey(pendingEntry.workspacePath, pendingEntry.workspaceIdentity)) ?? null;
     }
+    const matches = matchTaskTitles(entries, value);
+    if (matches.length === 1) return matches[0]!;
+    // 多个标题匹配必须交由用户确认，不能使用 find 静默选择首项。
+    if (matches.length > 1) return matches;
     const zcodeTaskService = await resolveZCodeTaskServiceForContext(context);
     const snapshot = await zcodeTaskService
       .getTaskSnapshot({
@@ -6444,10 +6430,15 @@ export function createBotsService(
               auth.user,
               command.value,
             );
+            if (Array.isArray(taskEntry)) return handleTaskList(message, taskEntry);
             if (!taskEntry) return [createOutbound(message.actor, msg(auth.locale, "taskMissing"))];
             const { task } = taskEntry;
+            // 重选当前任务只读状态，不清除尚待处理的权限和文件回传。
+            if (auth.context.activeTaskId === task.taskId && getWorkspaceKey(auth.context.workspacePath, auth.context.workspaceIdentity) === getWorkspaceKey(taskEntry.workspacePath, taskEntry.workspaceIdentity)) {
+              return createStatusReply(message.actor, auth.context, auth.locale);
+            }
             if (
-              auth.context.activeTaskId !== task.taskId &&
+              (auth.context.activeTaskId !== task.taskId || getWorkspaceKey(auth.context.workspacePath, auth.context.workspaceIdentity) !== getWorkspaceKey(taskEntry.workspacePath, taskEntry.workspaceIdentity)) &&
               (await isContextActiveTaskRunning(auth.context))
             ) {
               // Bugfix: 运行中的旧 task 已经建立了第三方 stream 订阅。
@@ -6462,6 +6453,9 @@ export function createBotsService(
               workspaceId: getWorkspaceKey(taskEntry.workspacePath, taskEntry.workspaceIdentity),
               mode: "task",
               activeTaskId: task.taskId,
+              pendingPermissionOptions: undefined,
+              pendingElicitation: undefined,
+              pendingWeixinArtifact: undefined,
             } satisfies BotContextState;
             await writeContext(nextContext);
             pendingTaskSelectionsByContext.delete(getActorContextKey(message.actor));

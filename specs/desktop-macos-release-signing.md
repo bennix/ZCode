@@ -220,3 +220,7 @@ Mac 正式 DMG 匿名下载摘要及装订校验通过，latest-mac.yml 与本�
 本地最新公证 DMG 的 SHA-256 为 `0faadc2c046e0ef58a1a805ddef4538e1df74b25d44498ac05176bec8e41ac8d`，旧 3.14.41 DMG 已删除。
 
 正式下载复验 `44057991472` 的 Windows x64/ARM64、Linux 双架构 DEB/RPM 六项全部成功。Mac 匿名正式下载摘要及装订验证通过，公开 latest-mac.yml 与本地最终文件逐字节一致。Landing Page 部署 `44058104285` 成功，线上 HTML 与双语/响应式验证后的源码一致。本地仅保留 release-artifacts 的一份最新公证 DMG。完整记录见 `desktop-release-audit-2026-11-17.json`。
+
+## 3.14.44 微信任务导航发布
+
+本版加入跨项目任务查询、真实进度、任务与目录同步切换、标题关键词匹配及歧义候选菜单。根版本、构建和安装验收工作流统一为 3.14.44；同一源码提交构建 macOS arm64、Windows x64/arm64、Linux x64/arm64 DEB/RPM。公证、装订、签名、候选安装验收及远端资产摘要均通过后才公开；失败保留 3.14.43 和本地旧 DMG。成功后本地只保留最新公证 DMG。
