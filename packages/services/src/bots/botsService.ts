@@ -1,3 +1,4 @@
+import { createHistoricalArtifactMenu, findHistoricalArtifacts, parseArtifactRetrieval } from "./weixinHistoricalArtifacts.js";
 import { matchTaskTitles } from "./taskTitleMatching.js";
 import { createWeixinTaskGuide } from "./weixinTaskGuide.js";
 import { ensureWeixinWorkspace, getWeixinWorkspacePath, clearWeixinWorkspace } from "./weixinWorkspace.js";
@@ -729,6 +730,7 @@ export function createBotsService(
     typingIntervals: typingIntervals.size,
     liveStatusProgress: liveStatusProgressByTaskId.size,
   }));
+  const historicalArtifacts = createHistoricalArtifactMenu();
   const pendingTaskSelectionsByContext = new Map<string, Map<string, BotTaskSelectionEntry>>();
   const pendingWorkspaceSelectionsByContext = new Map<
     string,
@@ -4867,6 +4869,7 @@ export function createBotsService(
     }
     if (bot.provider === "weixin") {
       lines.push(msg(locale, "imageHelp"));
+      lines.push("/产物 或 取回产物：列出当前历史任务已有文件，按 /取回产物 <确认码> <编号> 直接发送，不继续生成。");
       lines.push("/任务（/tasks）列出可访问项目的任务和目录；按菜单选择或 /切换任务 <任务ID、名称或关键词> 切换任务及目录；多个匹配会列出候选。/进度（/status）查询当前任务状态、耗时和执行步骤；/项目 切换项目。运行中可查询，切换其他任务前请 /停止。也可直接问：有哪些任务、当前任务进度。");
       lines.push("/think 或 /思考 查看当前模型可用思考档位；/think low 设置当前任务（以菜单实际支持为准）。默认模型和思考强度可在设置 → 微信控制中修改；/model 可手动切换当前任务模型。只有生图使用图像模型。");
       lines.push("/wechat 专属工作目录；/goal 长程任务引导；/goal show|pause|resume|clear 管理目标；/clean 二次确认清空专属目录。");
@@ -4978,6 +4981,37 @@ export function createBotsService(
       if (starts && !outcome.startedTurn) runningTasks.delete(taskId);
       return reply(outcome.response || "目标操作已提交。可用 /status 查看进度，/goal pause 暂停，/goal resume 继续。");
     } catch (error) { if (starts) runningTasks.delete(taskId); throw error; }
+  }
+
+  async function handleHistoricalArtifactRetrieval(message: BotInboundMessage): Promise<BotOutboundMessage[] | null> {
+    const choice = parseArtifactRetrieval(message.text);
+    if (choice === null) return null;
+    const auth = await withAuthorizedContext(message, "task");
+    if (!auth.ok) return auth.reply;
+    const context = auth.context;
+    const reply = (text: string) => [createOutbound(message.actor, text)];
+    if (!context.activeTaskId) return reply("请先用 /任务 或 /切换任务 选中要取回产物的历史任务。");
+    if (context.workspaceIdentity) return reply("远程任务暂不支持从本机回传历史产物，请在远程工作区下载文件。本次没有继续执行任务。");
+    const actorKey = getActorContextKey(message.actor);
+    const scope = JSON.stringify([getWorkspaceKey(context.workspacePath, context.workspaceIdentity), context.activeTaskId]);
+    try {
+      const service = await resolveZCodeTaskServiceForContext(context);
+      if ((await service.listDeletedTaskIds({ workspacePath: context.workspacePath, workspaceIdentity: context.workspaceIdentity })).includes(context.activeTaskId)) return reply("该任务已删除，请重新选择任务。");
+      if (choice) {
+        const file = await historicalArtifacts.take(actorKey, scope, choice);
+        if (!providers.weixin?.sendFile) throw new Error("微信文件发送未配置");
+        // 取回只向本条消息的已鉴权用户发送；不恢复 Agent，也不让模型修改已有产物。
+        await providers.weixin.sendFile(auth.bot, createOutbound(message.actor, ""), file.bytes, file.name);
+        historicalArtifacts.complete(actorKey);
+        return reply(`已发送文件：${file.name}`);
+      }
+      const snapshot = await service.getTaskSnapshot({ taskId: context.activeTaskId, workspacePath: context.workspacePath, workspaceIdentity: context.workspaceIdentity });
+      if (!snapshot) return reply("未找到当前任务记录，请重新选择任务。");
+      const files = await findHistoricalArtifacts(snapshot, context.workspacePath, context.pendingWeixinArtifact?.path);
+      return reply(historicalArtifacts.list(actorKey, scope, files));
+    } catch (error) {
+      return reply("产物取回失败：" + (error instanceof Error ? error.message : "未知错误") + "。本次没有继续执行或重新生成文件。");
+    }
   }
 
   async function handleMessage(message: BotInboundMessage): Promise<BotOutboundMessage[]> {
@@ -5788,6 +5822,8 @@ export function createBotsService(
           return handleStructuredElicitationResponse(message, message.elicitationResponse);
         }
         if (actor.provider === "weixin") {
+          const retrieval = await handleHistoricalArtifactRetrieval(message);
+          if (retrieval) return retrieval;
           const guided = await handleWeixinTaskGuide(message);
           if (guided) return guided;
         }

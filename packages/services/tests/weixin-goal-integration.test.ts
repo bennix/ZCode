@@ -19,6 +19,7 @@ test("Weixin end-to-end command routing uses goal API, explicit Yolo and two-ste
   let listener: (event: any) => Promise<void> = async () => {};
   let acceptPermission = true;
   let loaded = false;
+  let historyMessages: any[] = [];
   const repo = new BotsRepo();
   await repo.writeConfig({
     version: 3,
@@ -102,7 +103,7 @@ test("Weixin end-to-end command routing uses goal API, explicit Yolo and two-ste
         return task;
       },
       listDeletedTaskIds: async () => [],
-      getTaskSnapshot: async () => ({ messages: [], meta: { ...task, status: busy ? "running" : "completed" } }),
+      getTaskSnapshot: async () => ({ messages: historyMessages, meta: { ...task, status: busy ? "running" : "completed" } }),
       getTaskModelSelection: async (params: any) => {
         assert.equal(params.workspacePath, task.workspacePath);
         assert.equal(loaded, true, "restore session before reading its model");
@@ -256,6 +257,16 @@ test("Weixin end-to-end command routing uses goal API, explicit Yolo and two-ste
     const listing = await service.handleInboundMessage(message("有哪些任务"));
     assert.match(JSON.stringify(listing), /task-1/);
     assert.equal(calls.length, beforeQuery, "navigation must not invoke model or mutate task");
+    const historicalPdf = join(base, "previous-task.pdf");
+    await writeFile(historicalPdf, "%PDF-1.4 prior output");
+    historyMessages = [{ role: "assistant", content: `[交付文件](${historicalPdf})` }];
+    const retrievalCalls = calls.length;
+    const retrieved = await service.handleInboundMessage(message("取回 产物"));
+    assert.match(JSON.stringify(retrieved), /previous-task.pdf/);
+    assert.match(JSON.stringify(retrieved), /取回产物 [a-f0-9]{8} 1/);
+    assert.equal(calls.length, retrievalCalls, "retrieval must not call intent/model or guide task");
+    assert.equal(loaded, false, "retrieval must not resume the task");
+    historyMessages = [];
     const pendingPdf = { path: join(task.workspacePath, "pending.pdf"), kind: "pdf" as const, status: "pending" as const };
     saved.bots.wx.pendingWeixinArtifact = pendingPdf;
     await repo.writeState(saved);
