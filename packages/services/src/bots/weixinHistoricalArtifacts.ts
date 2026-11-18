@@ -14,6 +14,10 @@ export function parseArtifactRetrieval(text: string): string | null {
   const command = /^\/(?:产物|取回产物|artifacts)(?:\s+(.*))?$/iu.exec(trimmed);
   return command ? command[1]?.trim() ?? "" : null;
 }
+export function parseArtifactRegeneration(text: string): string | null {
+  const match = /^\/?重新生成产物(?:[\s：:]+(.*))?$/su.exec(text.trim());
+  return match ? match[1]?.trim() || "按原任务要求重新生成产物" : null;
+}
 const within = (root: string, path: string) => {
   const rel = relative(root, path);
   return !!rel && rel !== ".." && !rel.startsWith(`..${sep}`) && !isAbsolute(rel);
@@ -89,7 +93,7 @@ export function createHistoricalArtifactMenu() {
       if (!selected) throw new Error("文件编号不存在，请按菜单选择。");
       const canonical = await realpath(selected.path);
       const info = await stat(canonical);
-      if (canonical !== selected.path || info.size !== selected.size || info.mtimeMs !== selected.modified) throw new Error("文件已发生变化，请重新发送 /产物 确认。");
+      if (canonical !== selected.path || info.size !== selected.size || info.mtimeMs !== selected.modified) throw new Error("文件已发生变化，请重新发送 /产物 确认已有版本，或用 /重新生成产物 加修改要求生成新版。");
       const file = await readWeixinShareFile(selected.root, selected.path);
       const after = await stat(canonical);
       if (after.mtimeMs !== selected.modified || file.bytes.length !== selected.size) throw new Error("读取时文件发生变化，请重新查询产物。");

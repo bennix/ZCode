@@ -1,4 +1,4 @@
-import { createHistoricalArtifactMenu, findHistoricalArtifacts, parseArtifactRetrieval } from "./weixinHistoricalArtifacts.js";
+import { createHistoricalArtifactMenu, findHistoricalArtifacts, parseArtifactRegeneration, parseArtifactRetrieval } from "./weixinHistoricalArtifacts.js";
 import { matchTaskTitles } from "./taskTitleMatching.js";
 import { createWeixinTaskGuide } from "./weixinTaskGuide.js";
 import { ensureWeixinWorkspace, getWeixinWorkspacePath, clearWeixinWorkspace } from "./weixinWorkspace.js";
@@ -4869,7 +4869,7 @@ export function createBotsService(
     }
     if (bot.provider === "weixin") {
       lines.push(msg(locale, "imageHelp"));
-      lines.push("/产物 或 取回产物：列出当前历史任务已有文件，按 /取回产物 <确认码> <编号> 直接发送，不继续生成。");
+      lines.push("/产物 或 取回产物：列出当前历史任务已有文件，按 /取回产物 <确认码> <编号> 直接发送，不继续生成。/重新生成产物 <修改要求> 则继续原任务生成新版并回传。");
       lines.push("/任务（/tasks）列出可访问项目的任务和目录；按菜单选择或 /切换任务 <任务ID、名称或关键词> 切换任务及目录；多个匹配会列出候选。/进度（/status）查询当前任务状态、耗时和执行步骤；/项目 切换项目。运行中可查询，切换其他任务前请 /停止。也可直接问：有哪些任务、当前任务进度。");
       lines.push("/think 或 /思考 查看当前模型可用思考档位；/think low 设置当前任务（以菜单实际支持为准）。默认模型和思考强度可在设置 → 微信控制中修改；/model 可手动切换当前任务模型。只有生图使用图像模型。");
       lines.push("/wechat 专属工作目录；/goal 长程任务引导；/goal show|pause|resume|clear 管理目标；/clean 二次确认清空专属目录。");
@@ -5822,6 +5822,14 @@ export function createBotsService(
           return handleStructuredElicitationResponse(message, message.elicitationResponse);
         }
         if (actor.provider === "weixin") {
+          const regeneration = parseArtifactRegeneration(message.text);
+          if (regeneration !== null) {
+            // 用户明确选择重新生成才恢复任务；取回文件及文件变化不会触发这条写入路径。
+            return handleMessage({ ...message, text: "/continue " + regeneration +
+              "\n请按上述要求生成新版产物，默认保留旧版本。完成并验证后必须使用 SendWeixinFile 回传实际文件，不能只回复路径。先列出接收方，只选择本次微信会话：" +
+              JSON.stringify({ botId: actor.botId, userId: actor.providerUserId }) +
+              "。需要生图时调用系统图像模型；用户未指定图像模型则使用系统默认模型。" });
+          }
           const retrieval = await handleHistoricalArtifactRetrieval(message);
           if (retrieval) return retrieval;
           const guided = await handleWeixinTaskGuide(message);

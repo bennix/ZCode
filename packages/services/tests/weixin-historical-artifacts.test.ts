@@ -3,7 +3,7 @@ import { test } from "node:test";
 import { mkdtemp, mkdir, writeFile, rm, symlink, realpath } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { createHistoricalArtifactMenu, findHistoricalArtifacts, parseArtifactRetrieval } from "../src/bots/weixinHistoricalArtifacts.js";
+import { createHistoricalArtifactMenu, findHistoricalArtifacts, parseArtifactRegeneration, parseArtifactRetrieval } from "../src/bots/weixinHistoricalArtifacts.js";
 
 test("retrieval commands are exact and do not capture generation requests", () => {
   for (const text of ["取回 产物", "取回以前任务的产物", "/产物", "/artifacts"]) assert.equal(parseArtifactRetrieval(text), "");
@@ -33,4 +33,11 @@ test("historical temporary PDF retrieval is read-only, scoped and checked again 
     menu.complete("actor");
     await assert.rejects(menu.take("actor", "task", `${token} 1`));
   } finally { await rm(base, { recursive: true, force: true }); }
+});
+
+test("regeneration requires an explicit command and retains requested changes", () => {
+  assert.equal(parseArtifactRegeneration("/重新生成产物 加上正则表达式"), "加上正则表达式");
+  assert.equal(parseArtifactRegeneration("重新生成产物"), "按原任务要求重新生成产物");
+  assert.equal(parseArtifactRegeneration("取回产物"), null);
+  assert.equal(parseArtifactRegeneration("文件已变化"), null);
 });
