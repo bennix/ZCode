@@ -21,7 +21,7 @@ const within = (root: string, path: string) => {
 function pathsFromText(text: string): string[] {
   const paths: string[] = [];
   // 链接/引用支持中文空格；裸路径只读到分隔符，绝不执行历史命令。
-  for (const match of text.matchAll(/\]\(<?([^\n)]+?)>?\)|["'`]([^"'`\n]+)["'`]|((?:\/|[A-Za-z]:[\\/])[^\s<>"'`()\[\]]+)/gu)) {
+  for (const match of text.matchAll(/\]\(<?([^\n)]+?)>?\)|["'`]([^"'`\n]+)["'`]|((?:\/|[A-Za-z]:[\\/])[^\s<>"'`()[\]]+)/gu)) {
     let value = (match[1] ?? match[2] ?? match[3] ?? "").trim();
     if (value.startsWith("file://")) { try { value = decodeURIComponent(new URL(value).pathname); } catch { continue; } }
     if (extension.test(value) && !/^https?:/iu.test(value)) paths.push(value);
