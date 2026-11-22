@@ -232,3 +232,7 @@ Mac 正式 DMG 匿名下载摘要及装订校验通过，latest-mac.yml 与本�
 ## 3.14.45 候选（2026-11-22）
 
 发布共享引导界面重构、响应式设置、键盘焦点及专业工作 124 个工作流的中英文实时切换。根版本与全部构建/安装验收工作流统一为 3.14.45；同一源码提交构建 macOS arm64、Windows 双架构、Linux 双架构 DEB/RPM。完成签名、公证、装订与候选安装验收后公开；新版 DMG 验证通过并留存后才删除本地旧版及重复 DMG。失败保留旧版。
+
+### 3.14.45 发布验收
+
+源码 `1aa46c0a3c5a44cbf1694bc9ad89700a114452ed`。Windows/Linux 双架构构建、候选安装和正式下载安装复验全部通过。Mac DMG/ZIP 公证 Accepted；装订、挂载 App 严格签名、Gatekeeper 与两项打包界面测试通过。正式 DMG 匿名下载摘要和更新清单一致。40 个资产已核对，Release 为 Latest。本地仅保留 release-artifacts/ZenCode-3.14.45-mac-arm64.dmg，旧版及重复 DMG 已删除。详见 desktop-release-audit-2026-11-22.json。
