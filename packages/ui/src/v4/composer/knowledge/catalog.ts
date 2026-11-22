@@ -1,8 +1,6 @@
 export const knowledgeDomains = [
   {
     id: "sales",
-    zh: "销售与客户",
-    en: "Sales & CRM",
     skill: "account-research",
     skills: [
       "account-context",
@@ -70,8 +68,6 @@ export const knowledgeDomains = [
   },
   {
     id: "marketing",
-    zh: "营销与内容",
-    en: "Marketing",
     skill: "content-creation",
     skills: [
       "brand-review",
@@ -101,8 +97,6 @@ export const knowledgeDomains = [
   },
   {
     id: "customer-support",
-    zh: "客户支持",
-    en: "Customer Support",
     skill: "customer-escalation",
     skills: [
       "customer-escalation",
@@ -124,8 +118,6 @@ export const knowledgeDomains = [
   },
   {
     id: "product-management",
-    zh: "产品管理",
-    en: "Product Management",
     skill: "write-spec",
     skills: [
       "competitive-brief",
@@ -158,8 +150,6 @@ export const knowledgeDomains = [
   },
   {
     id: "productivity",
-    zh: "效率管理",
-    en: "Productivity",
     skill: "start",
     skills: ["memory-management", "start", "task-management", "update"],
     connectors: [
@@ -176,8 +166,6 @@ export const knowledgeDomains = [
   },
   {
     id: "data",
-    zh: "数据分析",
-    en: "Data Analysis",
     skill: "analyze",
     skills: [
       "analyze",
@@ -204,8 +192,6 @@ export const knowledgeDomains = [
   },
   {
     id: "finance",
-    zh: "财务分析",
-    en: "Finance",
     skill: "financial-statements",
     skills: [
       "audit-support",
@@ -221,8 +207,6 @@ export const knowledgeDomains = [
   },
   {
     id: "legal",
-    zh: "合同与法律",
-    en: "Legal",
     skill: "review-contract",
     skills: [
       "brief",
@@ -239,8 +223,6 @@ export const knowledgeDomains = [
   },
   {
     id: "bio-research",
-    zh: "生物研究",
-    en: "Bio Research",
     skill: "scientific-problem-selection",
     skills: [
       "instrument-data-to-allotrope",
@@ -266,24 +248,18 @@ export const knowledgeDomains = [
   },
   {
     id: "enterprise-search",
-    zh: "企业搜索",
-    en: "Enterprise Search",
     skill: "search-strategy",
     skills: ["digest", "knowledge-synthesis", "search", "search-strategy", "source-management"],
     connectors: ["asana", "atlassian", "gmail", "google calendar", "guru", "notion", "slack"],
   },
   {
     id: "cowork-plugin-management",
-    zh: "插件定制",
-    en: "Plugin Customization",
     skill: "cowork-plugin-customizer",
     skills: ["cowork-plugin-customizer", "create-cowork-plugin"],
     connectors: [],
   },
   {
     id: "engineering",
-    zh: "工程开发流程",
-    en: "Engineering lifecycle",
     skill: "using-agent-skills",
     skills: [
       "api-and-interface-design",

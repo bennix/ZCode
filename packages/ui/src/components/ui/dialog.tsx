@@ -3,6 +3,7 @@ import { Dialog as DialogPrimitive } from "radix-ui";
 
 import { cn } from "../lib/utils.js";
 import { Button } from "./button.js";
+import { useZCodeIntl } from "@/i18n/IntlProvider.js";
 import { XIcon } from "lucide-react";
 
 function Dialog({ ...props }: React.ComponentProps<typeof DialogPrimitive.Root>) {
@@ -52,6 +53,7 @@ function DialogContent({
   showOverlay?: boolean;
   overlayClassName?: string;
 }) {
+  const { intl } = useZCodeIntl();
   return (
     <DialogPortal>
       {showOverlay ? <DialogOverlay className={overlayClassName} /> : null}
@@ -75,7 +77,7 @@ function DialogContent({
               size="icon-sm"
             >
               <XIcon />
-              <span className="sr-only">Close</span>
+              <span className="sr-only">{intl.formatMessage({ id: "common.close" })}</span>
             </Button>
           </DialogPrimitive.Close>
         )}
@@ -98,6 +100,7 @@ function DialogFooter({
 }: React.ComponentProps<"div"> & {
   showCloseButton?: boolean;
 }) {
+  const { intl } = useZCodeIntl();
   return (
     <div
       data-slot="dialog-footer"
@@ -107,7 +110,7 @@ function DialogFooter({
       {children}
       {showCloseButton && (
         <DialogPrimitive.Close asChild>
-          <Button variant="outline">Close</Button>
+          <Button variant="outline">{intl.formatMessage({ id: "common.close" })}</Button>
         </DialogPrimitive.Close>
       )}
     </div>
@@ -118,7 +121,7 @@ function DialogTitle({ className, ...props }: React.ComponentProps<typeof Dialog
   return (
     <DialogPrimitive.Title
       data-slot="dialog-title"
-      className={cn("text-ui-base font-medium text-foreground", className)}
+      className={cn("text-ui-lg font-semibold text-foreground", className)}
       {...props}
     />
   );

@@ -4,6 +4,7 @@ import { Command as CommandPrimitive } from "cmdk";
 import { cn } from "../lib/utils.js";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "./dialog.js";
 import { InputGroup, InputGroupAddon } from "./input-group.js";
+import { useZCodeIntl } from "@/i18n/IntlProvider.js";
 import { SearchIcon, CheckIcon } from "lucide-react";
 
 function Command({
@@ -25,8 +26,8 @@ function Command({
 }
 
 function CommandDialog({
-  title = "Command Palette",
-  description = "Search for a command to run...",
+  title,
+  description,
   children,
   className,
   showCloseButton = false,
@@ -37,16 +38,20 @@ function CommandDialog({
   className?: string;
   showCloseButton?: boolean;
 }) {
+  const { intl } = useZCodeIntl();
   return (
     <Dialog {...props}>
-      <DialogHeader className="sr-only">
-        <DialogTitle>{title}</DialogTitle>
-        <DialogDescription>{description}</DialogDescription>
-      </DialogHeader>
       <DialogContent
         className={cn("top-1/3 translate-y-0 overflow-hidden p-0", className)}
         showCloseButton={showCloseButton}
       >
+        {/* 标题必须位于弹窗 Portal 内，读屏关联和语言切换才能保持一致。 */}
+        <DialogHeader className="sr-only">
+          <DialogTitle>{title ?? intl.formatMessage({ id: "quickPick.title" })}</DialogTitle>
+          <DialogDescription>
+            {description ?? intl.formatMessage({ id: "quickPick.description" })}
+          </DialogDescription>
+        </DialogHeader>
         {children}
       </DialogContent>
     </Dialog>

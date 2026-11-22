@@ -123,19 +123,22 @@ export function SettingsRow({
     <div className="border-t border-border px-4 py-3 first:border-t-0">
       <div
         className={cn(
-          "grid items-center gap-4",
+          // 窄屏和长译文不能继续挤进固定双列；控制区与文案按断点排列。
+          "grid items-center gap-3 sm:gap-4",
           controlLayout === "wide"
             ? "grid-cols-1 sm:grid-cols-[minmax(0,1fr)_280px]"
-            : "grid-cols-[minmax(0,1fr)_192px]",
+            : "grid-cols-1 sm:grid-cols-[minmax(0,1fr)_192px]",
         )}
       >
         <div className="min-w-0">
           <div className="text-ui-base font-medium text-foreground">{label}</div>
           {description ? (
-            <div className="mt-1 text-ui-base leading-6 text-foreground-subtle">{description}</div>
+            <div className="mt-1 text-ui-caption leading-5 text-foreground-subtle">
+              {description}
+            </div>
           ) : null}
         </div>
-        <div className="flex w-full flex-nowrap items-center justify-end gap-2">
+        <div className="flex min-w-0 w-full flex-wrap items-center justify-start gap-2 sm:justify-end">
           {controlLayout === "wide" ? detail : null}
           {control}
         </div>

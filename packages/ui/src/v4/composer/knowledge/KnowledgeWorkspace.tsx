@@ -7,7 +7,7 @@ import { useKnowledgeWork } from "@/hooks/useKnowledgeWork.js";
 import { useModelCostTiers } from "@/hooks/useModelCostTiers.js";
 import { useOptionalTabStore } from "@/store/TabStoreProvider.js";
 import { setPendingSettingsSectionIntent } from "@/lib/settingsNavigation.js";
-import { GuidedSteps } from "../GuidedSteps.js";
+import { GuidedWorkspaceFrame } from "../GuidedWorkspaceFrame.js";
 import { knowledgeDomains } from "./catalog.js";
 
 export function KnowledgeWorkspace({
@@ -23,9 +23,8 @@ export function KnowledgeWorkspace({
   modelSelectionView: ModelSelectionView | null;
   onReady: (text: string, selection?: { provider: string; model: string }) => void;
 }) {
-  const { intl, locale } = useZCodeIntl();
+  const { intl } = useZCodeIntl();
   const t = (key: string) => intl.formatMessage({ id: `chat.knowledge.${key}` });
-  const zh = locale.startsWith("zh");
   const [domainId, setDomainId] = useState<string>(knowledgeDomains[0].id);
   const [skillOverride, setSkillOverride] = useState("");
   const [step, setStep] = useState(0);
@@ -72,30 +71,30 @@ export function KnowledgeWorkspace({
   const selected =
     choices.find((item) => item.key === modelKey) ?? (modelKey ? undefined : recommended);
   return (
-    <section
+    <GuidedWorkspaceFrame
       data-testid="knowledge-workspace"
-      className="rounded-2xl border border-border bg-card p-3 text-ui-base"
-    >
-      <h2 className="font-medium">{t("title")}</h2>
-      <p className="my-2 text-ui-caption text-foreground-subtle">{t("intro")}</p>
-      <GuidedSteps
-        steps={[
+      title={t("title")}
+      description={t("intro")}
+      steps={{
+        steps: [
           "chat.knowledge.domain",
           "chat.knowledge.task",
           "chat.knowledge.sources",
           "chat.knowledge.confirm",
-        ]}
-        current={step}
-        onChange={setStep}
-        disabled={busy}
-        canAdvance={step !== 1 || Boolean(task.trim())}
-      />
+        ],
+        current: step,
+        onChange: setStep,
+        disabled: busy,
+        canAdvance: step !== 1 || Boolean(task.trim()),
+      }}
+    >
       {step === 0 && (
         <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
           {knowledgeDomains.map((item) => (
             <Button
               type="button"
               variant={item.id === domainId ? "secondary" : "ghost"}
+              className="h-auto min-h-12 justify-start whitespace-normal border border-border px-3 py-3 text-left"
               aria-pressed={item.id === domainId}
               key={item.id}
               onClick={() => {
@@ -104,7 +103,7 @@ export function KnowledgeWorkspace({
                 setConnectors([]);
               }}
             >
-              {zh ? item.zh : item.en}
+              {t(`domain.${item.id}`)}
             </Button>
           ))}
         </div>
@@ -149,7 +148,8 @@ export function KnowledgeWorkspace({
             >
               {domain.skills.map((name) => (
                 <option key={name} value={name}>
-                  {name}
+                  {/* 技能 ID 用于执行，显示名称必须随当前语言实时解析。 */}
+                  {t(`workflow.${name}`)}
                 </option>
               ))}
             </select>
@@ -232,7 +232,7 @@ export function KnowledgeWorkspace({
       {step === 3 && (
         <div className="space-y-3">
           <p>
-            {zh ? domain.zh : domain.en} · {task}
+            {t(`domain.${domain.id}`)} · {task}
           </p>
           <label className="block">
             {t("tier")}
@@ -294,6 +294,6 @@ export function KnowledgeWorkspace({
           {error}
         </p>
       )}
-    </section>
+    </GuidedWorkspaceFrame>
   );
 }

@@ -25,8 +25,11 @@ export function GuidedSteps({
     onChange(step);
   };
   return (
-    <nav aria-label={intl.formatMessage({ id: "chat.guide.steps" })} className="mb-3 space-y-2">
-      <ol className="flex flex-wrap gap-1">
+    <nav
+      aria-label={intl.formatMessage({ id: "chat.guide.steps" })}
+      className="mb-4 space-y-3 border-b border-border pb-4"
+    >
+      <ol className="flex flex-wrap gap-2">
         {steps.map((id, index) => (
           <li key={id} className="min-w-0">
             <Button
@@ -34,10 +37,18 @@ export function GuidedSteps({
               variant={index === current ? "secondary" : "ghost"}
               aria-current={index === current ? "step" : undefined}
               disabled={disabled || index > current}
-              className="h-auto min-h-8 whitespace-normal px-2 text-ui-caption"
+              className="h-auto min-h-9 gap-2 whitespace-normal px-2 text-left text-ui-caption"
               onClick={() => change(index)}
             >
-              <span className="mr-1 text-foreground-subtle">{index + 1}</span>
+              <span
+                className={
+                  index === current
+                    ? "flex size-5 shrink-0 items-center justify-center rounded-full bg-foreground text-background text-ui-xs"
+                    : "flex size-5 shrink-0 items-center justify-center rounded-full border border-border text-foreground-subtle text-ui-xs"
+                }
+              >
+                {index + 1}
+              </span>
               {intl.formatMessage({ id })}
             </Button>
           </li>

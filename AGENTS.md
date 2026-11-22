@@ -80,3 +80,10 @@
 - `info` 用于进程和会话生命周期、权限结果、一次性初始化等生产可用事件。
 - `warn` 用于可恢复异常；`error` 用于崩溃、握手失败、鉴权丢失等不可恢复错误。
 - 不在日志、示例或提交中写入凭据、真实用户数据和内部服务地址。
+
+## Stitch UI workflow
+
+- UI work uses the permanently installed google-labs-code/stitch-skills collection: extract-design-md for source-based design inventory, shadcn-ui for shared primitives. Use react-components only when converting or syncing actual Stitch screens through configured MCP. Load only relevant skills.
+- DESIGN.md is authoritative; .stitch/DESIGN.md is its generation brief. Preserve compact operational layouts, semantic tokens, reduced motion, and existing business-state ownership.
+- Audit all affected shared-component consumers; move reusable presentation into shared components, and all user-visible/default accessibility labels into existing zh-CN/en-US dictionaries.
+- Validate light/dark, narrow/wide layouts, long translations and keyboard focus. Do not claim Stitch cloud generation without an available MCP or full UI coverage without visual evidence.

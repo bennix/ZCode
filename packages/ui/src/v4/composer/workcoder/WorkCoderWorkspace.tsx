@@ -11,7 +11,7 @@ import { Button } from "@/components/ui/button.js";
 import { useZCodeIntl } from "@/i18n/IntlProvider.js";
 import { useWorkCoder } from "@/hooks/useWorkCoder.js";
 import { createComposerSubmissionConfig } from "../composerSubmissionConfig.js";
-import { GuidedSteps } from "../GuidedSteps.js";
+import { GuidedWorkspaceFrame } from "../GuidedWorkspaceFrame.js";
 import { resolveEffort, supportedEfforts } from "../reasoningEffort.js";
 import { thoughtLevelLabelId } from "@/chat-input-toolbar/thoughtLevelOptions.js";
 
@@ -127,20 +127,20 @@ export function WorkCoderWorkspace({
     }
   };
   return (
-    <section
-      className="mb-3 rounded-2xl border border-border bg-card p-3 text-ui-base"
+    <GuidedWorkspaceFrame
+      className="mb-3"
       data-testid="workcoder-workspace"
+      title="WorkCoder"
+      description={t("description")}
+      steps={{
+        probeScope: target.workspaceIdentity?.trim() || target.workspacePath,
+        steps: ["chat.workcoder.roles", "chat.workcoder.task", "chat.workcoder.confirm"],
+        current: step,
+        onChange: setStep,
+        disabled: busy || retry,
+        canAdvance: step === 0 || Boolean(task.trim()),
+      }}
     >
-      <h2 className="font-medium">WorkCoder</h2>
-      <p className="my-2 text-ui-caption text-foreground-subtle">{t("description")}</p>
-      <GuidedSteps
-        probeScope={target.workspaceIdentity?.trim() || target.workspacePath}
-        steps={["chat.workcoder.roles", "chat.workcoder.task", "chat.workcoder.confirm"]}
-        current={step}
-        onChange={setStep}
-        disabled={busy || retry}
-        canAdvance={step === 0 || Boolean(task.trim())}
-      />
       {step === 0 ? (
         <div className="grid gap-3 md:grid-cols-3">
           {roles.map((role) => {
@@ -151,7 +151,7 @@ export function WorkCoderWorkspace({
               <div
                 data-testid={`workcoder-role-${role}`}
                 key={role}
-                className="flex min-w-0 flex-col gap-1 text-ui-caption"
+                className="flex min-w-0 flex-col gap-2 rounded-xl border border-border bg-background p-3 text-ui-caption"
               >
                 <span className="font-medium">{t(role)}</span>
                 <span className="text-foreground-subtle">{t(`${role}Help`)}</span>
@@ -307,6 +307,6 @@ export function WorkCoderWorkspace({
           {error}
         </p>
       ) : null}
-    </section>
+    </GuidedWorkspaceFrame>
   );
 }
